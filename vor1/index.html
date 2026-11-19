@@ -150,6 +150,15 @@ textarea.rep{width:100%;min-height:220px;border-radius:14px;border:1.5px solid v
 .overlay{position:absolute;inset:0;z-index:5;background:rgba(244,243,239,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px;text-align:center}
 .overlay .btn{max-width:420px}
 .count{font-size:min(40vmin,220px);font-weight:800;color:var(--brand);line-height:1}
+#camv.parked{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1}
+#camv.preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.camwrap{position:relative;width:min(72vw,300px);aspect-ratio:3/4;margin:4px auto 14px;border-radius:22px;overflow:hidden;background:#0D1A20}
+.camwrap .frame{position:absolute;inset:12% 17% 20%;border:3px dashed rgba(255,255,255,.75);border-radius:50%/44%;z-index:2;pointer-events:none}
+.camlive{display:inline-flex;align-items:center;gap:6px;margin-left:10px;font-size:13px;font-weight:800;color:var(--ink2)}
+.camlive i{width:10px;height:10px;border-radius:50%;background:#B8C0C4;display:inline-block}
+.camlive i.ok{background:var(--ok)}.camlive i.bad{background:var(--danger)}
+.beta{font-size:10px;font-weight:800;color:var(--brand);background:var(--brand-soft);border-radius:6px;padding:1px 5px;margin-left:5px;vertical-align:middle;text-transform:none;letter-spacing:0}
+.btn:disabled{opacity:.45}
 .blurc{font-variant-numeric:tabular-nums;background:rgba(42,26,0,.14);border-radius:999px;padding:2px 12px;min-width:2.2em}
 </style>
 </head>
@@ -193,12 +202,14 @@ function load(){
       return {
         rx: Object.assign({}, DEFAULT_RX, d.rx || {}),
         sessions: Array.isArray(d.sessions) ? d.sessions : [],
+        tests: Array.isArray(d.tests) ? d.tests : [],
         safetyAck: !!d.safetyAck,
-        mode: d.mode === 'helper' ? 'helper' : 'self'
+        mode: d.mode === 'helper' ? 'helper' : 'self',
+        camOn: d.camOn !== false
       };
     }
   }catch(e){ storageOK = false; }
-  return {rx:{...DEFAULT_RX}, sessions:[], safetyAck:false, mode:'self'};
+  return {rx:{...DEFAULT_RX}, sessions:[], tests:[], safetyAck:false, mode:'self', camOn:true};
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); storageOK = true; }
@@ -248,6 +259,7 @@ function levelKV(rx){
 
 /* ---------- screens ---------- */
 function render(){
+  parkVideo();
   if(S){ renderSession(); return; }
   const fn = {home:renderHome, safety:renderSafety, howto:renderHowto, history:renderHistory, rx:renderRx}[view] || renderHome;
   fn();
@@ -265,13 +277,14 @@ function renderHome(){
       <div class="meta">${rx.setAt ? `Назначение ${rx.specialist ? esc(rx.specialist) + ', ' : ''}${fmtDay(rx.setAt)}` : 'Стартовые параметры. Специалист TURA настроит назначение под пациента.'}${rx.auto ? ' Нагрузка растёт автоматически.' : ''}</div>
     </div>
     <button class="btn btn-p" data-a="start">Начать тренировку</button>
+    ${Cam.available() ? `<button class="btn btn-s" data-a="startTest">Тест стабилизации взора<small>камера · начало и конец курса</small></button>` : ''}
     <div class="navgrid">
       <button class="navbtn" data-a="go" data-v="howto"><b>Как выполнять</b><span>Техника и смысл упражнения</span></button>
       <button class="navbtn" data-a="go" data-v="history"><b>Дневник</b><span>Прогресс и отчёт для специалиста</span></button>
       <button class="navbtn" data-a="go" data-v="rx"><b>Назначение</b><span>Для специалиста TURA</span></button>
       <button class="navbtn" data-a="go" data-v="safety"><b>Безопасность</b><span>Когда нельзя заниматься</span></button>
     </div>
-    <div class="foot">TURA · VOR×1 · прототип V0<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
+    <div class="foot">TURA · VOR×1 · версия 1 (камера β)<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
   </div>`;
 }
 
@@ -343,13 +356,13 @@ function renderHistory(){
   const week = ss.filter(s => Date.now() - s.ts < 7*864e5).length;
   let body;
   if(!ss.length){
-    body = `<div class="card"><p style="margin:0">Тренировок пока нет. После первой здесь появятся график темпа, динамика головокружения и отчёт для специалиста.</p></div>`;
+    body = `<div class="card"><p style="margin:0">Тренировок пока нет. После первой здесь появятся график темпа, динамика головокружения и отчёт для специалиста.</p></div>${testsCard()}`;
   } else {
     const last = ss.slice(-30);
     const list = ss.slice(-20).reverse().map(s => {
       const tag = s.stopped ? '<span class="tag stop">остановлена</span>' : `<span class="tag ${s.rec === 'up' ? 'up' : s.rec === 'down' ? 'down' : 'keep'}">${recWord(s)}</span>`;
       return `<div class="sess"><div class="d">${fmtDT(s.ts)}</div>${tag}
-        <div class="x">${L.dirShort[s.dir]} · ${s.bpm} уд/мин · ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)} · головокружение ${s.pre}→${s.post} · ${clarityWord(s)}${s.mode === 'helper' ? ' · с помощником' : ''}</div></div>`;
+        <div class="x">${L.dirShort[s.dir]} · ${s.bpm} уд/мин · ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)} · головокружение ${s.pre}→${s.post} · ${clarityWord(s)}${s.mode === 'helper' ? ' · с помощником' : ''}${s.cam ? ' · ' + camLine(s.cam) : ''}</div></div>`;
     }).join('');
     body = `<div class="stat3">
         <div><small>За 7 дней</small><b>${week}</b></div>
@@ -359,6 +372,7 @@ function renderHistory(){
       <div class="card"><h2>Головокружение, 0–10</h2>
         <div class="legend"><span><i style="background:var(--s1)"></i>до</span><span><i style="background:var(--s2)"></i>после</span></div>
         <div class="chart" id="c2"></div></div>
+      ${testsCard()}
       <div class="card"><h2>Тренировки</h2>${list}</div>`;
     setTimeout(() => {
       const oneDay = dayKey(last[0].ts) === dayKey(last[last.length-1].ts);
@@ -387,6 +401,14 @@ function renderHistory(){
   </div>`;
 }
 
+function testsCard(){
+  const ts = (DB.tests || []).slice().reverse();
+  if(!ts.length) return '';
+  const first = DB.tests[0], last = DB.tests[DB.tests.length - 1];
+  const delta = DB.tests.length > 1 && first.dir === last.dir ? `<div class="note ${last.maxVel > first.maxVel ? 'ok' : 'info'}" style="margin:0 0 10px">Было ${first.maxVel || '—'} °/с (${fmtDay(first.ts)}) → стало ${last.maxVel || '—'} °/с (${fmtDay(last.ts)})</div>` : '';
+  return `<div class="card"><h2>Тест стабилизации взора<span class="beta">β</span></h2>${delta}${ts.slice(0, 8).map(x => `<div class="sess"><div class="d">${fmtDT(x.ts)}</div><span class="tag keep">${x.maxVel || '—'} °/с</span><div class="x">${L.dirShort[x.dir]} · ${x.maxBpm ? `пройден уровень ${x.maxBpm} уд/мин` : 'уровни не пройдены'}</div></div>`).join('')}</div>`;
+}
+
 function buildChart(el, o){
   if(!el) return;
   const W = 340, H = 170, ml = 30, mr = o.direct ? 50 : 14, mt = 12, mb = 26;
@@ -404,7 +426,7 @@ function buildChart(el, o){
   o.series.forEach(se => {
     const pts = se.values.map((v, i) => [x(i), y(v)]);
     if(n > 1) s += `<polyline fill="none" style="stroke:${se.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p => p.join(',')).join(' ')}"/>`;
-    pts.forEach(p => s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" style="fill:${se.color}" stroke="#fff" stroke-width="2"/>`);
+    if(n <= 40) pts.forEach(p => s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" style="fill:${se.color}" stroke="#fff" stroke-width="2"/>`);
     ends.push({name:se.name, y:pts[pts.length-1][1], x:pts[pts.length-1][0]});
   });
   if(o.direct){
@@ -459,9 +481,14 @@ function reportText(){
   }
   out.push(`Текущий уровень: ${L.dirShort[rx.dir].toLowerCase()}, ${rx.bpm} уд/мин, ${rx.sets} × ${durLabel(rx.setSec)}, отдых ${rx.restSec} с, фон — ${L.bg[rx.bg].toLowerCase()}, ${L.pos[rx.pos].toLowerCase()}, ${L.sym[rx.sym].toLowerCase()}, ${L.dist[rx.dist]}`);
   out.push(`Потолок: ${rx.maxBpm} уд/мин, ${durLabel(rx.maxSetSec)}; автопрогрессия: ${rx.auto ? 'вкл' : 'выкл'}`);
+  const tests = DB.tests || [];
+  if(tests.length){
+    out.push('', 'Тест стабилизации взора (камера, экспериментально):');
+    tests.slice(-5).reverse().forEach(x => out.push(`• ${fmtDT(x.ts)} — ${x.maxVel || '—'} °/с (уровень ${x.maxBpm || '—'} уд/мин, ${L.dirShort[x.dir].toLowerCase()})`));
+  }
   if(ss.length){
     out.push('', 'Последние тренировки:');
-    ss.slice(-10).reverse().forEach(s => out.push(`• ${fmtDT(s.ts)} — ${s.bpm} уд/мин, ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)}; головокр. ${s.pre}→${s.post}; ${clarityWord(s)}; ${recWord(s)}${s.mode === 'helper' ? '; с помощником' : ''}`));
+    ss.slice(-10).reverse().forEach(s => out.push(`• ${fmtDT(s.ts)} — ${s.bpm} уд/мин, ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)}; головокр. ${s.pre}→${s.post}; ${clarityWord(s)}; ${recWord(s)}${s.mode === 'helper' ? '; с помощником' : ''}${s.cam ? '; камера: ' + camLine(s.cam) : ''}`));
   }
   return out.join('\n');
 }
@@ -518,13 +545,297 @@ function renderRx(){
   </div>`;
 }
 
+/* ---------- camera (MediaPipe Face Landmarker) ---------- */
+const MP_VER = '1.2.3';
+const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER;
+const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+const TEST_BPM = [60, 80, 100, 120, 140, 160, 180];
+const BLINK = 0.12;
+
+function camErrText(e){
+  const n = e && e.name;
+  if(n === 'NotAllowedError' || n === 'SecurityError') return 'Доступ к камере запрещён. Разрешите камеру для этого сайта в настройках браузера и обновите страницу.';
+  if(n === 'NotFoundError' || n === 'OverconstrainedError') return 'Фронтальная камера не найдена.';
+  if(n === 'NotReadableError') return 'Камера занята другим приложением. Закройте его и попробуйте снова.';
+  return 'Не удалось загрузить распознавание лица. Проверьте интернет и попробуйте снова.';
+}
+
+const Cam = {
+  state:'off', err:'', video:null, stream:null, lm:null, raf:0, lastVT:-1,
+  rec:null, recPaused:false, recent:[], last:null, fps:0, _fc:0, _ft:0,
+  available(){
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || !window.isSecureContext) return false;
+    try{
+      const fp = document.permissionsPolicy || document.featurePolicy;
+      if(fp && fp.allowsFeature && !fp.allowsFeature('camera')) return false;
+    }catch(e){}
+    return true;
+  },
+  ensureVideo(){
+    if(!this.video){
+      const v = document.createElement('video');
+      v.id = 'camv'; v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.muted = true; v.autoplay = true;
+      v.className = 'parked'; document.body.appendChild(v); this.video = v;
+    }
+    return this.video;
+  },
+  async start(onUpdate){
+    if(this.state === 'ready' || this.state === 'loading') return;
+    this.state = 'loading'; this.err = ''; onUpdate && onUpdate();
+    try{
+      const v = this.ensureVideo();
+      this.stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:'user', width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30}}});
+      v.srcObject = this.stream;
+      try{ await v.play(); }catch(e){}
+      if(!this.lm){
+        const mod = await import(MP_BASE + '/vision_bundle.mjs');
+        const files = await mod.FilesetResolver.forVisionTasks(MP_BASE + '/wasm');
+        const opts = d => ({baseOptions:{modelAssetPath:MODEL_URL, delegate:d}, runningMode:'VIDEO', numFaces:1,
+          outputFacialTransformationMatrixes:true, outputFaceBlendshapes:false,
+          minFaceDetectionConfidence:.5, minFacePresenceConfidence:.5, minTrackingConfidence:.5});
+        try{ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('GPU')); }
+        catch(e){ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('CPU')); }
+      }
+      this.state = 'ready'; this.loop();
+    }catch(e){
+      console.warn('camera', e);
+      this.stop(); this.state = 'error'; this.err = camErrText(e);
+    }
+    onUpdate && onUpdate();
+  },
+  loop(){
+    cancelAnimationFrame(this.raf);
+    const step = () => {
+      if(this.state !== 'ready') return;
+      const v = this.video;
+      if(v && v.readyState >= 2 && v.currentTime !== this.lastVT){
+        this.lastVT = v.currentTime;
+        const now = performance.now();
+        let res = null;
+        try{ res = this.lm.detectForVideo(v, now); }catch(e){}
+        this.process(res, now / 1000, v.videoWidth, v.videoHeight);
+      }
+      this.raf = requestAnimationFrame(step);
+    };
+    this.raf = requestAnimationFrame(step);
+  },
+  process(res, t, W, H){
+    const s = {t, face:false, ok:false, yaw:NaN, pitch:NaN, eh:NaN, ev:NaN, open:0, iod:0};
+    if(res && res.faceLandmarks && res.faceLandmarks.length && W && H){
+      const Lm = res.faceLandmarks[0];
+      const P = i => ({x:Lm[i].x * W, y:Lm[i].y * H});
+      s.face = true;
+      const mt = res.facialTransformationMatrixes && res.facialTransformationMatrixes[0];
+      const m = mt && (mt.data || mt);
+      if(m && m.length >= 11){
+        const fx = m[8], fy = m[9], fz = m[10];
+        s.yaw = Math.atan2(fx, fz) * 180 / Math.PI;
+        s.pitch = Math.atan2(-fy, Math.hypot(fx, fz)) * 180 / Math.PI;
+      }
+      if(Lm.length >= 478){
+        // глаз: угол A (левый по изображению) → B (правый), веки U/D, центр радужки C
+        const eye = (a, b, u, d, c) => {
+          const A = P(a), B = P(b), U = P(u), D = P(d), C = P(c);
+          const ax = B.x - A.x, ay = B.y - A.y, w2 = ax*ax + ay*ay || 1;
+          const th = ((C.x - A.x) * ax + (C.y - A.y) * ay) / w2 - 0.5;
+          const vx = D.x - U.x, vy = D.y - U.y, h2 = vx*vx + vy*vy || 1;
+          const tv = ((C.x - U.x) * vx + (C.y - U.y) * vy) / h2 - 0.5;
+          return {th, tv, open:Math.sqrt(h2 / w2)};
+        };
+        const r = eye(33, 133, 159, 145, 468), l = eye(362, 263, 386, 374, 473);
+        s.eh = (r.th + l.th) / 2; s.ev = (r.tv + l.tv) / 2; s.open = (r.open + l.open) / 2;
+        const i1 = P(468), i2 = P(473);
+        s.iod = Math.hypot(i1.x - i2.x, i1.y - i2.y) / Math.min(W, H);
+      }
+      s.ok = isFinite(s.yaw) && isFinite(s.eh) && s.open > BLINK;
+    }
+    this.last = s;
+    this.recent.push(s);
+    while(this.recent.length && t - this.recent[0].t > 1.5) this.recent.shift();
+    this._fc++; if(t - this._ft >= 1){ this.fps = this._fc / (t - this._ft || 1); this._fc = 0; this._ft = t; }
+    if(this.rec && !this.recPaused){
+      const R = this.rec;
+      R.t.push(t); R.yaw.push(s.yaw); R.pitch.push(s.pitch); R.eh.push(s.eh); R.ev.push(s.ev); R.ok.push(s.ok);
+    }
+  },
+  liveVel(dir){
+    const a = this.recent.filter(s => s.face && isFinite(dir === 'v' ? s.pitch : s.yaw));
+    if(a.length < 6) return null;
+    let mx = 0;
+    for(let i = 2; i < a.length - 2; i++){
+      const dt = a[i+2].t - a[i-2].t; if(dt <= 0 || dt > .4) continue;
+      const v = Math.abs(((dir === 'v' ? a[i+2].pitch : a[i+2].yaw) - (dir === 'v' ? a[i-2].pitch : a[i-2].yaw)) / dt);
+      if(v > mx) mx = v;
+    }
+    return mx;
+  },
+  startRec(){ this.rec = {t:[], yaw:[], pitch:[], eh:[], ev:[], ok:[]}; this.recPaused = false; },
+  stopRec(){ const r = this.rec; this.rec = null; return r; },
+  stop(){
+    cancelAnimationFrame(this.raf); this.raf = 0;
+    if(this.stream){ this.stream.getTracks().forEach(tr => tr.stop()); this.stream = null; }
+    if(this.video){ this.video.srcObject = null; }
+    if(this.state !== 'error') this.state = 'off';
+    this.last = null; this.recent = []; this.rec = null; this.lastVT = -1;
+  }
+};
+function parkVideo(){
+  const v = Cam.video;
+  if(v && v.parentNode !== document.body){ document.body.appendChild(v); }
+  if(v){ v.className = 'parked'; }
+}
+function mountVideo(slot){
+  const v = Cam.video; if(!v || !slot) return;
+  slot.insertBefore(v, slot.firstChild); v.className = 'preview';
+  try{ const p = v.play(); if(p && p.catch) p.catch(() => {}); }catch(e){}
+}
+
+/* ---------- signal analysis ---------- */
+const median = a => { if(!a.length) return NaN; const b = [...a].sort((x, y) => x - y), n = b.length; return n % 2 ? b[(n-1)/2] : (b[n/2-1] + b[n/2]) / 2; };
+const pct = (a, p) => { if(!a.length) return NaN; const b = [...a].sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.max(0, Math.round(p / 100 * (b.length - 1))))]; };
+function smooth(a, w){
+  const h = Math.floor(w / 2), out = new Array(a.length);
+  for(let i = 0; i < a.length; i++){ let s = 0, n = 0; for(let j = Math.max(0, i - h); j <= Math.min(a.length - 1, i + h); j++){ s += a[j]; n++; } out[i] = s / n; }
+  return out;
+}
+function linreg(x, y){
+  const n = x.length; let mx = 0, my = 0;
+  for(let i = 0; i < n; i++){ mx += x[i]; my += y[i]; }
+  mx /= n; my /= n;
+  let sxx = 0, syy = 0, sxy = 0;
+  for(let i = 0; i < n; i++){ const dx = x[i] - mx, dy = y[i] - my; sxx += dx*dx; syy += dy*dy; sxy += dx*dy; }
+  return {slope: sxy / (sxx || 1), r2: (sxy*sxy) / ((sxx*syy) || 1)};
+}
+function sigs(rec, dir){ return dir === 'v' ? {H:rec.pitch, E:rec.ev} : {H:rec.yaw, E:rec.eh}; }
+
+function calibrate(rec, dir){
+  if(!rec || rec.t.length < 30) return {ok:false, reason:'Камера не получила изображение лица.'};
+  const {H, E} = sigs(rec, dir), hs = [], es = [];
+  for(let i = 0; i < rec.t.length; i++) if(rec.ok[i] && isFinite(H[i]) && isFinite(E[i])){ hs.push(H[i]); es.push(E[i]); }
+  const validFrac = hs.length / rec.t.length;
+  if(hs.length < 60 || validFrac < .6) return {ok:false, validFrac, reason:'Лицо было плохо видно. Поставьте телефон на уровне глаз, включите свет перед собой.'};
+  const range = pct(hs, 95) - pct(hs, 5);
+  if(range < 12) return {ok:false, range, reason:`Повороты были слишком маленькими (${Math.round(range)}°). Поворачивайте голову примерно на 20° в каждую сторону.`};
+  const {slope:d, r2} = linreg(hs, es);   // глаз = c + d·голова
+  const k = -1 / d;
+  if(r2 < .45 || !isFinite(k) || Math.abs(k) < 30 || Math.abs(k) > 900)
+    return {ok:false, r2, range, reason:'Не удалось надёжно отследить глаза. Добавьте света на лицо, уберите блики с очков и держите телефон неподвижно.'};
+  return {ok:true, k, d, r2, range, validFrac};
+}
+
+function deriv(a, ts){
+  return a.map((_, i) => { const lo = Math.max(0, i - 2), hi = Math.min(a.length - 1, i + 2); return (a[hi] - a[lo]) / ((ts[hi] - ts[lo]) || 1); });
+}
+function analyze(rec, calib, skip, dir){
+  if(!rec || rec.t.length < 20) return {valid:false};
+  const {H, E} = sigs(rec, dir), t0 = rec.t[0] + skip;
+  const idx = []; let total = 0;
+  for(let i = 0; i < rec.t.length; i++){ if(rec.t[i] < t0) continue; total++; if(rec.ok[i] && isFinite(H[i]) && (!calib || isFinite(E[i]))) idx.push(i); }
+  const dur = rec.t[rec.t.length - 1] - t0, fps = total / Math.max(dur, .001), validFrac = idx.length / Math.max(total, 1);
+  if(idx.length < 30 || validFrac < .5) return {valid:false, validFrac, fps};
+  // разрыв сегмента: пропуск кадров (моргание, лицо потеряно)
+  const dts = []; for(let j = 1; j < idx.length; j++) dts.push(rec.t[idx[j]] - rec.t[idx[j-1]]);
+  const gap = Math.max(.12, 2.5 * median(dts));
+  const segs = []; let cur = [idx[0]];
+  for(let j = 1; j < idx.length; j++){ if(rec.t[idx[j]] - rec.t[idx[j-1]] > gap){ segs.push(cur); cur = []; } cur.push(idx[j]); }
+  segs.push(cur);
+  const peaks = [], amps = [];
+  const T = [], HR = [], HD = [], HV = [], GR = [], EV = [], SEG = [];
+  const d3 = (a, ts) => a.map((_, j) => { const lo = Math.max(0, j - 1), hi = Math.min(a.length - 1, j + 1); return (a[hi] - a[lo]) / ((ts[hi] - ts[lo]) || 1); });
+  segs.forEach((sg, si) => {
+    if(sg.length < 9) return;
+    const ts = sg.map(i => rec.t[i]), hs = smooth(sg.map(i => H[i]), 5), vel = deriv(hs, ts);
+    let sign = 0, start = 0, pk = 0, lo = Infinity, hi = -Infinity;
+    for(let i = 0; i < vel.length; i++){
+      const v = vel[i], sg2 = v > 15 ? 1 : v < -15 ? -1 : 0;
+      if(sg2 !== 0 && sg2 !== sign){
+        if(sign !== 0 && ts[i] - ts[start] > .15){ peaks.push(pk); amps.push(hi - lo); }
+        sign = sg2; start = i; pk = 0; lo = Infinity; hi = -Infinity;
+      }
+      pk = Math.max(pk, Math.abs(v)); lo = Math.min(lo, hs[i]); hi = Math.max(hi, hs[i]);
+    }
+    if(sign !== 0 && ts[ts.length - 1] - ts[start] > .15){ peaks.push(pk); amps.push(hi - lo); }
+    let ed = null, ev = null, hv3 = null;
+    if(calib){ ed = sg.map(i => calib.k * E[i]); ev = d3(ed, ts); hv3 = d3(sg.map(i => H[i]), ts); }
+    sg.forEach((i, j) => {
+      T.push(rec.t[i] - t0); HR.push(H[i]); HD.push(hs[j]); HV.push(calib ? hv3[j] : vel[j]); SEG.push(si);
+      if(calib){ GR.push(H[i] + ed[j]); EV.push(ev[j]); }
+    });
+  });
+  const out = {valid:true, fps, validFrac, vel:median(peaks), amp:median(amps), turns:peaks.length, gaze:null, trace:null};
+  if(!isFinite(out.vel)) out.vel = 0;
+  if(!isFinite(out.amp)) out.amp = 0;
+  const hMed = median(HR);
+  const n = T.length;
+  if(calib && n > 20){
+    // ошибка взгляда относительно скользящей медианы ±1 с (убирает медленный дрейф телефона/корпуса)
+    const err = new Array(n);
+    for(let i = 0; i < n; i++){
+      const w = [];
+      for(let j = i; j >= 0 && T[i] - T[j] <= 1; j--) w.push(GR[j]);
+      for(let j = i + 1; j < n && T[j] - T[i] <= 1; j++) w.push(GR[j]);
+      err[i] = GR[i] - median(w);
+    }
+    // поправочные саккады: быстрый скачок ошибки к нулю
+    const sac = new Uint8Array(n); let sacc = 0;
+    for(let i = 3; i < n - 3; i++){
+      if(SEG[i-3] !== SEG[i+2] || T[i+2] - T[i-3] > .4 || T[i] - T[i-1] > .1) continue;
+      const pre = (err[i-3] + err[i-2] + err[i-1]) / 3, post = (err[i] + err[i+1] + err[i+2]) / 3, jump = Math.abs(post - pre);
+      if(jump >= 3.5 && Math.abs(post) < Math.abs(pre) - 1.5 && Math.abs(err[i] - err[i-1]) >= .5 * jump){
+        sacc++; for(let j = Math.max(0, i - 2); j <= Math.min(n - 1, i + 2); j++) sac[j] = 1; i += 4;
+      }
+    }
+    const es = smooth(err, 3);
+    const stab = es.filter(v => Math.abs(v) <= 4).length / n;
+    const rms = Math.sqrt(es.reduce((s2, v) => s2 + v*v, 0) / n);
+    // gain по скоростям медленной фазы (без саккад, при скорости головы ≥ 30°/с)
+    let sxy = 0, sxx = 0, m = 0;
+    for(let i = 0; i < n; i++){ if(sac[i] || Math.abs(HV[i]) < 30 || !isFinite(EV[i])) continue; sxy += EV[i] * HV[i]; sxx += HV[i] * HV[i]; m++; }
+    const gain = m > 15 ? -sxy / sxx : NaN;
+    out.gaze = {stab, rms, sacc, gain};
+    const stepN = Math.max(1, Math.ceil(n / 160)), tr = {t:[], head:[], gaze:[]};
+    for(let i = 0; i < n; i += stepN){ tr.t.push(T[i]); tr.head.push(HD[i] - hMed); tr.gaze.push(es[i]); }
+    out.trace = tr;
+  } else {
+    const stepN = Math.max(1, Math.ceil(n / 160)), tr = {t:[], head:[], gaze:null};
+    for(let i = 0; i < n; i += stepN){ tr.t.push(T[i]); tr.head.push(HD[i] - hMed); }
+    out.trace = tr;
+  }
+  return out;
+}
+const levelPass = a => !!(a && a.valid && a.amp >= 20 && a.gaze && a.gaze.stab >= .7);
+
+function camMetricsHTML(a, compact){
+  if(!a) return '';
+  if(!a.valid) return `<div class="note warn"><b>Камера: мало данных</b>Лицо было видно ${Math.round((a.validFrac || 0) * 100)}% времени. Проверьте свет и положение телефона.</div>`;
+  const g = a.gaze;
+  return `<div class="kv">
+    <div><small>Скорость головы</small><b>${Math.round(a.vel)}°/с</b></div>
+    <div><small>Размах поворотов</small><b>${Math.round(a.amp)}°</b></div>
+    ${g ? `<div><small>Взгляд на цели<span class="beta">β</span></small><b>${Math.round(g.stab * 100)}%</b></div>
+    <div><small>Поправки взгляда<span class="beta">β</span></small><b>${g.sacc}</b></div>
+    ${compact ? '' : `<div><small>Компенсация, gain<span class="beta">β</span></small><b>${isFinite(g.gain) ? g.gain.toFixed(2) : '—'}</b></div>`}` : ''}
+    ${compact ? '' : `<div><small>Качество записи</small><b>${Math.round(a.validFrac * 100)}% · ${Math.round(a.fps)} к/с</b></div>`}
+  </div>${a.amp < 15 ? `<div class="note warn" style="margin:10px 0 0">Повороты маленькие (${Math.round(a.amp)}°). Поворачивайте голову шире — примерно на 20° в каждую сторону.</div>` : ''}`;
+}
+function traceChart(id, a){
+  const el = document.getElementById(id);
+  if(!el || !a || !a.trace || a.trace.t.length < 5) return;
+  const tr = a.trace, all = tr.head.concat(tr.gaze || []).map(Math.abs);
+  const m = Math.max(10, Math.ceil(Math.max(...all) / 10) * 10);
+  const series = [{name:'голова', color:'var(--s1)', values:tr.head.map(v => +v.toFixed(1))}];
+  if(tr.gaze) series.push({name:'взгляд', color:'var(--s2)', values:tr.gaze.map(v => +v.toFixed(1))});
+  buildChart(el, {series, yMin:-m, yMax:m, yTicks:[-m, 0, m], xLabels:tr.t.map(v => Math.round(v) + ' с'), direct:true,
+    tipFmt:i => `<b>${tr.t[i].toFixed(1)} с</b><br>голова ${tr.head[i].toFixed(0)}°${tr.gaze ? ` · взгляд ${tr.gaze[i].toFixed(1)}°` : ''}`});
+}
+
 /* ---------- session flow ---------- */
-function startSession(){
-  if(!DB.safetyAck){ afterSafety = true; view = 'safety'; render(); return; }
+function startSession(kind = 'train'){
+  if(!DB.safetyAck){ afterSafety = kind; view = 'safety'; render(); return; }
   const rx = DB.rx;
-  S = {step:'check', setIdx:0, clarity:[], blur:[], pre:null, post:null, stopped:false,
-       rx:{dir:rx.dir, bpm:rx.bpm, setSec:rx.setSec, sets:rx.sets, restSec:rx.restSec, bg:rx.bg, pos:rx.pos, dist:rx.dist, sym:rx.sym, size:rx.size},
-       timers:[], run:null, result:null};
+  S = {kind, step:'check', setIdx:0, levelIdx:0, clarity:[], blur:[], camSets:[], levels:[], pre:null, post:null, stopped:false,
+       rx:{dir:rx.dir, bpm:rx.bpm, setSec:rx.setSec, sets:rx.sets, restSec:rx.restSec, bg:kind === 'test' ? 'plain' : rx.bg, pos:rx.pos, dist:rx.dist, sym:rx.sym, size:rx.size},
+       cam:kind === 'test' ? true : (DB.camOn && Cam.available()), calib:null, cur:null, timers:[], run:null, result:null};
   render();
 }
 
@@ -534,13 +845,37 @@ function ratingGrid(){
   return `<div class="rate">${b}</div><div class="anchors"><span>0 — нет</span><span>5 — умеренное</span><span>10 — сильнейшее</span></div>`;
 }
 
+let camTick = 0;
+function camStatusText(){
+  if(Cam.state === 'loading') return {ok:false, t:'Загружаем распознавание лица… В первый раз это ~15 МБ и до минуты.'};
+  if(Cam.state === 'error') return {ok:false, t:Cam.err, err:true};
+  if(Cam.state !== 'ready') return {ok:false, t:'Включаем камеру…'};
+  const s = Cam.last;
+  if(!s || !s.face) return {ok:false, t:'Лицо не найдено. Держите телефон на уровне глаз, лицо целиком в кадре.'};
+  if(s.iod < .09) return {ok:false, t:'Слишком далеко — поднесите телефон ближе.'};
+  if(s.iod > .42) return {ok:false, t:'Слишком близко — отодвиньте телефон.'};
+  if(s.open < BLINK) return {ok:false, t:'Глаза не видны — откройте глаза, уберите блики с очков.'};
+  return {ok:true, t:'Лицо найдено ✓ Можно начинать калибровку.'};
+}
+function startCamTick(){
+  clearInterval(camTick);
+  camTick = setInterval(() => {
+    if(!S || S.step !== 'camcheck'){ clearInterval(camTick); return; }
+    const st = camStatusText(), el = document.getElementById('camStat'), b = document.getElementById('calibBtn');
+    if(el){ el.textContent = st.t; el.className = 'note ' + (st.ok ? 'ok' : st.err ? 'danger' : 'info'); }
+    if(b) b.disabled = !st.ok;
+    const slot = document.getElementById('camslot');
+    if(slot && Cam.video && Cam.state === 'ready' && Cam.video.parentNode !== slot) mountVideo(slot);
+  }, 300);
+}
+
 function renderSession(){
-  const r = S.rx, one = L.one[r.sym], acc = L.acc[r.sym];
+  const r = S.rx, one = L.one[r.sym], acc = L.acc[r.sym], test = S.kind === 'test';
   const cancel = `<button class="btn btn-s" data-a="cancelSession">Отменить</button>`;
   switch(S.step){
     case 'check':
       app.innerHTML = `<div class="wrap">${header()}
-        <h1>Перед тренировкой</h1>
+        <h1>${test ? 'Перед тестом' : 'Перед тренировкой'}</h1>
         <div class="card"><h2>Нет ли сегодня нового симптома?</h2>${RED_FLAGS}</div>
         <button class="btn btn-p" data-a="flagNone">Ничего нового — продолжить</button>
         <button class="btn btn-d" data-a="flagYes">Есть новый симптом</button>
@@ -569,18 +904,56 @@ function renderSession(){
           <li><b>Смотрите на ${acc}.</b> Когда ${one} меняется — ${r.sym === 'arrows' ? 'назовите или покажите направление' : 'назовите её вслух'}.</li>
           <li><b>Включите звук</b> (на iPhone — и боковой переключатель): темп задаёт сигнал.</li>
         </ol></div>
+        ${Cam.available() ? `<div class="card"><button class="switch ${S.cam ? 'on' : ''}" data-a="toggleCam"><span><b>Контроль камерой</b><span class="beta">β</span><br><span class="sub">Фронтальная камера следит за поворотами головы и удержанием взгляда. Видео обрабатывается прямо в телефоне и никуда не отправляется.</span></span><span class="knob"></span></button></div>` : ''}
         <div class="card"><h2>Кто занимается</h2>
           <div class="seg"><button class="${DB.mode === 'self' ? 'on' : ''}" data-a="setMode" data-v="self">Сам</button><button class="${DB.mode === 'helper' ? 'on' : ''}" data-a="setMode" data-v="helper">С помощником</button></div>
           <div class="fhint">${DB.mode === 'helper' ? `Помощник слушает, как пациент называет ${r.sym === 'digits' ? 'цифры' : r.sym === 'letters' ? 'буквы' : 'направления'}, и нажимает большую кнопку при каждой ошибке или если пациент говорит «расплывается».` : `После каждого подхода вы сами отметите, оставалась ли ${one} чёткой.`}</div>
         </div>
-        <button class="btn btn-p" data-a="beginSet">Начать подход 1 из ${r.sets}</button>
+        <button class="btn btn-p" data-a="beginSet">${S.cam ? 'Дальше — проверка камеры' : `Начать подход 1 из ${r.sets}`}</button>
         ${cancel}</div>`; break;
+    case 'camcheck':
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Проверка камеры</h1>
+        <p>Поставьте телефон на уровне глаз, как во время упражнения. Лицо — целиком в овале, свет — спереди.</p>
+        <div class="camwrap" id="camslot"><div class="frame"></div></div>
+        <div class="note info" id="camStat">Включаем камеру…</div>
+        <button class="btn btn-p" data-a="startCalib" id="calibBtn" disabled>Калибровка — 12 секунд</button>
+        ${test ? cancel : `<button class="btn btn-s" data-a="noCam">Продолжить без камеры</button>`}
+      </div>`;
+      if(Cam.state === 'error'){ Cam.state = 'off'; }
+      if(Cam.state === 'off') Cam.start(() => { if(S && S.step === 'camcheck'){ const sl = document.getElementById('camslot'); if(Cam.state === 'ready') mountVideo(sl); } });
+      else if(Cam.state === 'ready') mountVideo(document.getElementById('camslot'));
+      startCamTick();
+      break;
+    case 'calibDone': {
+      const c = S.calib;
+      if(c && c.ok){
+        const q = c.r2 >= .8 ? 'хорошее' : c.r2 >= .6 ? 'среднее' : 'низкое';
+        app.innerHTML = `<div class="wrap">${header()}
+          <h1>Калибровка готова</h1>
+          <div class="note ok"><b>Глаза отслеживаются ✓</b>Качество сигнала: ${q}. Теперь приложение видит, удерживается ли взгляд на цели.</div>
+          ${test ? `<div class="card"><h2>Как проходит тест</h2><p style="margin:0">Темп растёт каждые 8 секунд: ${TEST_BPM.join(', ')} уд/мин. Держите взгляд на ${L.acc[r.sym] === 'цифру' ? 'цифре' : 'цели'} и поворачивайте голову на ~20° в такт. Тест закончится сам, когда взгляд перестанет удерживаться. Можно остановить в любой момент.</p></div>` : ''}
+          <button class="btn btn-p" data-a="afterCalib">${test ? 'Начать тест' : `Начать подход 1 из ${r.sets}`}</button>
+          <button class="btn btn-s" data-a="startCalib">Повторить калибровку</button></div>`;
+      } else {
+        app.innerHTML = `<div class="wrap">${header()}
+          <h1>Калибровка не удалась</h1>
+          <div class="note warn"><b>Причина</b>${esc(c ? c.reason : 'Нет данных с камеры.')}</div>
+          <button class="btn btn-p" data-a="startCalib">Повторить калибровку</button>
+          ${test ? cancel : `<button class="btn btn-s" data-a="headOnly">Продолжить: только контроль головы</button>
+          <button class="btn btn-s" data-a="noCam">Продолжить без камеры</button>`}</div>`;
+      }
+      break;
+    }
     case 'count': case 'run': case 'pause':
       renderExercise(); break;
     case 'clarity': {
-      const b = S.blur[S.blur.length - 1] || 0;
+      const b = S.blur[S.blur.length - 1] || 0, ca = S.camSets[S.camSets.length - 1];
       app.innerHTML = `<div class="wrap">${header()}
         <h1>Подход ${S.setIdx + 1} готов</h1>
+        ${ca ? `<div class="card"><h2>Камера</h2>${camMetricsHTML(ca)}
+          ${ca.valid && ca.trace && ca.trace.t.length > 4 ? `<div style="height:14px"></div><div class="legend"><span><i style="background:var(--s1)"></i>голова</span>${ca.trace.gaze ? '<span><i style="background:var(--s2)"></i>взгляд (отклонение)</span>' : ''}</div><div class="chart" id="trc"></div>
+          <div class="fhint">${ca.trace.gaze ? 'Хорошо, когда голова качается широко, а линия взгляда остаётся почти ровной у нуля.' : 'Взгляд не отслеживался — только голова.'}</div>` : ''}</div>` : ''}
         ${DB.mode === 'helper' ? `<div class="note info">Помощник отметил ошибок: <b style="display:inline">${b}</b></div>` : ''}
         <div class="card"><h2>${L.One[r.sym]} оставалась чёткой?</h2>
           <button class="btn btn-s" data-a="clarity" data-v="0">Всё время чёткая</button>
@@ -591,6 +964,7 @@ function renderSession(){
         const sug = b === 0 ? 0 : b <= 2 ? 1 : 2;
         app.querySelectorAll('[data-a="clarity"]')[sug].className = 'btn btn-p';
       }
+      if(ca) setTimeout(() => traceChart('trc', ca), 0);
       break;
     }
     case 'rest':
@@ -604,40 +978,46 @@ function renderSession(){
         <h1>Остановились</h1>
         <div class="card"><ul class="flags"><li>Сядьте удобно или обопритесь.</li><li>Закройте глаза, дышите спокойно.</li><li>Обычно становится легче за несколько минут.</li></ul></div>
         <div class="note danger"><b>Звоните 103 (или 112), если внезапно появилось:</b>${RED_FLAGS}</div>
-        <button class="btn btn-p" data-a="toPost">Мне лучше — оценить состояние</button></div>`; break;
+        <button class="btn btn-p" data-a="toPost">${test ? 'Мне лучше — к результату' : 'Мне лучше — оценить состояние'}</button></div>`; break;
     case 'post':
       app.innerHTML = `<div class="wrap">${header()}
         <h1>Головокружение после</h1><p>Оцените сейчас: 0 — совсем нет, 10 — сильнейшее.</p>
         <div class="card">${ratingGrid()}</div></div>`; break;
     case 'summary':
       renderSummary(); break;
+    case 'testResult':
+      renderTestResult(); break;
   }
 }
 
 function renderExercise(){
-  const r = S.rx, h = r.dir === 'h';
+  const r = S.rx, h = r.dir === 'h', c = S.cur;
   const fs = Math.round(SIZE_VMIN[r.size] * (r.dist === 'far' ? 1.6 : 1));
-  const helper = DB.mode === 'helper';
-  app.innerHTML = `<div class="ex bg-${r.bg} ${h ? '' : 'v'}" id="ex">
+  const helper = DB.mode === 'helper' && c.kind === 'set';
+  const camOn = S.cam && Cam.state === 'ready';
+  const hint = c.kind === 'calib' ? `Медленно поворачивайте голову в такт, взгляд — на ${L.acc[r.sym] === 'цифру' ? 'цифре' : 'цели'}`
+             : c.kind === 'level' ? 'Держите темп, взгляд — на цели'
+             : `Смотрите на ${L.acc[r.sym]} · голова — к светящейся стороне`;
+  app.innerHTML = `<div class="ex bg-${c.kind === 'set' ? r.bg : 'plain'} ${h ? '' : 'v'}" id="ex">
     ${h ? '<div class="edge l" id="eA"></div><div class="edge r" id="eB"></div>' : '<div class="edge t" id="eA"></div><div class="edge b" id="eB"></div>'}
     <div class="ex-top">
       ${h ? `<svg class="headic" viewBox="0 0 40 40" aria-hidden="true"><g id="headG"><ellipse cx="6" cy="22" rx="3" ry="5" fill="#C9D4D6"/><ellipse cx="34" cy="22" rx="3" ry="5" fill="#C9D4D6"/><circle cx="20" cy="22" r="13" fill="#DDEFEE" stroke="#0B6E6E" stroke-width="2"/><path d="M16 10 L20 3 L24 10 Z" fill="#0B6E6E"/></g></svg>` : ''}
-      <div class="m">Подход ${S.setIdx + 1} из ${r.sets}<br>${r.bpm} уд/мин</div>
-      <div class="t" id="exT">${fmtSec(r.setSec)}</div>
+      <div class="m">${esc(c.title)}<br>${c.bpm} уд/мин${camOn ? `<span class="camlive"><i id="camDot"></i><span id="camTxt">камера</span></span>` : ''}</div>
+      <div class="t" id="exT">${fmtSec(c.dur)}</div>
     </div>
     <div class="ex-bar"><i id="exBar"></i></div>
     <div class="ex-center">
       <div class="sym-card" style="font-size:min(${fs}vmin,${fs * 4.2}px)"><span id="sym">${S.run ? S.run.sym : pickSym()}</span></div>
-      <div class="ex-hint" id="exHint">Смотрите на ${L.acc[r.sym]} · голова — к светящейся стороне</div>
+      <div class="ex-hint" id="exHint">${hint}</div>
     </div>
     <div class="ex-bottom">
       ${helper ? `<button class="btn btn-w" data-a="blur" style="flex:2">Ошибка <span class="blurc" id="blurC">${S.run ? S.run.blur : 0}</span></button>` : ''}
-      <button class="btn btn-s" data-a="pause">Пауза</button>
+      <button class="btn btn-s" data-a="pause">${c.kind === 'level' ? 'Стоп' : 'Пауза'}</button>
     </div>
-    ${S.step === 'count' ? `<div class="overlay" id="ov"><div class="count" id="cnt">3</div><p style="font-weight:700">Смотрите на ${L.acc[r.sym]}</p></div>` : ''}
-    ${S.step === 'pause' ? `<div class="overlay"><h1>Пауза</h1>
-      <button class="btn btn-p" data-a="resume">Продолжить</button>
-      <button class="btn btn-s" data-a="endEarly">Закончить тренировку</button>
+    ${S.step === 'count' ? `<div class="overlay" id="ov"><p style="font-weight:800;color:var(--ink);font-size:18px;margin:0">${esc(c.title)} · ${c.bpm} уд/мин</p><div class="count" id="cnt">3</div><p style="font-weight:700">Смотрите на ${L.acc[r.sym]}</p></div>` : ''}
+    ${S.step === 'pause' ? `<div class="overlay"><h1>${c.kind === 'level' ? 'Тест остановлен' : 'Пауза'}</h1>
+      ${c.kind === 'level' ? `<button class="btn btn-p" data-a="endTest">Показать результат</button>` : `<button class="btn btn-p" data-a="resume">Продолжить</button>
+      ${c.kind === 'set' ? `<button class="btn btn-s" data-a="endEarly">Закончить тренировку</button>` : `<button class="btn btn-s" data-a="cancelSession">Отменить</button>`}`}
       <button class="btn btn-d" data-a="stopBad">Мне плохо — остановить</button></div>` : ''}
   </div>`;
 }
@@ -699,7 +1079,15 @@ function pickSym(prev){
 }
 function clearTimers(){ (S && S.timers || []).forEach(t => clearTimeout(t)); if(S) S.timers = []; }
 
-async function beginSet(){
+const PHASE = {
+  set:   () => ({kind:'set', bpm:S.rx.bpm, dur:S.rx.setSec, title:`Подход ${S.setIdx + 1} из ${S.rx.sets}`}),
+  calib: () => ({kind:'calib', bpm:40, dur:12, title:'Калибровка'}),
+  level: () => ({kind:'level', bpm:TEST_BPM[S.levelIdx], dur:8, title:`Тест · уровень ${S.levelIdx + 1} из ${TEST_BPM.length}`})
+};
+async function startPhase(kind){
+  clearTimers(); clearInterval(camTick);
+  if(Cam.rec) Cam.stopRec();
+  S.cur = PHASE[kind]();
   await Metro.init();
   enterFS(); keepAwake();
   S.step = 'count'; S.run = null;
@@ -717,7 +1105,8 @@ async function beginSet(){
 
 function startRun(){
   S.step = 'run';
-  S.run = {elapsed:0, last:performance.now(), blur:0, sym:pickSym(), nextSym:2.5 + Math.random() * 2, raf:0};
+  S.run = {elapsed:0, last:performance.now(), blur:0, sym:pickSym(), nextSym:2.5 + Math.random() * 2, raf:0, camT:0};
+  if(S.cam && Cam.state === 'ready') Cam.startRec();
   render();
   S.timers.push(setTimeout(() => { const h = document.getElementById('exHint'); if(h) h.classList.add('gone'); }, 5000));
   runMetro();
@@ -725,14 +1114,14 @@ function startRun(){
 }
 function runMetro(){
   Metro.beatIdx = 0;
-  Metro.start(S.rx.bpm, i => {
+  Metro.start(S.cur.bpm, i => {
     const a = document.getElementById('eA'), b = document.getElementById('eB'), g = document.getElementById('headG');
-    const second = i % 2 === 0; // первый удар — вправо/вверх
+    const first = i % 2 === 0;
     if(a && b){
-      if(S.rx.dir === 'h'){ b.classList.toggle('on', second); a.classList.toggle('on', !second); }
-      else { a.classList.toggle('on', second); b.classList.toggle('on', !second); }
+      if(S.rx.dir === 'h'){ b.classList.toggle('on', first); a.classList.toggle('on', !first); }
+      else { a.classList.toggle('on', first); b.classList.toggle('on', !first); }
     }
-    if(g) g.style.transform = `rotate(${second ? 28 : -28}deg)`;
+    if(g) g.style.transform = `rotate(${first ? 28 : -28}deg)`;
   });
 }
 function loopRun(){
@@ -740,31 +1129,55 @@ function loopRun(){
   if(!R || S.step !== 'run') return;
   const now = performance.now();
   R.elapsed += (now - R.last) / 1000; R.last = now;
-  const left = S.rx.setSec - R.elapsed;
+  const left = S.cur.dur - R.elapsed;
   const t = document.getElementById('exT'), bar = document.getElementById('exBar');
   if(t) t.textContent = fmtSec(left);
-  if(bar) bar.style.width = Math.min(100, R.elapsed / S.rx.setSec * 100) + '%';
+  if(bar) bar.style.width = Math.min(100, R.elapsed / S.cur.dur * 100) + '%';
   if(R.elapsed >= R.nextSym){
     R.sym = pickSym(R.sym); R.nextSym = R.elapsed + 2.5 + Math.random() * 2;
     const el = document.getElementById('sym'); if(el) el.textContent = R.sym;
   }
-  if(left <= 0){ endSet(); return; }
+  if(S.cam && now - R.camT > 250){
+    R.camT = now;
+    const dot = document.getElementById('camDot'), tx = document.getElementById('camTxt');
+    if(dot){
+      const ok = Cam.last && Cam.last.face && (performance.now() / 1000 - Cam.last.t) < .6;
+      dot.className = ok ? 'ok' : 'bad';
+      const v = ok ? Cam.liveVel(S.rx.dir) : null;
+      if(tx) tx.textContent = ok ? (v != null ? Math.round(v) + '°/с' : 'лицо ✓') : 'лицо не видно';
+    }
+  }
+  if(left <= 0){ endPhase(); return; }
   R.raf = requestAnimationFrame(loopRun);
 }
 function pauseRun(){
   if(!S || S.step !== 'run') return;
   Metro.stop(); cancelAnimationFrame(S.run.raf);
+  Cam.recPaused = true;
   S.step = 'pause'; render();
 }
 function resumeRun(){
-  S.step = 'run'; S.run.last = performance.now();
+  if(S.cur.kind === 'calib'){ startPhase('calib'); return; }
+  S.step = 'run'; S.run.last = performance.now(); Cam.recPaused = false;
   render(); runMetro(); loopRun();
 }
-function endSet(){
+function endPhase(){
   Metro.stop(); cancelAnimationFrame(S.run.raf);
   Metro.beepNow(990, .12, .3); setTimeout(() => Metro.beepNow(990, .25, .3), 180);
-  S.blur.push(S.run.blur);
-  S.step = 'clarity'; render();
+  const rec = Cam.rec ? Cam.stopRec() : null, k = S.cur.kind, dir = S.rx.dir;
+  if(k === 'set'){
+    S.blur.push(S.run.blur);
+    S.camSets.push(S.cam && rec ? analyze(rec, S.calib && S.calib.ok ? S.calib : null, 1, dir) : null);
+    S.step = 'clarity'; render();
+  } else if(k === 'calib'){
+    S.calib = calibrate(rec, dir); exitFS();
+    S.step = 'calibDone'; render();
+  } else if(k === 'level'){
+    const a = analyze(rec, S.calib, 1.5, dir), pass = levelPass(a);
+    S.levels.push({bpm:S.cur.bpm, a, pass});
+    if(pass && S.levelIdx + 1 < TEST_BPM.length){ S.levelIdx++; startPhase('level'); }
+    else finishTest(pass ? 'done' : (a && a.valid && a.amp < 20 ? 'small' : a && a.valid ? 'gaze' : 'nodata'));
+  }
 }
 function afterClarity(v){
   S.clarity.push(v);
@@ -778,13 +1191,47 @@ function afterClarity(v){
       S.timers.push(setTimeout(tick, 1000));
     };
     S.timers.push(setTimeout(tick, 1000));
-  } else { S.step = 'post'; exitFS(); releaseAwake(); render(); }
+  } else { S.step = 'post'; exitFS(); releaseAwake(); Cam.stop(); render(); }
+}
+
+/* ---------- assessment test ---------- */
+function finishTest(reason){
+  Metro.stop(); clearTimers(); exitFS(); releaseAwake(); Cam.stop();
+  const passed = S.levels.filter(l => l.pass);
+  const best = passed.length ? passed[passed.length - 1] : null;
+  const prev = DB.tests.filter(x => x.dir === S.rx.dir).slice(-1)[0] || null;
+  const res = {ts:Date.now(), dir:S.rx.dir, maxVel:best ? Math.round(best.a.vel) : 0, maxBpm:best ? best.bpm : 0, reason:S.stopped ? 'stopped' : reason,
+    calibR2:S.calib ? +(S.calib.r2 || 0).toFixed(2) : null,
+    levels:S.levels.map(l => ({bpm:l.bpm, pass:l.pass, vel:l.a && l.a.valid ? Math.round(l.a.vel) : null, amp:l.a && l.a.valid ? Math.round(l.a.amp) : null, stab:l.a && l.a.gaze ? Math.round(l.a.gaze.stab * 100) : null}))};
+  if(S.levels.length){ DB.tests.push(res); save(); }
+  S.result = {test:res, prev};
+  S.step = 'testResult'; render();
+}
+function renderTestResult(){
+  const {test, prev} = S.result;
+  const first = !test.maxBpm;
+  const why = {done:'Пройдены все уровни теста.', gaze:first ? 'Уже на первом уровне взгляд не удерживался на цели.' : 'На следующем уровне взгляд перестал удерживаться на цели.', small:first ? 'Повороты были слишком маленькими (меньше 20°) — поворачивайте голову шире.' : 'На следующем уровне повороты стали слишком маленькими (меньше 20°).', nodata:'Камера потеряла лицо — уровень не засчитан. Проверьте свет и положение телефона.', stopped:'Тест остановлен по самочувствию.', user:'Тест остановлен.'}[test.reason] || '';
+  const rows = test.levels.map(l => `<div class="sess"><div class="d">${l.bpm} уд/мин</div><span class="tag ${l.pass ? 'up' : 'down'}">${l.pass ? 'пройден' : 'не пройден'}</span>
+    <div class="x">${l.vel != null ? `голова ${l.vel}°/с · размах ${l.amp}°` : 'нет данных'}${l.stab != null ? ` · взгляд на цели ${l.stab}%` : ''}</div></div>`).join('');
+  app.innerHTML = `<div class="wrap">${header()}
+    <h1>Результат теста</h1>
+    <div class="card" style="text-align:center">
+      <div class="sub" style="font-weight:700">Скорость головы со стабильным взглядом</div>
+      <div style="font-size:56px;font-weight:800;line-height:1.1;margin:6px 0">${test.maxVel || '—'}<span style="font-size:22px"> °/с</span></div>
+      <div class="sub">${test.maxBpm ? `уровень ${test.maxBpm} уд/мин · ${L.dirShort[test.dir].toLowerCase()}` : 'не пройден ни один уровень'}</div>
+      ${prev ? `<div class="note ${test.maxVel > prev.maxVel ? 'ok' : 'info'}" style="margin:14px 0 0">Прошлый тест ${fmtDay(prev.ts)}: ${prev.maxVel || '—'} °/с${test.maxVel && prev.maxVel ? ` → сейчас ${test.maxVel > prev.maxVel ? '+' : ''}${test.maxVel - prev.maxVel} °/с` : ''}</div>` : ''}
+    </div>
+    ${why ? `<div class="note info">${why}</div>` : ''}
+    <div class="card"><h2>Уровни</h2>${rows || '<p style="margin:0">Нет данных.</p>'}</div>
+    <div class="note warn"><b>Экспериментальная оценка</b>Сравнивайте результаты одного пациента между собой (начало и конец курса), а не с нормами. Условия теста — свет, расстояние, положение — должны быть одинаковыми.</div>
+    <button class="btn btn-p" data-a="doneSession">Готово</button></div>`;
 }
 
 /* ---------- progression ---------- */
 const worst = s => s.clarity.length ? Math.max(...s.clarity) : -1;
 const clarityWord = s => s.clarity.length ? L.clarity[worst(s)] : 'подходы не завершены';
-const isGood = s => !s.stopped && s.setsDone === s.setsPlanned && s.post < 7 && (s.post - s.pre) <= 2 && worst(s) === 0;
+const ampOK = s => !s.cam || !s.cam.n || s.cam.amp >= 15;
+const isGood = s => !s.stopped && s.setsDone === s.setsPlanned && s.post < 7 && (s.post - s.pre) <= 2 && worst(s) === 0 && ampOK(s);
 
 function recommend(cur){
   const rx = DB.rx, d = cur.post - cur.pre, w = worst(cur), why = [];
@@ -793,6 +1240,7 @@ function recommend(cur){
   if(d >= 4) why.push(`головокружение усилилось на ${balls(d)}`);
   if(w === 2) why.push(`${L.one[cur.sym]} часто расплывалась`);
   if(why.length) return {code:'down', why};
+  if(!ampOK(cur)) return {code:'keep', sub:'small'};
   if(isGood(cur)){
     const prev = DB.sessions[DB.sessions.length - 1];
     const sameLevel = prev && prev.bpm === cur.bpm && prev.setSec === cur.setSec && prev.dir === cur.dir && prev.bg === cur.bg && prev.pos === cur.pos;
@@ -818,12 +1266,25 @@ function planChange(code){
   }
   return {from, to, step, prevStep:rx.lastStep};
 }
+function camAggregate(){
+  const v = S.camSets.filter(a => a && a.valid);
+  if(!v.length) return S.cam ? {n:0} : null;
+  const g = v.filter(a => a.gaze);
+  const agg = {n:v.length, vel:Math.round(median(v.map(a => a.vel))), amp:Math.round(median(v.map(a => a.amp)))};
+  if(g.length){
+    agg.stab = Math.round(g.reduce((s, a) => s + a.gaze.stab, 0) / g.length * 100);
+    agg.sacc = g.reduce((s, a) => s + a.gaze.sacc, 0);
+    const gn = g.map(a => a.gaze.gain).filter(isFinite);
+    if(gn.length) agg.gain = +(gn.reduce((s, x) => s + x, 0) / gn.length).toFixed(2);
+  }
+  return agg;
+}
 
 function finishSession(){
   const r = S.rx;
   const cur = {ts:Date.now(), dir:r.dir, bpm:r.bpm, setSec:r.setSec, setsPlanned:r.sets, setsDone:S.clarity.length,
     bg:r.bg, pos:r.pos, dist:r.dist, sym:r.sym, mode:DB.mode, pre:S.pre, post:S.post,
-    clarity:S.clarity.slice(), blur:S.blur.slice(), stopped:S.stopped};
+    clarity:S.clarity.slice(), blur:S.blur.slice(), stopped:S.stopped, cam:camAggregate()};
   const rec = recommend(cur);
   cur.rec = rec.code;
   if(rec.code === 'up' || rec.code === 'down'){
@@ -846,6 +1307,11 @@ function changeText(ch){
   if(ch.to.setSec !== ch.from.setSec) parts.push(`подход ${durLabel(ch.from.setSec)} → ${durLabel(ch.to.setSec)}`);
   return parts.join(', ');
 }
+function camLine(c){
+  if(!c) return '';
+  if(!c.n) return 'камера: мало данных';
+  return `голова ${c.vel}°/с, размах ${c.amp}°` + (c.stab != null ? `, взгляд на цели ${c.stab}%, поправок ${c.sacc}` : '') + (c.gain != null ? `, gain ${c.gain}` : '');
+}
 
 function renderSummary(){
   const {cur, rec} = S.result, d = cur.post - cur.pre;
@@ -861,10 +1327,12 @@ function renderSummary(){
     const t = {first:'Хороший результат. Если следующая тренировка пройдёт так же — нагрузка вырастет.',
                day:'Хороший результат. Сегодня нагрузку уже повышали — следующий шаг не раньше завтра.',
                short:'Выполнены не все подходы — уровень оставляем прежним.',
+               small:`Камера показала маленькие повороты головы (${cur.cam ? cur.cam.amp : '—'}°). Поворачивайте шире — примерно на 20° в каждую сторону; тогда нагрузку можно будет повышать.`,
                adapt:'Оставляем текущий уровень: организм ещё привыкает. Это нормальная часть процесса.'}[rec.sub];
     box = `<div class="note info"><b>Уровень без изменений</b>${t}</div>`;
   }
   const warn = (cur.post >= 7 || d >= 4) ? `<div class="note danger">Если головокружение не проходит за 20 минут — сообщите специалисту TURA. При внезапных новых симптомах звоните 103 (или 112).</div>` : '';
+  const c = cur.cam;
   app.innerHTML = `<div class="wrap">${header()}
     <h1>${cur.stopped ? 'Тренировка остановлена' : 'Тренировка завершена'}</h1>
     <div class="card"><div class="kv">
@@ -872,6 +1340,7 @@ function renderSummary(){
       <div><small>Темп</small><b>${cur.bpm} уд/мин</b></div>
       <div><small>Головокружение</small><b>${cur.pre} → ${cur.post}</b></div>
       <div><small>Чёткость</small><b>${clarityWord(cur)}</b></div>
+      ${c && c.n ? `<div><small>Скорость головы</small><b>${c.vel}°/с</b></div><div><small>${c.stab != null ? 'Взгляд на цели<span class="beta">β</span>' : 'Размах'}</small><b>${c.stab != null ? c.stab + '%' : c.amp + '°'}</b></div>` : ''}
     </div></div>
     ${box}${warn}
     <button class="btn btn-p" data-a="doneSession">Готово</button>
@@ -880,17 +1349,19 @@ function renderSummary(){
 }
 
 function endSession(){
-  clearTimers(); Metro.stop(); exitFS(); releaseAwake();
+  clearTimers(); clearInterval(camTick); Metro.stop(); exitFS(); releaseAwake(); Cam.stop();
+  if(Cam.state === 'error') Cam.state = 'off';
   S = null; view = 'home'; render();
 }
 
 /* ---------- actions ---------- */
 const A = {
   go:el => { if(el.dataset.v === 'rx') D = null; afterSafety = null; view = el.dataset.v; render(); },
-  start:() => startSession(),
-  ackSafety:() => { DB.safetyAck = true; save(); if(afterSafety){ afterSafety = null; view = 'home'; startSession(); } else { view = 'home'; render(); } },
+  start:() => startSession('train'),
+  startTest:() => startSession('test'),
+  ackSafety:() => { DB.safetyAck = true; save(); const k = afterSafety; afterSafety = null; view = 'home'; if(k) startSession(k); else render(); },
   cancelSession:() => endSession(),
-  flagNone:() => { S.step = 'pre'; render(); },
+  flagNone:() => { S.step = S.kind === 'test' ? 'camcheck' : 'pre'; render(); },
   flagYes:() => { S.step = 'alarm'; render(); },
   rate:el => {
     const v = +el.dataset.v;
@@ -899,16 +1370,29 @@ const A = {
   },
   preAnyway:() => { S.step = 'setup'; render(); },
   setMode:el => { DB.mode = el.dataset.v; save(); render(); },
-  beginSet:() => beginSet(),
+  toggleCam:() => { S.cam = !S.cam; DB.camOn = S.cam; save(); render(); },
+  beginSet:() => { if(S.cam && !S.calib){ S.step = 'camcheck'; render(); } else startPhase('set'); },
+  startCalib:() => startPhase('calib'),
+  afterCalib:() => startPhase(S.kind === 'test' ? 'level' : 'set'),
+  headOnly:() => { S.calib = null; startPhase('set'); },
+  noCam:() => { S.cam = false; Cam.stop(); if(Cam.state === 'error') Cam.state = 'off'; startPhase('set'); },
   blur:() => { if(S && S.run && S.step === 'run'){ S.run.blur++; const c = document.getElementById('blurC'); if(c) c.textContent = S.run.blur; } },
-  pause:() => { if(S.step === 'count'){ clearTimers(); S.step = 'setup'; exitFS(); render(); } else pauseRun(); },
+  pause:() => {
+    if(S.step === 'count'){
+      clearTimers(); exitFS();
+      if(S.cur.kind === 'level'){ finishTest('user'); return; }
+      S.step = S.cur.kind === 'calib' ? 'camcheck' : 'setup'; render(); return;
+    }
+    pauseRun();
+  },
   resume:() => resumeRun(),
-  endEarly:() => { clearTimers(); exitFS(); releaseAwake(); S.step = 'post'; render(); },
-  stopBad:() => { clearTimers(); exitFS(); releaseAwake(); S.stopped = true; S.step = 'stopBad'; render(); },
-  toPost:() => { S.step = 'post'; render(); },
+  endTest:() => { Cam.stopRec(); finishTest('user'); },
+  endEarly:() => { clearTimers(); exitFS(); releaseAwake(); Cam.stop(); S.step = 'post'; render(); },
+  stopBad:() => { clearTimers(); Metro.stop(); exitFS(); releaseAwake(); if(S.run) cancelAnimationFrame(S.run.raf); Cam.stop(); S.stopped = true; S.step = 'stopBad'; render(); },
+  toPost:() => { if(S.kind === 'test') finishTest('stopped'); else { S.step = 'post'; render(); } },
   clarity:el => afterClarity(+el.dataset.v),
-  nextSet:() => { clearTimers(); S.setIdx++; beginSet(); },
-  finishNow:() => { clearTimers(); exitFS(); releaseAwake(); S.step = 'post'; render(); },
+  nextSet:() => { clearTimers(); S.setIdx++; startPhase('set'); },
+  finishNow:() => { clearTimers(); exitFS(); releaseAwake(); Cam.stop(); S.step = 'post'; render(); },
   doneSession:() => endSession(),
   undoChange:() => {
     const cur = S.result.cur;
@@ -943,16 +1427,16 @@ const A = {
   resetRx:() => { D = {...DEFAULT_RX, patient:D.patient, specialist:D.specialist}; renderRx(); toast('Стартовые параметры — сохраните, чтобы применить'); },
   wipe:() => {
     const m = document.createElement('div'); m.className = 'modal';
-    m.innerHTML = `<div class="card"><h2>Удалить все данные?</h2><p>Дневник тренировок и назначение будут удалены с этого устройства. Отменить нельзя.</p><button class="btn btn-d" data-a="wipeYes">Удалить</button><button class="btn btn-s" data-a="wipeNo">Отмена</button></div>`;
+    m.innerHTML = `<div class="card"><h2>Удалить все данные?</h2><p>Дневник тренировок, тесты и назначение будут удалены с этого устройства. Отменить нельзя.</p><button class="btn btn-d" data-a="wipeYes">Удалить</button><button class="btn btn-s" data-a="wipeNo">Отмена</button></div>`;
     document.body.appendChild(m);
   },
-  wipeYes:() => { document.querySelector('.modal')?.remove(); DB = {rx:{...DEFAULT_RX}, sessions:[], safetyAck:false, mode:'self'}; save(); D = null; view = 'home'; render(); toast('Данные удалены'); },
+  wipeYes:() => { document.querySelector('.modal')?.remove(); DB = {rx:{...DEFAULT_RX}, sessions:[], tests:[], safetyAck:false, mode:'self', camOn:true}; save(); D = null; view = 'home'; render(); toast('Данные удалены'); },
   wipeNo:() => document.querySelector('.modal')?.remove()
 };
 
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]');
-  if(!el) return;
+  if(!el || el.disabled) return;
   const fn = A[el.dataset.a];
   if(fn){ e.preventDefault(); fn(el); }
 });
