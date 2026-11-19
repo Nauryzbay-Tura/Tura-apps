@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B6E6E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VOR×1">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>TURA · VOR×1 — тренажёр стабилизации взора</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -40,7 +47,8 @@ p{line-height:1.5;margin:0 0 12px;color:var(--ink2);font-size:16px}
 .btn-d{background:var(--danger);color:#fff}
 .btn-w{background:var(--beat);color:#2A1A00}
 .btn + .btn{margin-top:10px}
-.btn small{display:block;font-size:13px;font-weight:600;opacity:.85}
+.btn{flex-wrap:wrap;row-gap:2px}
+.btn small{display:block;flex-basis:100%;font-size:13px;font-weight:600;opacity:.85}
 .navgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .navbtn{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:86px;text-align:left;display:flex;flex-direction:column;gap:4px}
 .navbtn b{font-size:16px}
@@ -140,7 +148,20 @@ textarea.rep{width:100%;min-height:220px;border-radius:14px;border:1.5px solid v
 .ex-bar i{display:block;height:100%;background:var(--brand);width:0}
 .headic{width:40px;height:40px;flex:none}
 .headic g{transition:transform .16s ease-out;transform-origin:20px 22px}
-.ex-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative;z-index:2;padding:0 40px}
+.ex-center{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative;z-index:2;padding:0 40px}
+@media (max-height:460px){.ex-hint{display:none}.ex-top{margin-top:calc(6px + var(--st))}.ex-bar{margin-top:4px}}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:320px;margin:0 auto}
+.pinpad button{min-height:64px;border-radius:16px;border:1.5px solid var(--line);background:var(--card);font-size:26px;font-weight:800}
+.pinpad button:active{background:var(--brand-soft)}
+.pindots{display:flex;gap:16px;justify-content:center;margin:8px 0 18px}
+.pindots i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--brand)}
+.pindots i.on{background:var(--brand)}
+.qrbox{background:#fff;border-radius:18px;padding:12px;display:grid;place-items:center;border:1px solid var(--line)}
+.qrbox svg,.qrbox img{width:min(78vw,320px);height:auto;display:block}
+.progress{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:10px 0 0}
+.progress i{display:block;height:100%;background:var(--brand);width:0;transition:width .25s}
+textarea.paste{width:100%;min-height:110px;border-radius:14px;border:1.5px solid var(--line);padding:12px;font:inherit;font-size:15px;background:var(--card);color:var(--ink)}
+.navgrid .navbtn:last-child:nth-child(odd){grid-column:1/-1}
 .sym-card{background:#fff;border-radius:.16em;border:3px solid #14222B;display:grid;place-items:center;min-width:1.3em;padding:.06em .2em;line-height:1.05;font-weight:800;color:#0B1A22;font-variant-numeric:tabular-nums}
 .ex-hint{background:rgba(255,255,255,.95);border-radius:12px;padding:8px 12px;font-size:15px;font-weight:700;color:var(--ink2);max-width:320px;text-align:center;transition:opacity .6s}
 .ex-hint.gone{opacity:0}
@@ -229,6 +250,8 @@ const pad = n => String(n).padStart(2,'0');
 const fmtSec = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60) + ':' + pad(s%60); };
 const fmtDay = ts => { const d = new Date(ts); return pad(d.getDate()) + '.' + pad(d.getMonth()+1); };
 const fmtDT = ts => { const d = new Date(ts); return fmtDay(ts) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const fmtDate = ts => { const d = new Date(ts); return fmtDay(ts) + '.' + d.getFullYear(); };
+const fmtDTy = ts => { const d = new Date(ts); return fmtDay(ts) + '.' + String(d.getFullYear()).slice(2) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); };
 const todaySessions = () => DB.sessions.filter(s => dayKey(s.ts) === dayKey(Date.now()));
 function plural(n, a, b, c){ const m10 = n % 10, m100 = n % 100; if(m10 === 1 && m100 !== 11) return a; if(m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return b; return c; }
@@ -258,10 +281,13 @@ function levelKV(rx){
 }
 
 /* ---------- screens ---------- */
+let renderAt = 0;
 function render(){
+  renderAt = performance.now();
   parkVideo();
   if(S){ renderSession(); return; }
-  const fn = {home:renderHome, safety:renderSafety, howto:renderHowto, history:renderHistory, rx:renderRx}[view] || renderHome;
+  if(view === 'rx' && DB.pinHash && !pinUnlocked) view = 'pin';
+  const fn = {home:renderHome, safety:renderSafety, howto:renderHowto, history:renderHistory, rx:renderRx, pin:renderPin, rxShare:renderRxShare, rxIn:renderRxIn, rxPaste:renderRxPaste}[view] || renderHome;
   fn();
   window.scrollTo(0,0);
 }
@@ -276,6 +302,7 @@ function renderHome(){
     <div class="card"><h2>Текущий уровень</h2>${levelKV(rx)}
       <div class="meta">${rx.setAt ? `Назначение ${rx.specialist ? esc(rx.specialist) + ', ' : ''}${fmtDay(rx.setAt)}` : 'Стартовые параметры. Специалист TURA настроит назначение под пациента.'}${rx.auto ? ' Нагрузка растёт автоматически.' : ''}</div>
     </div>
+    ${draftCard()}
     <button class="btn btn-p" data-a="start">Начать тренировку</button>
     ${Cam.available() ? `<button class="btn btn-s" data-a="startTest">Тест стабилизации взора<small>камера · начало и конец курса</small></button>` : ''}
     <div class="navgrid">
@@ -283,8 +310,10 @@ function renderHome(){
       <button class="navbtn" data-a="go" data-v="history"><b>Дневник</b><span>Прогресс и отчёт для специалиста</span></button>
       <button class="navbtn" data-a="go" data-v="rx"><b>Назначение</b><span>Для специалиста TURA</span></button>
       <button class="navbtn" data-a="go" data-v="safety"><b>Безопасность</b><span>Когда нельзя заниматься</span></button>
+      <button class="navbtn" data-a="go" data-v="rxPaste"><b>Получить назначение</b><span>Ссылка от специалиста TURA</span></button>
     </div>
-    <div class="foot">TURA · VOR×1 · версия 1 (камера β)<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
+    ${installCard()}
+    <div class="foot">TURA · VOR×1 · версия 1.1 (камера β)<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
   </div>`;
 }
 
@@ -396,7 +425,8 @@ function renderHistory(){
     <h1>Дневник</h1>
     ${!storageOK ? `<div class="note warn">Данные не сохраняются в этом браузере — скопируйте отчёт сейчас.</div>` : ''}
     ${body}
-    <button class="btn btn-p" data-a="copyReport">Скопировать отчёт для специалиста</button>
+    <button class="btn btn-p" data-a="shareReport">Отправить отчёт специалисту</button>
+    <button class="btn btn-s" data-a="copyReport">Скопировать текст отчёта</button>
     <div id="repbox"></div>
   </div>`;
 }
@@ -468,11 +498,14 @@ function recWord(s){
 function reportText(){
   const rx = DB.rx, ss = DB.sessions, out = ['TURA · VOR×1 — отчёт для специалиста'];
   if(rx.patient) out.push('Пациент: ' + rx.patient);
-  out.push('Сформирован: ' + fmtDT(Date.now()));
+  out.push('Сформирован: ' + fmtDTy(Date.now()));
   if(!ss.length) out.push('Тренировок пока нет.');
   else {
     const days = new Set(ss.map(s => dayKey(s.ts))).size;
-    out.push(`Период: ${fmtDay(ss[0].ts)}–${fmtDay(ss[ss.length-1].ts)}; тренировок: ${ss.length}; дней с занятиями: ${days} (план: ${rx.perDay} в день)`);
+    out.push(`Период: ${fmtDate(ss[0].ts)}–${fmtDate(ss[ss.length-1].ts)}; тренировок: ${ss.length}; дней с занятиями: ${days} (план: ${rx.perDay} в день)`);
+    const pf = [];
+    for(let i = 0; i < 7; i++){ const t = Date.now() - i * 864e5, k = dayKey(t); pf.push(`${fmtDay(t)} ${ss.filter(x => dayKey(x.ts) === k).length}/${rx.perDay}`); }
+    out.push('План/факт за 7 дней: ' + pf.join(', '));
     const r = ss.slice(-10);
     const avg = k => (r.reduce((a, s) => a + s[k], 0) / r.length).toFixed(1);
     const sets = r.flatMap(s => s.clarity);
@@ -484,11 +517,11 @@ function reportText(){
   const tests = DB.tests || [];
   if(tests.length){
     out.push('', 'Тест стабилизации взора (камера, экспериментально):');
-    tests.slice(-5).reverse().forEach(x => out.push(`• ${fmtDT(x.ts)} — ${x.maxVel || '—'} °/с (уровень ${x.maxBpm || '—'} уд/мин, ${L.dirShort[x.dir].toLowerCase()})`));
+    tests.slice(-5).reverse().forEach(x => out.push(`• ${fmtDTy(x.ts)} — ${x.maxVel || '—'} °/с (уровень ${x.maxBpm || '—'} уд/мин, ${L.dirShort[x.dir].toLowerCase()})`));
   }
   if(ss.length){
     out.push('', 'Последние тренировки:');
-    ss.slice(-10).reverse().forEach(s => out.push(`• ${fmtDT(s.ts)} — ${s.bpm} уд/мин, ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)}; головокр. ${s.pre}→${s.post}; ${clarityWord(s)}; ${recWord(s)}${s.mode === 'helper' ? '; с помощником' : ''}${s.cam ? '; камера: ' + camLine(s.cam) : ''}`));
+    ss.slice(-10).reverse().forEach(s => out.push(`• ${fmtDTy(s.ts)} — ${s.bpm} уд/мин, ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)}; головокр. ${s.pre}→${s.post}; ${clarityWord(s)}; ${recWord(s)}${s.mode === 'helper' ? '; с помощником' : ''}${s.cam ? '; камера: ' + camLine(s.cam) : ''}`));
   }
   return out.join('\n');
 }
@@ -539,6 +572,13 @@ function renderRx(){
       ${stepper('maxBpm', 'Потолок темпа')}
       ${stepper('maxSetSec', 'Потолок длительности')}
     </div>
+    <div class="card"><h2>Защита и отправка</h2>
+      <div class="field"><label for="f_pin">${DB.pinHash ? 'PIN установлен. Новый PIN (4 цифры)' : 'PIN специалиста (4 цифры)'}</label>
+        <input type="password" id="f_pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" style="width:100%;min-height:52px;border-radius:14px;border:1.5px solid var(--line);padding:0 14px;font:inherit;font-size:20px;letter-spacing:.4em;background:var(--card);color:var(--ink)">
+        <div class="fhint">С PIN-кодом пациент не сможет случайно изменить назначение. PIN передаётся вместе со ссылкой.</div></div>
+      ${DB.pinHash ? `<button class="btn btn-s" data-a="clearPin">Убрать PIN</button>` : ''}
+      <button class="btn btn-s" data-a="sendRx">Отправить назначение на телефон пациента<small>QR-код или ссылка</small></button>
+    </div>
     <button class="btn btn-p" data-a="saveRx">Сохранить назначение</button>
     <button class="btn btn-s" data-a="resetRx">Стартовые параметры</button>
     <button class="btn btn-s" data-a="wipe" style="color:var(--danger)">Удалить все данные</button>
@@ -552,16 +592,47 @@ const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmark
 const TEST_BPM = [60, 80, 100, 120, 140, 160, 180];
 const BLINK = 0.12;
 
+const MP_TOTAL_MB = 18;
+async function fetchBytes(url){
+  const ctrl = new AbortController(); let last = Date.now();
+  const dog = setInterval(() => { if(Date.now() - last > 30000) ctrl.abort(); }, 2000);
+  try{
+    const r = await fetch(url, {signal:ctrl.signal, mode:'cors'});
+    if(!r.ok) throw Object.assign(new Error('HTTP ' + r.status), {name:'NetError'});
+    if(!r.body || !r.body.getReader){ const b = await r.arrayBuffer(); Cam.progress.loaded += b.byteLength; return b; }
+    const reader = r.body.getReader(), chunks = []; let n = 0;
+    for(;;){
+      const {done, value} = await reader.read();
+      if(done) break;
+      chunks.push(value); n += value.length; Cam.progress.loaded += value.length; last = Date.now();
+    }
+    const out = new Uint8Array(n); let o = 0;
+    for(const c of chunks){ out.set(c, o); o += c.length; }
+    return out.buffer;
+  }catch(e){
+    if(e && e.name === 'AbortError') throw Object.assign(new Error('stalled'), {name:'SlowError'});
+    throw e;
+  }finally{ clearInterval(dog); }
+}
+function camErrKind(e){
+  const n = e && e.name;
+  if(n === 'NotAllowedError' || n === 'SecurityError') return 'denied';
+  if(n === 'NotFoundError' || n === 'OverconstrainedError') return 'nocam';
+  if(n === 'NotReadableError') return 'busy';
+  if(n === 'SlowError') return 'slow';
+  return 'net';
+}
 function camErrText(e){
   const n = e && e.name;
-  if(n === 'NotAllowedError' || n === 'SecurityError') return 'Доступ к камере запрещён. Разрешите камеру для этого сайта в настройках браузера и обновите страницу.';
+  if(n === 'SlowError') return 'Загрузка остановилась: слишком медленный интернет. Подключитесь к Wi-Fi и нажмите «Повторить».';
+  if(n === 'NotAllowedError' || n === 'SecurityError') return 'Доступ к камере запрещён. Разрешите камеру по инструкции ниже и нажмите «Повторить».';
   if(n === 'NotFoundError' || n === 'OverconstrainedError') return 'Фронтальная камера не найдена.';
   if(n === 'NotReadableError') return 'Камера занята другим приложением. Закройте его и попробуйте снова.';
-  return 'Не удалось загрузить распознавание лица. Проверьте интернет и попробуйте снова.';
+  return 'Не удалось загрузить распознавание лица. Проверьте интернет и нажмите «Повторить».';
 }
 
 const Cam = {
-  state:'off', err:'', video:null, stream:null, lm:null, raf:0, lastVT:-1,
+  state:'off', err:'', errKind:'', progress:null, video:null, stream:null, lm:null, raf:0, lastVT:-1,
   rec:null, recPaused:false, recent:[], last:null, fps:0, _fc:0, _ft:0,
   available(){
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || !window.isSecureContext) return false;
@@ -581,7 +652,7 @@ const Cam = {
   },
   async start(onUpdate){
     if(this.state === 'ready' || this.state === 'loading') return;
-    this.state = 'loading'; this.err = ''; onUpdate && onUpdate();
+    this.state = 'loading'; this.err = ''; this.errKind = ''; this.progress = null; onUpdate && onUpdate();
     try{
       const v = this.ensureVideo();
       this.stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:'user', width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30}}});
@@ -590,16 +661,20 @@ const Cam = {
       if(!this.lm){
         const mod = await import(MP_BASE + '/vision_bundle.mjs');
         const files = await mod.FilesetResolver.forVisionTasks(MP_BASE + '/wasm');
-        const opts = d => ({baseOptions:{modelAssetPath:MODEL_URL, delegate:d}, runningMode:'VIDEO', numFaces:1,
+        this.progress = {loaded:0};
+        const [wasmBuf, modelBuf] = await Promise.all([fetchBytes(files.wasmBinaryPath), fetchBytes(MODEL_URL)]);
+        const fileset = {wasmLoaderPath:files.wasmLoaderPath, wasmBinaryPath:URL.createObjectURL(new Blob([wasmBuf], {type:'application/wasm'}))};
+        const opts = d => ({baseOptions:{modelAssetBuffer:new Uint8Array(modelBuf.slice(0)), delegate:d}, runningMode:'VIDEO', numFaces:1,
           outputFacialTransformationMatrixes:true, outputFaceBlendshapes:false,
           minFaceDetectionConfidence:.5, minFacePresenceConfidence:.5, minTrackingConfidence:.5});
-        try{ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('GPU')); }
-        catch(e){ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('CPU')); }
+        try{ this.lm = await mod.FaceLandmarker.createFromOptions(fileset, opts('GPU')); }
+        catch(e){ this.lm = await mod.FaceLandmarker.createFromOptions(fileset, opts('CPU')); }
+        this.progress = null;
       }
       this.state = 'ready'; this.loop();
     }catch(e){
       console.warn('camera', e);
-      this.stop(); this.state = 'error'; this.err = camErrText(e);
+      this.stop(); this.state = 'error'; this.err = camErrText(e); this.errKind = camErrKind(e); this.progress = null;
     }
     onUpdate && onUpdate();
   },
@@ -847,7 +922,7 @@ function ratingGrid(){
 
 let camTick = 0;
 function camStatusText(){
-  if(Cam.state === 'loading') return {ok:false, t:'Загружаем распознавание лица… В первый раз это ~15 МБ и до минуты.'};
+  if(Cam.state === 'loading') return {ok:false, t:Cam.progress ? `Загружаем распознавание лица: ${(Cam.progress.loaded / 1e6).toFixed(1).replace('.', ',')} из ~${MP_TOTAL_MB} МБ. Это нужно только в первый раз.` : 'Включаем камеру…'};
   if(Cam.state === 'error') return {ok:false, t:Cam.err, err:true};
   if(Cam.state !== 'ready') return {ok:false, t:'Включаем камеру…'};
   const s = Cam.last;
@@ -864,6 +939,10 @@ function startCamTick(){
     const st = camStatusText(), el = document.getElementById('camStat'), b = document.getElementById('calibBtn');
     if(el){ el.textContent = st.t; el.className = 'note ' + (st.ok ? 'ok' : st.err ? 'danger' : 'info'); }
     if(b) b.disabled = !st.ok;
+    const pr = document.getElementById('camProg');
+    if(pr){ pr.hidden = !(Cam.state === 'loading' && Cam.progress); const i = pr.querySelector('i'); if(i && Cam.progress) i.style.width = Math.min(98, Cam.progress.loaded / (MP_TOTAL_MB * 1e6) * 100) + '%'; }
+    const rb = document.getElementById('camRetry'); if(rb) rb.hidden = Cam.state !== 'error';
+    const hp = document.getElementById('camHelp'); if(hp) hp.hidden = !(Cam.state === 'error' && Cam.errKind === 'denied');
     const slot = document.getElementById('camslot');
     if(slot && Cam.video && Cam.state === 'ready' && Cam.video.parentNode !== slot) mountVideo(slot);
   }, 300);
@@ -917,6 +996,12 @@ function renderSession(){
         <p>Поставьте телефон на уровне глаз, как во время упражнения. Лицо — целиком в овале, свет — спереди.</p>
         <div class="camwrap" id="camslot"><div class="frame"></div></div>
         <div class="note info" id="camStat">Включаем камеру…</div>
+        <div class="progress" id="camProg" hidden><i></i></div>
+        <div class="card" id="camHelp" hidden><h2>Как разрешить камеру</h2><ul class="flags">
+          <li><b>iPhone, Safari:</b> кнопка «аА» в адресной строке → «Настройки веб-сайта» → «Камера» → «Разрешить».</li>
+          <li><b>Приложение на экране «Домой» (iPhone):</b> «Настройки» → «Конфиденциальность» → «Камера» или закройте и снова откройте приложение — оно спросит разрешение.</li>
+          <li><b>Android, Chrome:</b> значок слева от адреса → «Разрешения» → «Камера» → «Разрешить».</li></ul></div>
+        <button class="btn btn-p" data-a="camRetry" id="camRetry" hidden>Повторить</button>
         <button class="btn btn-p" data-a="startCalib" id="calibBtn" disabled>Калибровка — 12 секунд</button>
         ${test ? cancel : `<button class="btn btn-s" data-a="noCam">Продолжить без камеры</button>`}
       </div>`;
@@ -1007,16 +1092,16 @@ function renderExercise(){
     </div>
     <div class="ex-bar"><i id="exBar"></i></div>
     <div class="ex-center">
-      <div class="sym-card" style="font-size:min(${fs}vmin,${fs * 4.2}px)"><span id="sym">${S.run ? S.run.sym : pickSym()}</span></div>
+      <div class="sym-card" style="font-size:min(${fs}vmin,${fs * 4.2}px,26vh)"><span id="sym">${S.run ? S.run.sym : pickSym()}</span></div>
       <div class="ex-hint" id="exHint">${hint}</div>
     </div>
     <div class="ex-bottom">
       ${helper ? `<button class="btn btn-w" data-a="blur" style="flex:2">Ошибка <span class="blurc" id="blurC">${S.run ? S.run.blur : 0}</span></button>` : ''}
       <button class="btn btn-s" data-a="pause">${c.kind === 'level' ? 'Стоп' : 'Пауза'}</button>
     </div>
-    ${S.step === 'count' ? `<div class="overlay" id="ov"><p style="font-weight:800;color:var(--ink);font-size:18px;margin:0">${esc(c.title)} · ${c.bpm} уд/мин</p><div class="count" id="cnt">3</div><p style="font-weight:700">Смотрите на ${L.acc[r.sym]}</p></div>` : ''}
-    ${S.step === 'pause' ? `<div class="overlay"><h1>${c.kind === 'level' ? 'Тест остановлен' : 'Пауза'}</h1>
-      ${c.kind === 'level' ? `<button class="btn btn-p" data-a="endTest">Показать результат</button>` : `<button class="btn btn-p" data-a="resume">Продолжить</button>
+    ${S.step === 'count' ? `<div class="overlay" id="ov"><p style="font-weight:800;color:var(--ink);font-size:18px;margin:0">${esc(c.title)} · ${c.bpm} уд/мин</p><div class="count" id="cnt">3</div><p style="font-weight:700">Смотрите на ${L.acc[r.sym]}</p><button class="btn btn-s" data-a="pause" style="max-width:260px">Отмена</button></div>` : ''}
+    ${S.step === 'pause' ? `<div class="overlay"><h1>Пауза</h1>
+      ${c.kind === 'level' ? `<button class="btn btn-p" data-a="resume">Продолжить тест</button><button class="btn btn-s" data-a="endTest">Показать результат</button>` : `<button class="btn btn-p" data-a="resume">Продолжить</button>
       ${c.kind === 'set' ? `<button class="btn btn-s" data-a="endEarly">Закончить тренировку</button>` : `<button class="btn btn-s" data-a="cancelSession">Отменить</button>`}`}
       <button class="btn btn-d" data-a="stopBad">Мне плохо — остановить</button></div>` : ''}
   </div>`;
@@ -1067,7 +1152,7 @@ const Metro = {
 };
 
 let wakeLock = null;
-async function keepAwake(){ try{ if('wakeLock' in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
+async function keepAwake(){ try{ if('wakeLock' in navigator && (!wakeLock || wakeLock.released)) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
 function releaseAwake(){ try{ if(wakeLock){ wakeLock.release(); } }catch(e){} wakeLock = null; }
 function enterFS(){ try{ const el = document.documentElement; if(!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => {}); }catch(e){} }
 function exitFS(){ try{ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }catch(e){} }
@@ -1084,13 +1169,17 @@ const PHASE = {
   calib: () => ({kind:'calib', bpm:40, dur:12, title:'Калибровка'}),
   level: () => ({kind:'level', bpm:TEST_BPM[S.levelIdx], dur:8, title:`Тест · уровень ${S.levelIdx + 1} из ${TEST_BPM.length}`})
 };
-async function startPhase(kind){
+async function startPhase(kind, chained){
+  if(!S) return;
+  if(!chained && (S.starting || S.step === 'count' || S.step === 'run')) return;
+  S.starting = true;
   clearTimers(); clearInterval(camTick);
   if(Cam.rec) Cam.stopRec();
   S.cur = PHASE[kind]();
   await Metro.init();
+  if(!S) return;
   enterFS(); keepAwake();
-  S.step = 'count'; S.run = null;
+  S.step = 'count'; S.run = null; S.starting = false;
   render();
   let c = 3;
   Metro.beepNow(520, .12, .3);
@@ -1157,7 +1246,8 @@ function pauseRun(){
   S.step = 'pause'; render();
 }
 function resumeRun(){
-  if(S.cur.kind === 'calib'){ startPhase('calib'); return; }
+  if(!S.run || S.cur.kind === 'calib' || S.cur.kind === 'level'){ startPhase(S.cur.kind); return; }
+  keepAwake();
   S.step = 'run'; S.run.last = performance.now(); Cam.recPaused = false;
   render(); runMetro(); loopRun();
 }
@@ -1175,12 +1265,13 @@ function endPhase(){
   } else if(k === 'level'){
     const a = analyze(rec, S.calib, 1.5, dir), pass = levelPass(a);
     S.levels.push({bpm:S.cur.bpm, a, pass});
-    if(pass && S.levelIdx + 1 < TEST_BPM.length){ S.levelIdx++; startPhase('level'); }
+    if(pass && S.levelIdx + 1 < TEST_BPM.length){ S.levelIdx++; startPhase('level', true); }
     else finishTest(pass ? 'done' : (a && a.valid && a.amp < 20 ? 'small' : a && a.valid ? 'gaze' : 'nodata'));
   }
 }
 function afterClarity(v){
   S.clarity.push(v);
+  saveDraft();
   if(S.setIdx + 1 < S.rx.sets){
     S.step = 'rest'; S.restLeft = S.rx.restSec; render();
     const tick = () => {
@@ -1296,7 +1387,7 @@ function finishSession(){
       cur.change.applied = true;
     }
   }
-  DB.sessions.push(cur); save();
+  DB.sessions.push(cur); save(); clearDraft(); askPersist();
   S.result = {cur, rec};
   S.step = 'summary'; render();
 }
@@ -1354,10 +1445,268 @@ function endSession(){
   S = null; view = 'home'; render();
 }
 
+/* ---------- draft (незавершённая тренировка) ---------- */
+const DRAFT_KEY = 'tura_vor1_draft';
+function saveDraft(){
+  if(!S || S.kind !== 'train') return;
+  const d = {ts:Date.now(), rx:S.rx, pre:S.pre, clarity:S.clarity, blur:S.blur, cam:!!S.cam,
+    camSets:S.camSets.map(a => { if(!a) return a; const {trace, ...rest} = a; return rest; })};
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); }catch(e){}
+}
+function loadDraft(){
+  try{
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if(d && d.clarity && d.clarity.length && Date.now() - d.ts < 12 * 3600e3) return d;
+    if(d) localStorage.removeItem(DRAFT_KEY);
+  }catch(e){}
+  return null;
+}
+function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+function restoreDraft(d, finish){
+  S = {kind:'train', step:'rest', setIdx:d.clarity.length - 1, levelIdx:0, clarity:d.clarity.slice(), blur:(d.blur || []).slice(), camSets:(d.camSets || []).slice(),
+       levels:[], pre:d.pre, post:null, stopped:false, rx:d.rx, cam:!!d.cam && DB.camOn && Cam.available(), calib:null, camReady:false,
+       cur:null, timers:[], run:null, result:null, restLeft:0, resumed:true};
+  if(finish || S.clarity.length >= S.rx.sets) S.step = 'post';
+}
+function draftCard(){
+  const d = loadDraft();
+  if(!d) return '';
+  return `<div class="note warn"><b>Незавершённая тренировка</b>${fmtDT(d.ts)}: выполнено ${d.clarity.length} из ${d.rx.sets} ${plural(d.rx.sets, 'подхода', 'подходов', 'подходов')}.
+    <div style="height:10px"></div><button class="btn btn-p" data-a="draftContinue">Продолжить</button><button class="btn btn-s" data-a="draftFinish">Завершить и сохранить</button><button class="btn btn-s" data-a="draftDelete">Удалить</button></div>`;
+}
+function askPersist(){ try{ if(!DB.persistAsked && navigator.storage && navigator.storage.persist){ DB.persistAsked = true; save(); navigator.storage.persist().catch(() => {}); } }catch(e){} }
+
+/* ---------- установка приложения (PWA) ---------- */
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; if(!S && view === 'home') render(); });
+window.addEventListener('appinstalled', () => { deferredInstall = null; if(!S && view === 'home') render(); });
+const isStandalone = () => { try{ return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }catch(e){ return false; } };
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function installCard(){
+  if(isStandalone()) return '';
+  if(DB.installHiddenAt && Date.now() - DB.installHiddenAt < 3 * 864e5) return '';
+  if(deferredInstall) return `<div class="card" style="margin-top:14px"><h2>Установите приложение</h2><p>Иконка появится на экране телефона, дневник будет храниться надёжнее, а камера заработает без интернета.</p><button class="btn btn-p" data-a="install">Установить</button><button class="btn btn-s" data-a="hideInstall">Позже</button></div>`;
+  if(isIOS()) return `<div class="card" style="margin-top:14px"><h2>Добавьте на экран «Домой»</h2>
+    <p>В Safari дневник стирается, если сайт не открывать 7 дней. В установленном приложении он сохраняется.</p>
+    <ol class="steps"><li>Если ссылка открылась внутри WhatsApp — нажмите «Открыть в Safari».</li><li>Нажмите <b>«Поделиться»</b> — квадрат со стрелкой вверх.</li><li>Выберите <b>«На экран "Домой"»</b> и <b>«Добавить»</b>.</li><li>Занимайтесь через иконку VOR×1: данные из Safari в приложение не переносятся.</li></ol>
+    <div style="height:12px"></div><button class="btn btn-s" data-a="hideInstall">Скрыть на 3 дня</button></div>`;
+  return '';
+}
+try{ if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {}); }catch(e){}
+
+/* ---------- PIN специалиста ---------- */
+let pinUnlocked = false, pinBuf = '', pinErr = false;
+async function hashPin(pin){
+  const msg = 'tura-vor1:' + pin;
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  }catch(e){
+    let h = 0x811c9dc5; for(const ch of msg){ h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+    return ('fnv' + h.toString(16)).padEnd(16, '0');
+  }
+}
+function renderPin(){
+  let dots = ''; for(let i = 0; i < 4; i++) dots += `<i class="${i < pinBuf.length ? 'on' : ''}"></i>`;
+  let keys = ''; ['1','2','3','4','5','6','7','8','9','','0','del'].forEach(k => {
+    keys += k === '' ? '<span></span>' : `<button data-a="pin" data-v="${k}" aria-label="${k === 'del' ? 'Стереть' : k}">${k === 'del' ? '⌫' : k}</button>`;
+  });
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>PIN специалиста</h1><p>Раздел «Назначение» защищён. Введите 4 цифры.</p>
+    <div class="pindots">${dots}</div>
+    ${pinErr ? '<div class="note danger" style="text-align:center">Неверный PIN</div>' : ''}
+    <div class="pinpad">${keys}</div>
+    <div class="foot">Забыли PIN? Его можно снять только вместе со всеми данными: <a href="#" data-a="wipe">удалить данные на этом телефоне</a>.</div>
+  </div>`;
+  pinErr = false;
+}
+
+/* ---------- назначение по ссылке / QR ---------- */
+const RX_KEYS = {dir:'d', bpm:'b', maxBpm:'B', setSec:'s', maxSetSec:'S', sets:'n', restSec:'r', perDay:'p', bg:'g', pos:'o', dist:'i', sym:'y', size:'z', auto:'a', patient:'P', specialist:'N'};
+let pendingRx = null, incomingUrl = null;
+const b64u = str => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = str => decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))));
+function rxLink(rx){
+  const o = {};
+  for(const [k, short] of Object.entries(RX_KEYS)){ const v = rx[k]; if(v === '' || v == null) continue; o[short] = k === 'auto' ? (v ? 1 : 0) : v; }
+  if(DB.pinHash) o.h = DB.pinHash;
+  o.t = Math.round(Date.now() / 1000);
+  return location.origin + location.pathname + '#rx=' + b64u(JSON.stringify(o));
+}
+function parseRxLink(text){
+  try{
+    const m = String(text).match(/#rx=([A-Za-z0-9_-]{8,})/);
+    if(!m) return null;
+    const o = JSON.parse(unb64u(m[1])), r = {};
+    for(const [k, short] of Object.entries(RX_KEYS)){
+      if(!(short in o)) continue;
+      const v = o[short];
+      if(STEP[k]){ const n = Math.round(+v); if(isFinite(n)) r[k] = Math.max(STEP[k].min, Math.min(STEP[k].max, n)); }
+      else if(k === 'auto') r.auto = !!v;
+      else if(k === 'patient' || k === 'specialist'){ if(typeof v === 'string') r[k] = v.slice(0, 60); }
+      else { const opts = {dir:L.dir, bg:L.bg, pos:L.pos, dist:L.dist, sym:L.sym, size:L.size}[k]; if(opts && v in opts) r[k] = v; }
+    }
+    if(r.bpm == null || r.setSec == null || r.sets == null) return null;
+    if(r.maxBpm != null && r.maxBpm < r.bpm) r.maxBpm = r.bpm;
+    if(r.maxSetSec != null && r.maxSetSec < r.setSec) r.maxSetSec = r.setSec;
+    if(typeof o.h === 'string' && /^[0-9a-z]{16,64}$/.test(o.h)) r.ph = o.h;
+    if(+o.t) r.t = +o.t * 1000;
+    return r;
+  }catch(e){ return null; }
+}
+async function commitRx(){
+  const pinEl = document.getElementById('f_pin');
+  const pin = pinEl ? pinEl.value.trim() : '';
+  if(pin && !/^\d{4}$/.test(pin)){ toast('PIN — ровно 4 цифры'); return false; }
+  if(D){
+    if(D.maxBpm < D.bpm){ toast(`Потолок темпа поднят до ${D.bpm} — он не может быть ниже текущего темпа`); D.maxBpm = D.bpm; }
+    if(D.maxSetSec < D.setSec) D.maxSetSec = D.setSec;
+    D.setAt = Date.now();
+    DB.rx = {...D};
+  }
+  if(pin){ DB.pinHash = await hashPin(pin); pinUnlocked = true; }
+  save();
+  return true;
+}
+function copyText(txt, okMsg){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(() => toast(okMsg), () => prompt0(txt)); return; }
+  }catch(e){}
+  prompt0(txt);
+}
+function prompt0(txt){
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div class="card"><h2>Скопируйте вручную</h2><textarea class="rep" readonly>${esc(txt)}</textarea><button class="btn btn-s" data-a="wipeNo">Закрыть</button></div>`;
+  document.body.appendChild(m); const ta = m.querySelector('textarea'); ta.focus(); ta.select();
+}
+function rxSummaryKV(r){
+  const v = (k, f) => r[k] != null ? f(r[k]) : '—';
+  return `<div class="kv">
+    <div><small>Движение</small><b>${v('dir', x => L.dirShort[x])}</b></div>
+    <div><small>Темп</small><b>${v('bpm', x => x + ' уд/мин')}</b></div>
+    <div><small>Подход</small><b>${r.sets} × ${durLabel(r.setSec)}</b></div>
+    <div><small>В день</small><b>${v('perDay', x => x + ' ' + plural(x, 'тренировка', 'тренировки', 'тренировок'))}</b></div>
+    <div><small>Фон</small><b>${v('bg', x => L.bg[x])}</b></div>
+    <div><small>Положение</small><b>${v('pos', x => L.pos[x])}</b></div>
+    <div><small>Цель</small><b>${v('sym', x => L.sym[x])}${r.dist ? ', ' + L.dist[r.dist].split(',')[0].toLowerCase() : ''}</b></div>
+    <div><small>Потолок</small><b>${v('maxBpm', x => x + ' уд/мин')}</b></div>
+  </div>`;
+}
+function renderRxShare(){
+  const url = rxLink(DB.rx);
+  app.innerHTML = `<div class="wrap">${backbar('К назначению', 'rx')}
+    <h1>Отправить назначение</h1>
+    <p>Пусть пациент наведёт камеру своего телефона на QR-код или откроет ссылку и нажмёт «Применить». Дневник пациента сохранится.</p>
+    <div class="qrbox" id="qrbox"><div class="sub">Готовим QR-код…</div></div>
+    <div style="height:14px"></div>
+    <button class="btn btn-p" data-a="shareRxLink">Отправить ссылку (WhatsApp и др.)</button>
+    <button class="btn btn-s" data-a="copyRxLink">Скопировать ссылку</button>
+    <div class="note info" style="margin-top:14px"><b>Если у пациента iPhone и приложение на экране «Домой»</b>QR-код откроется в Safari, а не в приложении. Отправьте ссылку в WhatsApp: пациент скопирует её и вставит в приложении — «Получить назначение».</div>
+    <div class="card">${rxSummaryKV(DB.rx)}${DB.pinHash ? '<div class="meta">PIN передаётся вместе с назначением.</div>' : ''}</div>
+  </div>`;
+  loadQR().then(() => {
+    const box = document.getElementById('qrbox'); if(!box) return;
+    try{ const q = qrcode(0, 'L'); q.addData(url); q.make(); box.innerHTML = q.createSvgTag({cellSize:4, margin:2, scalable:true}); }
+    catch(e){ box.innerHTML = '<div class="sub">QR-код не получился — отправьте ссылку.</div>'; }
+  }).catch(() => { const box = document.getElementById('qrbox'); if(box) box.innerHTML = '<div class="sub">QR-код недоступен без интернета — отправьте ссылку.</div>'; });
+}
+let qrLoading = null;
+function loadQR(){
+  if(window.qrcode) return Promise.resolve();
+  if(!qrLoading) qrLoading = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'qrcode.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+  return qrLoading;
+}
+function renderRxIn(){
+  const r = pendingRx;
+  if(!r){ view = 'home'; renderHome(); return; }
+  app.innerHTML = `<div class="wrap">${header()}
+    <h1>Новое назначение</h1>
+    <p>${r.specialist ? `От: <b>${esc(r.specialist)}</b>. ` : ''}${r.patient ? `Пациент: <b>${esc(r.patient)}</b>. ` : ''}${r.t ? `Выдано ${fmtDT(r.t)}.` : ''}</p>
+    <div class="card">${rxSummaryKV(r)}${r.ph ? '<div class="meta">Раздел «Назначение» будет защищён PIN-кодом специалиста.</div>' : ''}</div>
+    ${DB.sessions.length ? `<div class="note info">Дневник (${DB.sessions.length} ${plural(DB.sessions.length, 'тренировка', 'тренировки', 'тренировок')}) сохранится.</div>` : ''}
+    ${incomingUrl && isIOS() && !isStandalone() ? `<div class="note warn"><b>Занимаетесь в приложении на экране «Домой»?</b>Тогда примените назначение там: скопируйте ссылку и вставьте её в приложении — «Получить назначение».<div style="height:10px"></div><button class="btn btn-s" data-a="copyIncoming">Скопировать ссылку</button></div>` : ''}
+    <button class="btn btn-p" data-a="rxApply">Применить назначение</button>
+    <button class="btn btn-s" data-a="rxReject">Отклонить</button>
+  </div>`;
+}
+function renderRxPaste(){
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Получить назначение</h1>
+    <p>Специалист TURA присылает ссылку в WhatsApp. Нажмите на сообщение и удерживайте, выберите «Скопировать», затем вставьте сюда.</p>
+    <textarea class="paste" id="rxPasteText" placeholder="Вставьте ссылку сюда"></textarea>
+    <div style="height:12px"></div>
+    <button class="btn btn-p" data-a="rxPasteGo">Проверить назначение</button>
+  </div>`;
+}
+function checkRxHash(){
+  const r = parseRxLink(location.hash);
+  if(!r) return false;
+  pendingRx = r; incomingUrl = location.href;
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  if(!S){ view = 'rxIn'; return true; }
+  return false;
+}
+checkRxHash();
+window.addEventListener('hashchange', () => { if(checkRxHash()) render(); });
+
 /* ---------- actions ---------- */
 const A = {
   go:el => { if(el.dataset.v === 'rx') D = null; afterSafety = null; view = el.dataset.v; render(); },
-  start:() => startSession('train'),
+  start:() => {
+    const d = loadDraft();
+    if(!d){ startSession('train'); return; }
+    const m = document.createElement('div'); m.className = 'modal';
+    m.innerHTML = `<div class="card"><h2>Есть незавершённая тренировка</h2><p>${fmtDT(d.ts)}: выполнено ${d.clarity.length} из ${d.rx.sets} ${plural(d.rx.sets, 'подхода', 'подходов', 'подходов')}.</p>
+      <button class="btn btn-p" data-a="draftContinue">Продолжить её</button><button class="btn btn-s" data-a="draftFinish">Завершить и сохранить</button><button class="btn btn-s" data-a="startNew">Начать новую</button></div>`;
+    document.body.appendChild(m);
+  },
+  startNew:() => { document.querySelector('.modal')?.remove(); clearDraft(); startSession('train'); },
+  draftContinue:() => { document.querySelector('.modal')?.remove(); const d = loadDraft(); if(d) restoreDraft(d, false); render(); },
+  draftFinish:() => { document.querySelector('.modal')?.remove(); const d = loadDraft(); if(d) restoreDraft(d, true); render(); },
+  draftDelete:() => { clearDraft(); render(); toast('Незавершённая тренировка удалена'); },
+  install:async () => { if(!deferredInstall) return; deferredInstall.prompt(); try{ await deferredInstall.userChoice; }catch(e){} deferredInstall = null; render(); },
+  hideInstall:() => { DB.installHiddenAt = Date.now(); save(); render(); },
+  camRetry:() => { Cam.state = 'off'; Cam.err = ''; Cam.errKind = ''; render(); },
+  pin:el => {
+    const k = el.dataset.v;
+    if(k === 'del') pinBuf = pinBuf.slice(0, -1); else if(pinBuf.length < 4) pinBuf += k;
+    renderPin();
+    if(pinBuf.length === 4){
+      const tried = pinBuf;
+      hashPin(tried).then(h => {
+        if(h === DB.pinHash){ pinUnlocked = true; pinBuf = ''; D = null; view = 'rx'; render(); }
+        else { pinBuf = ''; pinErr = true; renderPin(); }
+      });
+    }
+  },
+  clearPin:() => { DB.pinHash = null; save(); renderRx(); toast('PIN убран'); },
+  sendRx:async () => { if(!(await commitRx())) return; view = 'rxShare'; render(); },
+  shareRxLink:() => {
+    const url = rxLink(DB.rx);
+    if(navigator.share){ navigator.share({title:'Назначение TURA VOR×1', text:'Назначение упражнения VOR×1 от TURA. Откройте ссылку на телефоне пациента:', url}).catch(() => {}); }
+    else A.copyRxLink();
+  },
+  copyRxLink:() => copyText(rxLink(DB.rx), 'Ссылка скопирована'),
+  copyIncoming:() => copyText(incomingUrl || '', 'Ссылка скопирована — вставьте её в приложении'),
+  rxApply:() => {
+    const r = pendingRx; if(!r) return;
+    const {ph, t, ...fields} = r;
+    DB.rx = Object.assign({}, DB.rx, fields, {setAt:Date.now(), lastStep:null});
+    if(ph) DB.pinHash = ph;
+    save(); pendingRx = null; incomingUrl = null; view = 'home'; render(); toast('Назначение применено');
+  },
+  rxReject:() => { pendingRx = null; incomingUrl = null; view = 'home'; render(); },
+  rxPasteGo:() => {
+    const t = (document.getElementById('rxPasteText') || {}).value || '';
+    const r = parseRxLink(t);
+    if(!r){ toast('Это не похоже на ссылку-назначение TURA'); return; }
+    pendingRx = r; incomingUrl = null; view = 'rxIn'; render();
+  },
+  shareReport:() => {
+    const txt = reportText();
+    if(navigator.share){ navigator.share({title:'Отчёт TURA VOR×1', text:txt}).catch(e => { if(!e || e.name !== 'AbortError') A.copyReport(); }); }
+    else A.copyReport();
+  },
   startTest:() => startSession('test'),
   ackSafety:() => { DB.safetyAck = true; save(); const k = afterSafety; afterSafety = null; view = 'home'; if(k) startSession(k); else render(); },
   cancelSession:() => endSession(),
@@ -1371,17 +1720,21 @@ const A = {
   preAnyway:() => { S.step = 'setup'; render(); },
   setMode:el => { DB.mode = el.dataset.v; save(); render(); },
   toggleCam:() => { S.cam = !S.cam; DB.camOn = S.cam; save(); render(); },
-  beginSet:() => { if(S.cam && !S.calib){ S.step = 'camcheck'; render(); } else startPhase('set'); },
+  beginSet:() => { if(S.cam && !S.camReady){ S.step = 'camcheck'; render(); } else startPhase('set'); },
   startCalib:() => startPhase('calib'),
-  afterCalib:() => startPhase(S.kind === 'test' ? 'level' : 'set'),
-  headOnly:() => { S.calib = null; startPhase('set'); },
+  afterCalib:() => { S.camReady = true; startPhase(S.kind === 'test' ? 'level' : 'set'); },
+  headOnly:() => { S.calib = null; S.camReady = true; startPhase('set'); },
   noCam:() => { S.cam = false; Cam.stop(); if(Cam.state === 'error') Cam.state = 'off'; startPhase('set'); },
   blur:() => { if(S && S.run && S.step === 'run'){ S.run.blur++; const c = document.getElementById('blurC'); if(c) c.textContent = S.run.blur; } },
   pause:() => {
     if(S.step === 'count'){
       clearTimers(); exitFS();
+      Metro.stop(); S.starting = false;
       if(S.cur.kind === 'level'){ finishTest('user'); return; }
-      S.step = S.cur.kind === 'calib' ? 'camcheck' : 'setup'; render(); return;
+      if(S.cur.kind === 'calib') S.step = 'camcheck';
+      else if(S.setIdx > 0){ S.step = 'rest'; S.restLeft = 0; }
+      else S.step = 'setup';
+      render(); return;
     }
     pauseRun();
   },
@@ -1391,7 +1744,7 @@ const A = {
   stopBad:() => { clearTimers(); Metro.stop(); exitFS(); releaseAwake(); if(S.run) cancelAnimationFrame(S.run.raf); Cam.stop(); S.stopped = true; S.step = 'stopBad'; render(); },
   toPost:() => { if(S.kind === 'test') finishTest('stopped'); else { S.step = 'post'; render(); } },
   clarity:el => afterClarity(+el.dataset.v),
-  nextSet:() => { clearTimers(); S.setIdx++; startPhase('set'); },
+  nextSet:() => { if(S.step !== 'rest') return; clearTimers(); S.setIdx++; if(S.cam && !S.camReady){ S.step = 'camcheck'; render(); } else startPhase('set'); },
   finishNow:() => { clearTimers(); exitFS(); releaseAwake(); Cam.stop(); S.step = 'post'; render(); },
   doneSession:() => endSession(),
   undoChange:() => {
@@ -1418,33 +1771,39 @@ const A = {
     const o = document.getElementById('o_' + k); if(o) o.innerHTML = `${D[k]} <small>${st.unit}</small>`;
   },
   toggleAuto:el => { D.auto = !D.auto; el.classList.toggle('on', D.auto); },
-  saveRx:() => {
-    if(D.maxBpm < D.bpm) D.maxBpm = D.bpm;
-    if(D.maxSetSec < D.setSec) D.maxSetSec = D.setSec;
-    D.setAt = Date.now();
-    DB.rx = {...D}; save(); D = null; toast('Назначение сохранено'); view = 'home'; render();
-  },
+  saveRx:async () => { if(!(await commitRx())) return; D = null; toast('Назначение сохранено'); view = 'home'; render(); },
   resetRx:() => { D = {...DEFAULT_RX, patient:D.patient, specialist:D.specialist}; renderRx(); toast('Стартовые параметры — сохраните, чтобы применить'); },
   wipe:() => {
     const m = document.createElement('div'); m.className = 'modal';
     m.innerHTML = `<div class="card"><h2>Удалить все данные?</h2><p>Дневник тренировок, тесты и назначение будут удалены с этого устройства. Отменить нельзя.</p><button class="btn btn-d" data-a="wipeYes">Удалить</button><button class="btn btn-s" data-a="wipeNo">Отмена</button></div>`;
     document.body.appendChild(m);
   },
-  wipeYes:() => { document.querySelector('.modal')?.remove(); DB = {rx:{...DEFAULT_RX}, sessions:[], tests:[], safetyAck:false, mode:'self', camOn:true}; save(); D = null; view = 'home'; render(); toast('Данные удалены'); },
+  wipeYes:() => { document.querySelector('.modal')?.remove(); DB = {rx:{...DEFAULT_RX}, sessions:[], tests:[], safetyAck:false, mode:'self', camOn:true, pinHash:null}; save(); clearDraft(); D = null; pinUnlocked = false; view = 'home'; render(); toast('Данные удалены'); },
   wipeNo:() => document.querySelector('.modal')?.remove()
 };
 
+const FAST = ['blur', 'step', 'pin', 'seg', 'toggleAuto'];
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]');
   if(!el || el.disabled) return;
-  const fn = A[el.dataset.a];
-  if(fn){ e.preventDefault(); fn(el); }
+  const a = el.dataset.a, fn = A[a];
+  if(!fn) return;
+  e.preventDefault();
+  // защита от двойного нажатия и «призрачного» нажатия на только что открывшемся экране
+  if(!FAST.includes(a) && performance.now() - renderAt < 350) return;
+  fn(el);
 });
 document.addEventListener('input', e => {
   const el = e.target;
   if(D && el.matches('input[type=text][data-k]')) D[el.dataset.k] = el.value;
 });
-document.addEventListener('visibilitychange', () => { if(document.hidden && S && S.step === 'run') pauseRun(); });
+document.addEventListener('visibilitychange', () => {
+  if(!S) return;
+  if(document.hidden){
+    if(S.step === 'run') pauseRun();
+    else if(S.step === 'count'){ clearTimers(); Metro.stop(); S.starting = false; S.step = 'pause'; S.run = null; render(); }
+  } else if(['count', 'run', 'pause', 'rest', 'clarity'].includes(S.step)) keepAwake();
+});
 
 render();
 </script>
