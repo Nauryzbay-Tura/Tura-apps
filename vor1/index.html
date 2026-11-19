@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B6E6E">
+<title>TURA · VOR×1 — тренажёр стабилизации взора</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F4F3EF; --card:#FFFFFF; --ink:#14222B; --ink2:#4A5963; --muted:#7A8790; --line:#E3E1DA; --grid:#ECEAE4;
+  --brand:#0B6E6E; --brand-dark:#085858; --brand-soft:#DDEFEE;
+  --beat:#F2A23A; --beat-soft:#FDEBD0;
+  --danger:#B42318; --danger-soft:#FDE7E4; --ok:#1C7C3A; --ok-soft:#E3F3E7; --warn-soft:#FFF1D6;
+  --s1:#2a78d6; --s2:#eb6834;
+  --r:20px;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh}
+button{font:inherit;cursor:pointer;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:calc(14px + var(--st)) 16px calc(28px + var(--sb))}
+.top{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+.logo{width:46px;height:46px;flex:none;border-radius:14px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;letter-spacing:.08em}
+.ttl{font-size:20px;font-weight:800;line-height:1.1}
+.sub{font-size:13px;color:var(--ink2);margin-top:2px}
+.backbar{display:flex;align-items:center;gap:8px;margin:2px 0 12px}
+.back{border:0;background:var(--card);border:1px solid var(--line);border-radius:14px;min-height:46px;padding:0 16px;font-weight:700;font-size:15px;color:var(--ink2)}
+h1{font-size:26px;line-height:1.15;margin:6px 0 10px;font-weight:800;letter-spacing:-.01em}
+h2{font-size:17px;margin:0 0 10px;font-weight:800}
+p{line-height:1.5;margin:0 0 12px;color:var(--ink2);font-size:16px}
+.card{background:var(--card);border-radius:var(--r);padding:18px;margin:0 0 14px;border:1px solid var(--line);box-shadow:0 8px 24px -18px rgba(20,34,43,.35)}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;border-radius:16px;border:0;font-size:18px;font-weight:800;padding:14px 18px;text-align:center;line-height:1.2}
+.btn-p{background:var(--brand);color:#fff}
+.btn-p:active{background:var(--brand-dark)}
+.btn-s{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+.btn-d{background:var(--danger);color:#fff}
+.btn-w{background:var(--beat);color:#2A1A00}
+.btn + .btn{margin-top:10px}
+.btn small{display:block;font-size:13px;font-weight:600;opacity:.85}
+.navgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.navbtn{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:86px;text-align:left;display:flex;flex-direction:column;gap:4px}
+.navbtn b{font-size:16px}
+.navbtn span{font-size:13px;color:var(--ink2);line-height:1.35}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv div{background:var(--bg);border-radius:14px;padding:10px 12px}
+.kv small{display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.kv b{font-size:15px;line-height:1.3}
+.meta{font-size:13px;color:var(--muted);margin-top:12px;line-height:1.4}
+.today{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.today b{font-size:22px}
+.dots{display:flex;gap:8px}
+.dot{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--brand)}
+.dot.on{background:var(--brand)}
+.rate{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.rate button{min-height:60px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-size:24px;font-weight:800}
+.rate button:active{background:var(--brand-soft);border-color:var(--brand)}
+.anchors{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-top:10px;font-weight:600}
+.seg{display:flex;background:var(--bg);border-radius:14px;padding:4px;gap:4px;flex-wrap:wrap}
+.seg button{flex:1;min-width:0;min-height:46px;border:0;border-radius:11px;background:transparent;font-size:14px;font-weight:700;color:var(--ink2);padding:6px 8px;line-height:1.2}
+.seg button.on{background:var(--card);color:var(--brand);box-shadow:0 1px 4px rgba(20,34,43,.16)}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:54px;height:54px;flex:none;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-size:26px;font-weight:700}
+.stepper output{flex:1;text-align:center;font-size:22px;font-weight:800}
+.stepper output small{font-size:14px;color:var(--ink2);font-weight:600}
+.field{margin:0 0 18px}
+.field > label,.flabel{display:block;font-size:13px;font-weight:800;color:var(--ink2);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.fhint{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}
+input[type=text]{width:100%;min-height:52px;border-radius:14px;border:1.5px solid var(--line);padding:0 14px;font:inherit;font-size:16px;background:var(--card);color:var(--ink)}
+input[type=text]:focus{outline:2px solid var(--brand);outline-offset:1px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg);border-radius:14px;padding:12px 14px;border:0;width:100%;text-align:left}
+.switch .knob{width:52px;height:32px;border-radius:16px;background:#C9CCC8;position:relative;flex:none;transition:background .15s}
+.switch .knob::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch.on .knob{background:var(--brand)}
+.switch.on .knob::after{left:23px}
+.switch b{font-size:15px}
+.note{border-radius:16px;padding:14px 16px;font-size:15px;line-height:1.45;margin:0 0 14px}
+.note b{display:block;margin-bottom:4px;font-size:16px}
+.note.ok{background:var(--ok-soft);color:#0F4D24}
+.note.warn{background:var(--warn-soft);color:#5C3500}
+.note.danger{background:var(--danger-soft);color:#7A160F}
+.note.info{background:var(--brand-soft);color:#063F3F}
+.steps{list-style:none;padding:0;margin:0;counter-reset:s}
+.steps li{position:relative;padding:0 0 14px 44px;line-height:1.45;font-size:16px;color:var(--ink2)}
+.steps li:last-child{padding-bottom:0}
+.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:-2px;width:30px;height:30px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-weight:800;display:grid;place-items:center;font-size:15px}
+.steps li b{color:var(--ink)}
+ul.flags{margin:0;padding-left:20px;line-height:1.5}
+ul.flags li{margin-bottom:4px}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stat3 div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.stat3 small{display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.stat3 b{font-size:22px;font-weight:800}
+.sess{border-top:1px solid var(--line);padding:12px 0;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.sess:first-of-type{border-top:0}
+.sess .d{font-weight:800;font-size:15px}
+.sess .x{font-size:14px;color:var(--ink2);grid-column:1/-1;line-height:1.4}
+.tag{font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px;align-self:start;white-space:nowrap}
+.tag.up{background:var(--ok-soft);color:var(--ok)}
+.tag.keep{background:var(--brand-soft);color:var(--brand)}
+.tag.down{background:var(--warn-soft);color:#7A4600}
+.tag.stop{background:var(--danger-soft);color:var(--danger)}
+.chart{position:relative;margin-top:4px;touch-action:pan-y}
+.chart svg{display:block;overflow:visible}
+.chart .ax{font-size:11px;fill:var(--muted);font-family:inherit}
+.chart .dl{font-size:12px;fill:var(--ink2);font-weight:700;font-family:inherit}
+.tip{position:absolute;top:0;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:10px;padding:7px 10px;font-size:12px;line-height:1.4;pointer-events:none;white-space:nowrap;z-index:3}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--ink2);font-weight:700;margin-bottom:6px}
+.legend i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+textarea.rep{width:100%;min-height:220px;border-radius:14px;border:1.5px solid var(--line);padding:12px;font:13px/1.45 ui-monospace,Menlo,monospace;color:var(--ink);background:var(--bg);margin-top:10px}
+.foot{font-size:12px;color:var(--muted);text-align:center;margin-top:22px;line-height:1.5}
+.toast{position:fixed;left:50%;bottom:calc(24px + var(--sb));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;font-size:15px;z-index:100;box-shadow:0 10px 30px -10px rgba(0,0,0,.5);max-width:90vw;text-align:center}
+.modal{position:fixed;inset:0;background:rgba(20,34,43,.45);display:grid;place-items:center;z-index:90;padding:20px}
+.modal .card{max-width:420px;width:100%;margin:0}
+.anim{display:flex;justify-content:center;margin:4px 0 10px}
+.anim svg{width:200px;height:auto}
+.anim .headg{transform-box:view-box;transform-origin:110px 150px;animation:turn 1.6s ease-in-out infinite}
+.anim.v .headg{animation:nod 1.6s ease-in-out infinite;transform-origin:110px 150px}
+@keyframes turn{0%,100%{transform:rotate(-20deg)}50%{transform:rotate(20deg)}}
+@keyframes nod{0%,100%{transform:scaleY(.86) translateY(8px)}50%{transform:scaleY(1) translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.anim .headg{animation:none}}
+
+/* exercise */
+.ex{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;background:#FFFFFF;overflow:hidden;user-select:none;-webkit-user-select:none}
+.ex.bg-pattern{background:repeating-conic-gradient(#D3D9DC 0 25%,#FFFFFF 0 50%) 0 0/48px 48px}
+.ex.bg-busy{background:repeating-conic-gradient(#1F2B31 0 25%,#F5F4EF 0 50%) 0 0/26px 26px}
+.edge{position:absolute;background:rgba(20,34,43,.10);transition:background .07s,box-shadow .07s;z-index:1}
+.edge.l{left:0;top:0;bottom:0;width:30px}.edge.r{right:0;top:0;bottom:0;width:30px}
+.edge.t{top:0;left:0;right:0;height:30px}.edge.b{bottom:0;left:0;right:0;height:30px}
+.edge.on{background:var(--beat);box-shadow:0 0 26px 4px rgba(242,162,58,.55)}
+.ex-top{position:relative;z-index:2;margin:calc(12px + var(--st)) 42px 0;background:rgba(255,255,255,.95);border-radius:18px;padding:8px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 14px -8px rgba(0,0,0,.3)}
+.ex.v .ex-top{margin-top:calc(40px + var(--st));margin-left:14px;margin-right:14px}
+.ex-top .m{font-size:14px;font-weight:700;color:var(--ink2);line-height:1.25}
+.ex-top .t{margin-left:auto;font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.ex-bar{height:6px;background:rgba(20,34,43,.12);border-radius:3px;margin:8px 42px 0;overflow:hidden;position:relative;z-index:2}
+.ex.v .ex-bar{margin-left:14px;margin-right:14px}
+.ex-bar i{display:block;height:100%;background:var(--brand);width:0}
+.headic{width:40px;height:40px;flex:none}
+.headic g{transition:transform .16s ease-out;transform-origin:20px 22px}
+.ex-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative;z-index:2;padding:0 40px}
+.sym-card{background:#fff;border-radius:.16em;border:3px solid #14222B;display:grid;place-items:center;min-width:1.3em;padding:.06em .2em;line-height:1.05;font-weight:800;color:#0B1A22;font-variant-numeric:tabular-nums}
+.ex-hint{background:rgba(255,255,255,.95);border-radius:12px;padding:8px 12px;font-size:15px;font-weight:700;color:var(--ink2);max-width:320px;text-align:center;transition:opacity .6s}
+.ex-hint.gone{opacity:0}
+.ex-bottom{position:relative;z-index:2;padding:0 42px calc(16px + var(--sb));display:flex;gap:10px}
+.ex.v .ex-bottom{padding:0 14px calc(42px + var(--sb))}
+.ex-bottom .btn{min-height:62px;font-size:17px}
+.overlay{position:absolute;inset:0;z-index:5;background:rgba(244,243,239,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px;text-align:center}
+.overlay .btn{max-width:420px}
+.count{font-size:min(40vmin,220px);font-weight:800;color:var(--brand);line-height:1}
+.blurc{font-variant-numeric:tabular-nums;background:rgba(42,26,0,.14);border-radius:999px;padding:2px 12px;min-width:2.2em}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ===================== TURA · VOR×1 — прототип V0 ===================== */
+const KEY = 'tura_vor1_v0';
+const DEFAULT_RX = {
+  patient:'', specialist:'', dir:'h', bpm:60, maxBpm:160, setSec:30, maxSetSec:90,
+  sets:2, restSec:30, perDay:3, bg:'plain', pos:'sit', dist:'near', sym:'digits', size:'l',
+  auto:true, lastStep:null, setAt:null
+};
+const L = {
+  dir:{h:'Горизонтально', v:'Вертикально'},
+  dirShort:{h:'Влево-вправо', v:'Вверх-вниз'},
+  bg:{plain:'Однотонный', pattern:'Узор', busy:'Пёстрый'},
+  pos:{sit:'Сидя', support:'Стоя у опоры', stand:'Стоя'},
+  dist:{near:'В руке, 40 см', far:'Подставка, 1,5–2 м'},
+  sym:{digits:'Цифры', letters:'Буквы', arrows:'Стрелки'},
+  one:{digits:'цифра', letters:'буква', arrows:'стрелка'},
+  acc:{digits:'цифру', letters:'букву', arrows:'стрелку'},
+  One:{digits:'Цифра', letters:'Буква', arrows:'Стрелка'},
+  size:{s:'Мелкий', m:'Средний', l:'Крупный', xl:'Очень крупный'},
+  clarity:['чётко','иногда расплывалась','часто расплывалась']
+};
+const SYMS = {
+  digits:['2','3','4','5','6','7','8','9'],
+  letters:['Б','Г','Д','К','Л','М','Н','Р','С','Т','Ш'],
+  arrows:['↑','→','↓','←']
+};
+const SIZE_VMIN = {s:10, m:16, l:24, xl:34};
+
+let storageOK = true;
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      return {
+        rx: Object.assign({}, DEFAULT_RX, d.rx || {}),
+        sessions: Array.isArray(d.sessions) ? d.sessions : [],
+        safetyAck: !!d.safetyAck,
+        mode: d.mode === 'helper' ? 'helper' : 'self'
+      };
+    }
+  }catch(e){ storageOK = false; }
+  return {rx:{...DEFAULT_RX}, sessions:[], safetyAck:false, mode:'self'};
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(DB)); storageOK = true; }
+  catch(e){ storageOK = false; }
+}
+let DB = load();
+let view = 'home';
+let S = null;          // текущая тренировка
+let D = null;          // черновик назначения
+let afterSafety = null;
+
+const app = document.getElementById('app');
+
+/* ---------- helpers ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const fmtSec = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60) + ':' + pad(s%60); };
+const fmtDay = ts => { const d = new Date(ts); return pad(d.getDate()) + '.' + pad(d.getMonth()+1); };
+const fmtDT = ts => { const d = new Date(ts); return fmtDay(ts) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); };
+const todaySessions = () => DB.sessions.filter(s => dayKey(s.ts) === dayKey(Date.now()));
+function plural(n, a, b, c){ const m10 = n % 10, m100 = n % 100; if(m10 === 1 && m100 !== 11) return a; if(m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return b; return c; }
+const balls = n => n + ' ' + plural(n, 'балл', 'балла', 'баллов');
+function durLabel(sec){ return sec < 60 ? sec + ' с' : (sec % 60 ? Math.floor(sec/60) + ' мин ' + (sec%60) + ' с' : (sec/60) + ' мин'); }
+
+function toast(msg){
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2400);
+}
+
+function header(){
+  return `<div class="top"><div class="logo">TURA</div><div><div class="ttl">VOR×1</div><div class="sub">Тренажёр стабилизации взора</div></div></div>`;
+}
+function backbar(label='Назад', to='home'){
+  return `<div class="backbar"><button class="back" data-a="go" data-v="${to}">← ${label}</button></div>`;
+}
+function levelKV(rx){
+  return `<div class="kv">
+    <div><small>Движение</small><b>${L.dirShort[rx.dir]}</b></div>
+    <div><small>Темп</small><b>${rx.bpm} уд/мин</b></div>
+    <div><small>Подход</small><b>${rx.sets} × ${durLabel(rx.setSec)}</b></div>
+    <div><small>Фон</small><b>${L.bg[rx.bg]}</b></div>
+    <div><small>Положение</small><b>${L.pos[rx.pos]}</b></div>
+    <div><small>Цель</small><b>${L.sym[rx.sym]}, ${L.dist[rx.dist].split(',')[0].toLowerCase()}</b></div>
+  </div>`;
+}
+
+/* ---------- screens ---------- */
+function render(){
+  if(S){ renderSession(); return; }
+  const fn = {home:renderHome, safety:renderSafety, howto:renderHowto, history:renderHistory, rx:renderRx}[view] || renderHome;
+  fn();
+  window.scrollTo(0,0);
+}
+
+function renderHome(){
+  const rx = DB.rx, done = todaySessions().length;
+  let dots = '';
+  for(let i = 0; i < Math.max(rx.perDay, done); i++) dots += `<span class="dot ${i < done ? 'on' : ''}"></span>`;
+  app.innerHTML = `<div class="wrap">${header()}
+    ${!storageOK ? `<div class="note warn"><b>Дневник не сохраняется</b>Браузер не даёт хранить данные: после закрытия страницы записи пропадут. Копируйте отчёт после каждой тренировки.</div>` : ''}
+    <div class="card"><div class="today"><div><h2 style="margin:0 0 4px">Сегодня</h2><b>${done} из ${rx.perDay}</b> <span class="sub">${plural(rx.perDay,'тренировки','тренировок','тренировок')}</span></div><div class="dots">${dots}</div></div></div>
+    <div class="card"><h2>Текущий уровень</h2>${levelKV(rx)}
+      <div class="meta">${rx.setAt ? `Назначение ${rx.specialist ? esc(rx.specialist) + ', ' : ''}${fmtDay(rx.setAt)}` : 'Стартовые параметры. Специалист TURA настроит назначение под пациента.'}${rx.auto ? ' Нагрузка растёт автоматически.' : ''}</div>
+    </div>
+    <button class="btn btn-p" data-a="start">Начать тренировку</button>
+    <div class="navgrid">
+      <button class="navbtn" data-a="go" data-v="howto"><b>Как выполнять</b><span>Техника и смысл упражнения</span></button>
+      <button class="navbtn" data-a="go" data-v="history"><b>Дневник</b><span>Прогресс и отчёт для специалиста</span></button>
+      <button class="navbtn" data-a="go" data-v="rx"><b>Назначение</b><span>Для специалиста TURA</span></button>
+      <button class="navbtn" data-a="go" data-v="safety"><b>Безопасность</b><span>Когда нельзя заниматься</span></button>
+    </div>
+    <div class="foot">TURA · VOR×1 · прототип V0<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
+  </div>`;
+}
+
+const RED_FLAGS = `<ul class="flags">
+  <li>внезапное новое или очень сильное головокружение;</li>
+  <li>нарушение речи, перекос лица;</li>
+  <li>новая слабость или онемение руки, ноги, лица;</li>
+  <li>двоение в глазах, внезапная потеря зрения;</li>
+  <li>резкая сильная головная боль, нарушение глотания.</li></ul>`;
+
+function renderSafety(){
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Безопасность</h1>
+    <div class="note danger"><b>Не занимайтесь и звоните 103 (или 112), если внезапно появилось:</b>${RED_FLAGS}</div>
+    <div class="card"><h2>Сначала спросите врача, если</h2>
+      <ul class="flags"><li>болит шея или поворачивать голову трудно;</li><li>инсульт был связан с расслоением артерии шеи;</li><li>недавно было падение или травма шеи.</li></ul></div>
+    <div class="card"><h2>Как заниматься безопасно</h2>
+      <ul class="flags"><li>Первые тренировки — сидя на устойчивом стуле со спинкой.</li>
+      <li>Стоя — только когда разрешит специалист и рядом помощник.</li>
+      <li>Лёгкое усиление головокружения во время упражнения ожидаемо.</li>
+      <li>Если оно не проходит за 20 минут — сообщите специалисту TURA.</li></ul></div>
+    <button class="btn btn-p" data-a="ackSafety">${afterSafety ? 'Понятно — к тренировке' : 'Понятно'}</button>
+  </div>`;
+}
+
+function howtoAnim(dir){
+  return `<div class="anim ${dir === 'v' ? 'v' : ''}"><svg viewBox="0 0 220 210" aria-label="Голова двигается, взгляд остаётся на цели">
+    <rect x="92" y="10" width="36" height="36" rx="8" fill="#fff" stroke="#14222B" stroke-width="3"/>
+    <text x="110" y="37" text-anchor="middle" font-size="24" font-weight="800" fill="#14222B" font-family="Manrope,sans-serif">7</text>
+    <line x1="110" y1="112" x2="110" y2="50" stroke="#F2A23A" stroke-width="3" stroke-dasharray="6 6"/>
+    <g class="headg">
+      <ellipse cx="72" cy="150" rx="7" ry="12" fill="#C9D4D6"/><ellipse cx="148" cy="150" rx="7" ry="12" fill="#C9D4D6"/>
+      <circle cx="110" cy="150" r="38" fill="#DDEFEE" stroke="#0B6E6E" stroke-width="3"/>
+      <path d="M100 116 L110 100 L120 116 Z" fill="#0B6E6E"/>
+      <circle cx="98" cy="128" r="4" fill="#14222B"/><circle cx="122" cy="128" r="4" fill="#14222B"/>
+    </g>
+  </svg></div>`;
+}
+
+function renderHowto(){
+  const rx = DB.rx;
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Как выполнять VOR×1</h1>
+    ${howtoAnim(rx.dir)}
+    <p style="text-align:center;margin-top:-4px">Голова двигается, взгляд остаётся на ${L.one[rx.sym] === 'цифра' ? 'цифре' : L.one[rx.sym] === 'буква' ? 'букве' : 'стрелке'}.</p>
+    <div class="card"><ol class="steps">
+      <li><b>${L.pos[rx.pos]}.</b> ${posText(rx.pos)}</li>
+      <li><b>Телефон</b> ${distText(rx.dist)}</li>
+      <li><b>${rx.dir === 'h' ? 'Поворачивайте голову вправо-влево' : 'Двигайте головой вверх-вниз'}</b> на небольшой угол, около 20°, ${rx.dir === 'h' ? 'как будто говорите «нет»' : 'как будто киваете «да»'}. На каждый сигнал — к той стороне экрана, которая светится.</li>
+      <li><b>Не отводите взгляд от цели.</b> ${L.One[rx.sym]} должна оставаться чёткой. Когда она меняется — ${rx.sym === 'arrows' ? 'назовите направление' : 'назовите её'} вслух.</li>
+      <li><b>Расплывается?</b> Делайте повороты чуть меньше, но держите темп.</li>
+    </ol></div>
+    <div class="card"><h2>Зачем это нужно</h2>
+      <p>Упражнение тренирует вестибулоокулярный рефлекс — он держит изображение неподвижным, когда голова движется. Лёгкое «размытие» во время упражнения — сигнал, по которому мозг перенастраивает рефлекс, поэтому важно держать темп, а не замедляться.</p>
+      <p style="margin:0">Обычно 3 раза в день по 1–2 подхода. Темп и длительность растут постепенно; точный план назначает специалист TURA.</p></div>
+    <button class="btn btn-p" data-a="start">Начать тренировку</button>
+  </div>`;
+}
+function posText(p){
+  return {sit:'На устойчивом стуле со спинкой, ноги на полу.', support:'Держитесь рукой за стол или поручень, помощник рядом.', stand:'Ноги на ширине плеч, помощник рядом.'}[p];
+}
+function distText(d){
+  return d === 'near' ? 'на вытянутой руке (около 40 см), на уровне глаз. Лучше — на подставке или в руках помощника, чтобы он не двигался.' : 'на подставке на уровне глаз, в 1,5–2 метрах.';
+}
+
+/* ---------- history ---------- */
+function renderHistory(){
+  const ss = DB.sessions, rx = DB.rx;
+  const week = ss.filter(s => Date.now() - s.ts < 7*864e5).length;
+  let body;
+  if(!ss.length){
+    body = `<div class="card"><p style="margin:0">Тренировок пока нет. После первой здесь появятся график темпа, динамика головокружения и отчёт для специалиста.</p></div>`;
+  } else {
+    const last = ss.slice(-30);
+    const list = ss.slice(-20).reverse().map(s => {
+      const tag = s.stopped ? '<span class="tag stop">остановлена</span>' : `<span class="tag ${s.rec === 'up' ? 'up' : s.rec === 'down' ? 'down' : 'keep'}">${recWord(s)}</span>`;
+      return `<div class="sess"><div class="d">${fmtDT(s.ts)}</div>${tag}
+        <div class="x">${L.dirShort[s.dir]} · ${s.bpm} уд/мин · ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)} · головокружение ${s.pre}→${s.post} · ${clarityWord(s)}${s.mode === 'helper' ? ' · с помощником' : ''}</div></div>`;
+    }).join('');
+    body = `<div class="stat3">
+        <div><small>За 7 дней</small><b>${week}</b></div>
+        <div><small>Сегодня</small><b>${todaySessions().length}/${rx.perDay}</b></div>
+        <div><small>Темп</small><b>${rx.bpm}</b></div></div>
+      <div class="card"><h2>Темп, уд/мин</h2><div class="chart" id="c1"></div></div>
+      <div class="card"><h2>Головокружение, 0–10</h2>
+        <div class="legend"><span><i style="background:var(--s1)"></i>до</span><span><i style="background:var(--s2)"></i>после</span></div>
+        <div class="chart" id="c2"></div></div>
+      <div class="card"><h2>Тренировки</h2>${list}</div>`;
+    setTimeout(() => {
+      const oneDay = dayKey(last[0].ts) === dayKey(last[last.length-1].ts);
+      const xl = last.map(s => oneDay ? fmtDT(s.ts).slice(6) : fmtDay(s.ts));
+      const tip = i => `<b>${fmtDT(last[i].ts)}</b>`;
+      const bmax = Math.max(80, ...last.map(s => s.bpm));
+      const top = Math.ceil(bmax / 40) * 40;
+      buildChart(document.getElementById('c1'), {
+        series:[{name:'Темп', color:'var(--brand)', values:last.map(s => s.bpm)}],
+        yMin:0, yMax:top, yTicks:[0, top/2, top], xLabels:xl,
+        tipFmt:i => `${tip(i)}<br>${last[i].bpm} уд/мин · ${last[i].setsDone}×${durLabel(last[i].setSec)}`
+      });
+      buildChart(document.getElementById('c2'), {
+        series:[{name:'до', color:'var(--s1)', values:last.map(s => s.pre)}, {name:'после', color:'var(--s2)', values:last.map(s => s.post)}],
+        yMin:0, yMax:10, yTicks:[0,5,10], xLabels:xl, direct:true,
+        tipFmt:i => `${tip(i)}<br>до: ${last[i].pre} · после: ${last[i].post}`
+      });
+    }, 0);
+  }
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Дневник</h1>
+    ${!storageOK ? `<div class="note warn">Данные не сохраняются в этом браузере — скопируйте отчёт сейчас.</div>` : ''}
+    ${body}
+    <button class="btn btn-p" data-a="copyReport">Скопировать отчёт для специалиста</button>
+    <div id="repbox"></div>
+  </div>`;
+}
+
+function buildChart(el, o){
+  if(!el) return;
+  const W = 340, H = 170, ml = 30, mr = o.direct ? 50 : 14, mt = 12, mb = 26;
+  const n = o.series[0].values.length, iw = W - ml - mr, ih = H - mt - mb;
+  const x = i => n <= 1 ? ml + iw/2 : ml + i * iw / (n - 1);
+  const y = v => mt + ih - (v - o.yMin) / (o.yMax - o.yMin) * ih;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.series.map(z => z.name).join(', '))}">`;
+  o.yTicks.forEach(t => {
+    s += `<line x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--grid)" stroke-width="1"/>`;
+    s += `<text x="${ml - 6}" y="${y(t) + 4}" text-anchor="end" class="ax">${t}</text>`;
+  });
+  s += `<text x="${x(0)}" y="${H - 6}" text-anchor="${n <= 1 ? 'middle' : 'start'}" class="ax">${o.xLabels[0]}</text>`;
+  if(n > 1) s += `<text x="${x(n-1)}" y="${H - 6}" text-anchor="end" class="ax">${o.xLabels[n-1]}</text>`;
+  const ends = [];
+  o.series.forEach(se => {
+    const pts = se.values.map((v, i) => [x(i), y(v)]);
+    if(n > 1) s += `<polyline fill="none" style="stroke:${se.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p => p.join(',')).join(' ')}"/>`;
+    pts.forEach(p => s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" style="fill:${se.color}" stroke="#fff" stroke-width="2"/>`);
+    ends.push({name:se.name, y:pts[pts.length-1][1], x:pts[pts.length-1][0]});
+  });
+  if(o.direct){
+    if(ends.length === 2 && Math.abs(ends[0].y - ends[1].y) < 13){
+      const mid = (ends[0].y + ends[1].y) / 2;
+      ends[0].y = mid - 7; ends[1].y = mid + 7;
+      if(o.series[0].values[n-1] < o.series[1].values[n-1]){ ends[0].y = mid + 7; ends[1].y = mid - 7; }
+    }
+    ends.forEach(e => s += `<text x="${e.x + 9}" y="${e.y + 4}" class="dl">${esc(e.name)}</text>`);
+  }
+  s += `<line class="xh" x1="0" x2="0" y1="${mt}" y2="${mt + ih}" style="stroke:var(--ink2)" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>`;
+  s += `<rect class="hit" x="${ml - 12}" y="0" width="${iw + 24}" height="${H}" fill="transparent"/></svg><div class="tip" hidden></div>`;
+  el.innerHTML = s;
+  const svg = el.querySelector('svg'), hit = el.querySelector('.hit'), xh = el.querySelector('.xh'), tip = el.querySelector('.tip');
+  const show = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) / r.width * W;
+    let i = n <= 1 ? 0 : Math.round((px - ml) / (iw / (n - 1)));
+    i = Math.max(0, Math.min(n - 1, i));
+    xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i)); xh.setAttribute('opacity', '1');
+    tip.innerHTML = o.tipFmt(i); tip.hidden = false;
+    const left = Math.max(60, Math.min(r.width - 60, x(i) / W * r.width));
+    tip.style.left = left + 'px'; tip.style.top = '-8px'; tip.style.transform = 'translate(-50%,-100%)';
+  };
+  const hide = () => { xh.setAttribute('opacity', '0'); tip.hidden = true; };
+  hit.addEventListener('pointermove', show);
+  hit.addEventListener('pointerdown', show);
+  hit.addEventListener('pointerleave', hide);
+}
+
+function recWord(s){
+  if(s.stopped) return 'остановлена';
+  if(s.rec === 'up') return s.change && s.change.applied ? 'нагрузка ↑' : 'можно повысить';
+  if(s.rec === 'down') return s.change && s.change.applied ? 'нагрузка ↓' : 'снизить';
+  if(s.rec === 'max') return 'потолок';
+  return 'без изменений';
+}
+
+function reportText(){
+  const rx = DB.rx, ss = DB.sessions, out = ['TURA · VOR×1 — отчёт для специалиста'];
+  if(rx.patient) out.push('Пациент: ' + rx.patient);
+  out.push('Сформирован: ' + fmtDT(Date.now()));
+  if(!ss.length) out.push('Тренировок пока нет.');
+  else {
+    const days = new Set(ss.map(s => dayKey(s.ts))).size;
+    out.push(`Период: ${fmtDay(ss[0].ts)}–${fmtDay(ss[ss.length-1].ts)}; тренировок: ${ss.length}; дней с занятиями: ${days} (план: ${rx.perDay} в день)`);
+    const r = ss.slice(-10);
+    const avg = k => (r.reduce((a, s) => a + s[k], 0) / r.length).toFixed(1);
+    const sets = r.flatMap(s => s.clarity);
+    const clear = sets.length ? Math.round(sets.filter(c => c === 0).length / sets.length * 100) : 0;
+    out.push(`Последние ${r.length}: головокружение в среднем ${avg('pre')} → ${avg('post')} (0–10); цель чёткая в ${clear}% подходов; остановлено: ${r.filter(s => s.stopped).length}`);
+  }
+  out.push(`Текущий уровень: ${L.dirShort[rx.dir].toLowerCase()}, ${rx.bpm} уд/мин, ${rx.sets} × ${durLabel(rx.setSec)}, отдых ${rx.restSec} с, фон — ${L.bg[rx.bg].toLowerCase()}, ${L.pos[rx.pos].toLowerCase()}, ${L.sym[rx.sym].toLowerCase()}, ${L.dist[rx.dist]}`);
+  out.push(`Потолок: ${rx.maxBpm} уд/мин, ${durLabel(rx.maxSetSec)}; автопрогрессия: ${rx.auto ? 'вкл' : 'выкл'}`);
+  if(ss.length){
+    out.push('', 'Последние тренировки:');
+    ss.slice(-10).reverse().forEach(s => out.push(`• ${fmtDT(s.ts)} — ${s.bpm} уд/мин, ${s.setsDone}/${s.setsPlanned} × ${durLabel(s.setSec)}; головокр. ${s.pre}→${s.post}; ${clarityWord(s)}; ${recWord(s)}${s.mode === 'helper' ? '; с помощником' : ''}`));
+  }
+  return out.join('\n');
+}
+
+/* ---------- prescription (specialist) ---------- */
+const STEP = {
+  bpm:{min:40, max:200, d:10, unit:'уд/мин'}, maxBpm:{min:60, max:200, d:10, unit:'уд/мин'},
+  setSec:{min:15, max:180, d:15, unit:'с'}, maxSetSec:{min:15, max:180, d:15, unit:'с'},
+  sets:{min:1, max:5, d:1, unit:''}, restSec:{min:15, max:120, d:15, unit:'с'}, perDay:{min:1, max:6, d:1, unit:'в день'}
+};
+function stepper(k, label, hint){
+  const st = STEP[k];
+  return `<div class="field"><span class="flabel">${label}</span><div class="stepper">
+    <button data-a="step" data-k="${k}" data-d="-1" aria-label="Меньше">−</button>
+    <output id="o_${k}">${D[k]} <small>${st.unit}</small></output>
+    <button data-a="step" data-k="${k}" data-d="1" aria-label="Больше">+</button></div>${hint ? `<div class="fhint">${hint}</div>` : ''}</div>`;
+}
+function seg(k, label, opts, hint){
+  return `<div class="field"><span class="flabel">${label}</span><div class="seg">${Object.entries(opts).map(([v, t]) => `<button class="${D[k] === v ? 'on' : ''}" data-a="seg" data-k="${k}" data-v="${v}">${t}</button>`).join('')}</div>${hint ? `<div class="fhint">${hint}</div>` : ''}</div>`;
+}
+function renderRx(){
+  if(!D) D = {...DB.rx};
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Назначение</h1>
+    <div class="note info">Раздел для специалиста TURA: настройте упражнение на визите. Пациент и семья видят только тренировку.</div>
+    <div class="card">
+      <div class="field"><label for="f_patient">Пациент</label><input type="text" id="f_patient" data-k="patient" value="${esc(D.patient)}" placeholder="Имя пациента"></div>
+      <div class="field" style="margin:0"><label for="f_spec">Специалист</label><input type="text" id="f_spec" data-k="specialist" value="${esc(D.specialist)}" placeholder="Кто назначил"></div>
+    </div>
+    <div class="card"><h2>Упражнение</h2>
+      ${seg('dir', 'Направление', L.dir)}
+      ${stepper('bpm', 'Темп — поворотов в минуту', 'Один сигнал = один поворот. Начинать обычно с 60.')}
+      ${stepper('setSec', 'Длительность подхода')}
+      ${stepper('sets', 'Подходов за тренировку')}
+      ${stepper('restSec', 'Отдых между подходами')}
+      ${stepper('perDay', 'Тренировок в день')}
+    </div>
+    <div class="card"><h2>Усложнение</h2>
+      ${seg('bg', 'Фон за целью', L.bg, 'Узор и пёстрый фон добавляют зрительную нагрузку.')}
+      ${seg('pos', 'Положение', L.pos)}
+      ${seg('dist', 'Расстояние до экрана', L.dist)}
+      ${seg('sym', 'Цель', L.sym, 'Для пациентов с афазией удобнее стрелки — направление можно показать рукой.')}
+      ${seg('size', 'Размер цели', L.size, 'Чем мельче цель, тем точнее нужна фиксация взгляда.')}
+    </div>
+    <div class="card"><h2>Автопрогрессия</h2>
+      <button class="switch ${D.auto ? 'on' : ''}" data-a="toggleAuto"><span><b>Повышать нагрузку автоматически</b><br><span class="sub">После 2 хороших тренировок подряд: +10 уд/мин или +15 с по очереди, не чаще раза в день. При плохой переносимости — шаг назад.</span></span><span class="knob"></span></button>
+      <div style="height:16px"></div>
+      ${stepper('maxBpm', 'Потолок темпа')}
+      ${stepper('maxSetSec', 'Потолок длительности')}
+    </div>
+    <button class="btn btn-p" data-a="saveRx">Сохранить назначение</button>
+    <button class="btn btn-s" data-a="resetRx">Стартовые параметры</button>
+    <button class="btn btn-s" data-a="wipe" style="color:var(--danger)">Удалить все данные</button>
+  </div>`;
+}
+
+/* ---------- session flow ---------- */
+function startSession(){
+  if(!DB.safetyAck){ afterSafety = true; view = 'safety'; render(); return; }
+  const rx = DB.rx;
+  S = {step:'check', setIdx:0, clarity:[], blur:[], pre:null, post:null, stopped:false,
+       rx:{dir:rx.dir, bpm:rx.bpm, setSec:rx.setSec, sets:rx.sets, restSec:rx.restSec, bg:rx.bg, pos:rx.pos, dist:rx.dist, sym:rx.sym, size:rx.size},
+       timers:[], run:null, result:null};
+  render();
+}
+
+function ratingGrid(){
+  let b = '';
+  for(let i = 0; i <= 10; i++) b += `<button data-a="rate" data-v="${i}">${i}</button>`;
+  return `<div class="rate">${b}</div><div class="anchors"><span>0 — нет</span><span>5 — умеренное</span><span>10 — сильнейшее</span></div>`;
+}
+
+function renderSession(){
+  const r = S.rx, one = L.one[r.sym], acc = L.acc[r.sym];
+  const cancel = `<button class="btn btn-s" data-a="cancelSession">Отменить</button>`;
+  switch(S.step){
+    case 'check':
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Перед тренировкой</h1>
+        <div class="card"><h2>Нет ли сегодня нового симптома?</h2>${RED_FLAGS}</div>
+        <button class="btn btn-p" data-a="flagNone">Ничего нового — продолжить</button>
+        <button class="btn btn-d" data-a="flagYes">Есть новый симптом</button>
+        ${cancel}</div>`; break;
+    case 'alarm':
+      app.innerHTML = `<div class="wrap">${header()}
+        <div class="note danger"><b>Не выполняйте упражнение сегодня</b>Если симптом появился внезапно — звоните 103 (или 112). В остальных случаях сообщите специалисту TURA.</div>
+        <button class="btn btn-s" data-a="cancelSession">На главную</button></div>`; break;
+    case 'pre':
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Головокружение сейчас</h1><p>Оцените до упражнения: 0 — совсем нет, 10 — сильнейшее.</p>
+        <div class="card">${ratingGrid()}</div>${cancel}</div>`; break;
+    case 'preHigh':
+      app.innerHTML = `<div class="wrap">${header()}
+        <div class="note warn"><b>Сейчас головокружение сильное (${S.pre} из 10)</b>Лучше отдохнуть 30–60 минут и попробовать позже.</div>
+        <button class="btn btn-p" data-a="cancelSession">Отложить тренировку</button>
+        <button class="btn btn-s" data-a="preAnyway">Всё равно начать</button></div>`; break;
+    case 'setup':
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Подготовка</h1>
+        <div class="note info"><b>${r.sets} × ${durLabel(r.setSec)} · ${r.bpm} уд/мин</b>${L.dirShort[r.dir]} · отдых ${r.restSec} с · фон ${L.bg[r.bg].toLowerCase()}</div>
+        <div class="card"><ol class="steps">
+          <li><b>${L.pos[r.pos]}.</b> ${posText(r.pos)}</li>
+          <li><b>Телефон</b> ${distText(r.dist)}</li>
+          <li><b>${r.dir === 'h' ? 'Голова вправо-влево' : 'Голова вверх-вниз'}</b> на ~20°, по сигналу — к светящейся стороне экрана.</li>
+          <li><b>Смотрите на ${acc}.</b> Когда ${one} меняется — ${r.sym === 'arrows' ? 'назовите или покажите направление' : 'назовите её вслух'}.</li>
+          <li><b>Включите звук</b> (на iPhone — и боковой переключатель): темп задаёт сигнал.</li>
+        </ol></div>
+        <div class="card"><h2>Кто занимается</h2>
+          <div class="seg"><button class="${DB.mode === 'self' ? 'on' : ''}" data-a="setMode" data-v="self">Сам</button><button class="${DB.mode === 'helper' ? 'on' : ''}" data-a="setMode" data-v="helper">С помощником</button></div>
+          <div class="fhint">${DB.mode === 'helper' ? `Помощник слушает, как пациент называет ${r.sym === 'digits' ? 'цифры' : r.sym === 'letters' ? 'буквы' : 'направления'}, и нажимает большую кнопку при каждой ошибке или если пациент говорит «расплывается».` : `После каждого подхода вы сами отметите, оставалась ли ${one} чёткой.`}</div>
+        </div>
+        <button class="btn btn-p" data-a="beginSet">Начать подход 1 из ${r.sets}</button>
+        ${cancel}</div>`; break;
+    case 'count': case 'run': case 'pause':
+      renderExercise(); break;
+    case 'clarity': {
+      const b = S.blur[S.blur.length - 1] || 0;
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Подход ${S.setIdx + 1} готов</h1>
+        ${DB.mode === 'helper' ? `<div class="note info">Помощник отметил ошибок: <b style="display:inline">${b}</b></div>` : ''}
+        <div class="card"><h2>${L.One[r.sym]} оставалась чёткой?</h2>
+          <button class="btn btn-s" data-a="clarity" data-v="0">Всё время чёткая</button>
+          <button class="btn btn-s" data-a="clarity" data-v="1">Иногда расплывалась</button>
+          <button class="btn btn-s" data-a="clarity" data-v="2">Часто расплывалась или «прыгала»</button>
+        </div></div>`;
+      if(DB.mode === 'helper'){
+        const sug = b === 0 ? 0 : b <= 2 ? 1 : 2;
+        app.querySelectorAll('[data-a="clarity"]')[sug].className = 'btn btn-p';
+      }
+      break;
+    }
+    case 'rest':
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Отдых</h1><p>Сидите спокойно, можно закрыть глаза.</p>
+        <div class="card" style="text-align:center"><div class="count" id="restC" style="font-size:72px">${fmtSec(S.restLeft)}</div></div>
+        <button class="btn btn-p" data-a="nextSet" id="nextBtn">Начать подход ${S.setIdx + 2} из ${r.sets}</button>
+        <button class="btn btn-s" data-a="finishNow">Закончить на сегодня</button></div>`; break;
+    case 'stopBad':
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Остановились</h1>
+        <div class="card"><ul class="flags"><li>Сядьте удобно или обопритесь.</li><li>Закройте глаза, дышите спокойно.</li><li>Обычно становится легче за несколько минут.</li></ul></div>
+        <div class="note danger"><b>Звоните 103 (или 112), если внезапно появилось:</b>${RED_FLAGS}</div>
+        <button class="btn btn-p" data-a="toPost">Мне лучше — оценить состояние</button></div>`; break;
+    case 'post':
+      app.innerHTML = `<div class="wrap">${header()}
+        <h1>Головокружение после</h1><p>Оцените сейчас: 0 — совсем нет, 10 — сильнейшее.</p>
+        <div class="card">${ratingGrid()}</div></div>`; break;
+    case 'summary':
+      renderSummary(); break;
+  }
+}
+
+function renderExercise(){
+  const r = S.rx, h = r.dir === 'h';
+  const fs = Math.round(SIZE_VMIN[r.size] * (r.dist === 'far' ? 1.6 : 1));
+  const helper = DB.mode === 'helper';
+  app.innerHTML = `<div class="ex bg-${r.bg} ${h ? '' : 'v'}" id="ex">
+    ${h ? '<div class="edge l" id="eA"></div><div class="edge r" id="eB"></div>' : '<div class="edge t" id="eA"></div><div class="edge b" id="eB"></div>'}
+    <div class="ex-top">
+      ${h ? `<svg class="headic" viewBox="0 0 40 40" aria-hidden="true"><g id="headG"><ellipse cx="6" cy="22" rx="3" ry="5" fill="#C9D4D6"/><ellipse cx="34" cy="22" rx="3" ry="5" fill="#C9D4D6"/><circle cx="20" cy="22" r="13" fill="#DDEFEE" stroke="#0B6E6E" stroke-width="2"/><path d="M16 10 L20 3 L24 10 Z" fill="#0B6E6E"/></g></svg>` : ''}
+      <div class="m">Подход ${S.setIdx + 1} из ${r.sets}<br>${r.bpm} уд/мин</div>
+      <div class="t" id="exT">${fmtSec(r.setSec)}</div>
+    </div>
+    <div class="ex-bar"><i id="exBar"></i></div>
+    <div class="ex-center">
+      <div class="sym-card" style="font-size:min(${fs}vmin,${fs * 4.2}px)"><span id="sym">${S.run ? S.run.sym : pickSym()}</span></div>
+      <div class="ex-hint" id="exHint">Смотрите на ${L.acc[r.sym]} · голова — к светящейся стороне</div>
+    </div>
+    <div class="ex-bottom">
+      ${helper ? `<button class="btn btn-w" data-a="blur" style="flex:2">Ошибка <span class="blurc" id="blurC">${S.run ? S.run.blur : 0}</span></button>` : ''}
+      <button class="btn btn-s" data-a="pause">Пауза</button>
+    </div>
+    ${S.step === 'count' ? `<div class="overlay" id="ov"><div class="count" id="cnt">3</div><p style="font-weight:700">Смотрите на ${L.acc[r.sym]}</p></div>` : ''}
+    ${S.step === 'pause' ? `<div class="overlay"><h1>Пауза</h1>
+      <button class="btn btn-p" data-a="resume">Продолжить</button>
+      <button class="btn btn-s" data-a="endEarly">Закончить тренировку</button>
+      <button class="btn btn-d" data-a="stopBad">Мне плохо — остановить</button></div>` : ''}
+  </div>`;
+}
+
+/* ---------- metronome ---------- */
+const Metro = {
+  ctx:null, timer:null, rafId:0, nextBeat:0, beatIdx:0, interval:1, onBeat:null, queue:[],
+  async init(){
+    try{
+      if(!this.ctx){ const AC = window.AudioContext || window.webkitAudioContext; if(AC) this.ctx = new AC(); }
+      if(this.ctx && this.ctx.state === 'suspended') await this.ctx.resume();
+    }catch(e){ this.ctx = null; }
+  },
+  now(){ return this.ctx && this.ctx.state === 'running' ? this.ctx.currentTime : performance.now() / 1000; },
+  beep(t, freq, dur = 0.07, vol = 0.3){
+    if(!this.ctx || this.ctx.state !== 'running') return;
+    try{
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(this.ctx.destination); o.start(t); o.stop(t + dur + 0.03);
+    }catch(e){}
+  },
+  beepNow(freq, dur, vol){ if(this.ctx && this.ctx.state === 'running') this.beep(this.ctx.currentTime + 0.01, freq, dur, vol); },
+  start(bpm, onBeat){
+    this.stop();
+    this.interval = 60 / bpm; this.onBeat = onBeat; this.queue = [];
+    this.nextBeat = this.now() + 0.12;
+    this.timer = setInterval(() => this.tick(), 20);
+    const loop = () => {
+      if(!this.timer) return;
+      const n = this.now();
+      while(this.queue.length && this.queue[0].t <= n){ const b = this.queue.shift(); if(this.onBeat) this.onBeat(b.i); }
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  },
+  tick(){
+    const ahead = 0.12;
+    while(this.nextBeat < this.now() + ahead){
+      this.beep(this.nextBeat, this.beatIdx % 2 ? 620 : 880);
+      this.queue.push({t:this.nextBeat, i:this.beatIdx});
+      this.nextBeat += this.interval; this.beatIdx++;
+    }
+  },
+  stop(){ clearInterval(this.timer); this.timer = null; cancelAnimationFrame(this.rafId); this.queue = []; }
+};
+
+let wakeLock = null;
+async function keepAwake(){ try{ if('wakeLock' in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
+function releaseAwake(){ try{ if(wakeLock){ wakeLock.release(); } }catch(e){} wakeLock = null; }
+function enterFS(){ try{ const el = document.documentElement; if(!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => {}); }catch(e){} }
+function exitFS(){ try{ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }catch(e){} }
+
+function pickSym(prev){
+  const set = SYMS[S.rx.sym]; let s;
+  do { s = set[Math.floor(Math.random() * set.length)]; } while(set.length > 1 && s === prev);
+  return s;
+}
+function clearTimers(){ (S && S.timers || []).forEach(t => clearTimeout(t)); if(S) S.timers = []; }
+
+async function beginSet(){
+  await Metro.init();
+  enterFS(); keepAwake();
+  S.step = 'count'; S.run = null;
+  render();
+  let c = 3;
+  Metro.beepNow(520, .12, .3);
+  const step = () => {
+    c--;
+    const el = document.getElementById('cnt');
+    if(c > 0){ if(el) el.textContent = c; Metro.beepNow(520, .12, .3); S.timers.push(setTimeout(step, 1000)); }
+    else { Metro.beepNow(990, .2, .35); startRun(); }
+  };
+  S.timers.push(setTimeout(step, 1000));
+}
+
+function startRun(){
+  S.step = 'run';
+  S.run = {elapsed:0, last:performance.now(), blur:0, sym:pickSym(), nextSym:2.5 + Math.random() * 2, raf:0};
+  render();
+  S.timers.push(setTimeout(() => { const h = document.getElementById('exHint'); if(h) h.classList.add('gone'); }, 5000));
+  runMetro();
+  loopRun();
+}
+function runMetro(){
+  Metro.beatIdx = 0;
+  Metro.start(S.rx.bpm, i => {
+    const a = document.getElementById('eA'), b = document.getElementById('eB'), g = document.getElementById('headG');
+    const second = i % 2 === 0; // первый удар — вправо/вверх
+    if(a && b){
+      if(S.rx.dir === 'h'){ b.classList.toggle('on', second); a.classList.toggle('on', !second); }
+      else { a.classList.toggle('on', second); b.classList.toggle('on', !second); }
+    }
+    if(g) g.style.transform = `rotate(${second ? 28 : -28}deg)`;
+  });
+}
+function loopRun(){
+  const R = S && S.run;
+  if(!R || S.step !== 'run') return;
+  const now = performance.now();
+  R.elapsed += (now - R.last) / 1000; R.last = now;
+  const left = S.rx.setSec - R.elapsed;
+  const t = document.getElementById('exT'), bar = document.getElementById('exBar');
+  if(t) t.textContent = fmtSec(left);
+  if(bar) bar.style.width = Math.min(100, R.elapsed / S.rx.setSec * 100) + '%';
+  if(R.elapsed >= R.nextSym){
+    R.sym = pickSym(R.sym); R.nextSym = R.elapsed + 2.5 + Math.random() * 2;
+    const el = document.getElementById('sym'); if(el) el.textContent = R.sym;
+  }
+  if(left <= 0){ endSet(); return; }
+  R.raf = requestAnimationFrame(loopRun);
+}
+function pauseRun(){
+  if(!S || S.step !== 'run') return;
+  Metro.stop(); cancelAnimationFrame(S.run.raf);
+  S.step = 'pause'; render();
+}
+function resumeRun(){
+  S.step = 'run'; S.run.last = performance.now();
+  render(); runMetro(); loopRun();
+}
+function endSet(){
+  Metro.stop(); cancelAnimationFrame(S.run.raf);
+  Metro.beepNow(990, .12, .3); setTimeout(() => Metro.beepNow(990, .25, .3), 180);
+  S.blur.push(S.run.blur);
+  S.step = 'clarity'; render();
+}
+function afterClarity(v){
+  S.clarity.push(v);
+  if(S.setIdx + 1 < S.rx.sets){
+    S.step = 'rest'; S.restLeft = S.rx.restSec; render();
+    const tick = () => {
+      if(!S || S.step !== 'rest') return;
+      S.restLeft--;
+      const el = document.getElementById('restC'); if(el) el.textContent = fmtSec(S.restLeft);
+      if(S.restLeft <= 0){ Metro.beepNow(880, .15, .3); const b = document.getElementById('nextBtn'); if(b) b.textContent = 'Готово — ' + b.textContent.charAt(0).toLowerCase() + b.textContent.slice(1); return; }
+      S.timers.push(setTimeout(tick, 1000));
+    };
+    S.timers.push(setTimeout(tick, 1000));
+  } else { S.step = 'post'; exitFS(); releaseAwake(); render(); }
+}
+
+/* ---------- progression ---------- */
+const worst = s => s.clarity.length ? Math.max(...s.clarity) : -1;
+const clarityWord = s => s.clarity.length ? L.clarity[worst(s)] : 'подходы не завершены';
+const isGood = s => !s.stopped && s.setsDone === s.setsPlanned && s.post < 7 && (s.post - s.pre) <= 2 && worst(s) === 0;
+
+function recommend(cur){
+  const rx = DB.rx, d = cur.post - cur.pre, w = worst(cur), why = [];
+  if(cur.stopped) why.push('тренировку остановили из-за самочувствия');
+  if(cur.post >= 7) why.push('после занятия сильное головокружение');
+  if(d >= 4) why.push(`головокружение усилилось на ${balls(d)}`);
+  if(w === 2) why.push(`${L.one[cur.sym]} часто расплывалась`);
+  if(why.length) return {code:'down', why};
+  if(isGood(cur)){
+    const prev = DB.sessions[DB.sessions.length - 1];
+    const sameLevel = prev && prev.bpm === cur.bpm && prev.setSec === cur.setSec && prev.dir === cur.dir && prev.bg === cur.bg && prev.pos === cur.pos;
+    if(sameLevel && isGood(prev)){
+      if(rx.bpm >= rx.maxBpm && rx.setSec >= rx.maxSetSec) return {code:'max'};
+      if(todaySessions().some(s => s.rec === 'up' && s.change && s.change.applied)) return {code:'keep', sub:'day'};
+      return {code:'up'};
+    }
+    return {code:'keep', sub:'first'};
+  }
+  if(cur.setsDone < cur.setsPlanned) return {code:'keep', sub:'short'};
+  return {code:'keep', sub:'adapt'};
+}
+function planChange(code){
+  const rx = DB.rx, from = {bpm:rx.bpm, setSec:rx.setSec}, to = {...from};
+  let step = rx.lastStep;
+  if(code === 'up'){
+    const canB = rx.bpm < rx.maxBpm, canD = rx.setSec < rx.maxSetSec;
+    if(canB && (!canD || rx.lastStep !== 'bpm')){ to.bpm = Math.min(rx.maxBpm, rx.bpm + 10); step = 'bpm'; }
+    else { to.setSec = Math.min(rx.maxSetSec, rx.setSec + 15); step = 'dur'; }
+  } else if(code === 'down'){
+    if(rx.bpm > 40) to.bpm = Math.max(40, rx.bpm - 10); else to.setSec = Math.max(15, rx.setSec - 15);
+  }
+  return {from, to, step, prevStep:rx.lastStep};
+}
+
+function finishSession(){
+  const r = S.rx;
+  const cur = {ts:Date.now(), dir:r.dir, bpm:r.bpm, setSec:r.setSec, setsPlanned:r.sets, setsDone:S.clarity.length,
+    bg:r.bg, pos:r.pos, dist:r.dist, sym:r.sym, mode:DB.mode, pre:S.pre, post:S.post,
+    clarity:S.clarity.slice(), blur:S.blur.slice(), stopped:S.stopped};
+  const rec = recommend(cur);
+  cur.rec = rec.code;
+  if(rec.code === 'up' || rec.code === 'down'){
+    const ch = planChange(rec.code);
+    cur.change = {from:ch.from, to:ch.to, prevStep:ch.prevStep, applied:false};
+    if(DB.rx.auto){
+      DB.rx.bpm = ch.to.bpm; DB.rx.setSec = ch.to.setSec;
+      if(rec.code === 'up') DB.rx.lastStep = ch.step;
+      cur.change.applied = true;
+    }
+  }
+  DB.sessions.push(cur); save();
+  S.result = {cur, rec};
+  S.step = 'summary'; render();
+}
+
+function changeText(ch){
+  const parts = [];
+  if(ch.to.bpm !== ch.from.bpm) parts.push(`темп ${ch.from.bpm} → ${ch.to.bpm} уд/мин`);
+  if(ch.to.setSec !== ch.from.setSec) parts.push(`подход ${durLabel(ch.from.setSec)} → ${durLabel(ch.to.setSec)}`);
+  return parts.join(', ');
+}
+
+function renderSummary(){
+  const {cur, rec} = S.result, d = cur.post - cur.pre;
+  let box = '';
+  const ch = cur.change;
+  if(rec.code === 'up'){
+    box = `<div class="note ok"><b>Отлично — два хороших результата подряд</b>${ch.applied ? `Со следующей тренировки: ${changeText(ch)}.` : `Рекомендация для специалиста: ${changeText(ch)}.`}</div>`;
+  } else if(rec.code === 'down'){
+    box = `<div class="note warn"><b>Нагрузка была великовата</b>${rec.why.join('; ')}. ${ch.applied ? `Немного облегчаем: ${changeText(ch)}.` : `Рекомендация для специалиста: ${changeText(ch)}.`}</div>`;
+  } else if(rec.code === 'max'){
+    box = `<div class="note info"><b>Достигнут потолок назначения</b>Покажите дневник специалисту TURA — он решит, как усложнить упражнение: фон, положение стоя или вертикальные движения.</div>`;
+  } else {
+    const t = {first:'Хороший результат. Если следующая тренировка пройдёт так же — нагрузка вырастет.',
+               day:'Хороший результат. Сегодня нагрузку уже повышали — следующий шаг не раньше завтра.',
+               short:'Выполнены не все подходы — уровень оставляем прежним.',
+               adapt:'Оставляем текущий уровень: организм ещё привыкает. Это нормальная часть процесса.'}[rec.sub];
+    box = `<div class="note info"><b>Уровень без изменений</b>${t}</div>`;
+  }
+  const warn = (cur.post >= 7 || d >= 4) ? `<div class="note danger">Если головокружение не проходит за 20 минут — сообщите специалисту TURA. При внезапных новых симптомах звоните 103 (или 112).</div>` : '';
+  app.innerHTML = `<div class="wrap">${header()}
+    <h1>${cur.stopped ? 'Тренировка остановлена' : 'Тренировка завершена'}</h1>
+    <div class="card"><div class="kv">
+      <div><small>Подходы</small><b>${cur.setsDone} из ${cur.setsPlanned}</b></div>
+      <div><small>Темп</small><b>${cur.bpm} уд/мин</b></div>
+      <div><small>Головокружение</small><b>${cur.pre} → ${cur.post}</b></div>
+      <div><small>Чёткость</small><b>${clarityWord(cur)}</b></div>
+    </div></div>
+    ${box}${warn}
+    <button class="btn btn-p" data-a="doneSession">Готово</button>
+    ${ch && ch.applied ? `<button class="btn btn-s" data-a="undoChange">Оставить прежний уровень</button>` : ''}
+  </div>`;
+}
+
+function endSession(){
+  clearTimers(); Metro.stop(); exitFS(); releaseAwake();
+  S = null; view = 'home'; render();
+}
+
+/* ---------- actions ---------- */
+const A = {
+  go:el => { if(el.dataset.v === 'rx') D = null; afterSafety = null; view = el.dataset.v; render(); },
+  start:() => startSession(),
+  ackSafety:() => { DB.safetyAck = true; save(); if(afterSafety){ afterSafety = null; view = 'home'; startSession(); } else { view = 'home'; render(); } },
+  cancelSession:() => endSession(),
+  flagNone:() => { S.step = 'pre'; render(); },
+  flagYes:() => { S.step = 'alarm'; render(); },
+  rate:el => {
+    const v = +el.dataset.v;
+    if(S.step === 'pre'){ S.pre = v; S.step = v >= 7 ? 'preHigh' : 'setup'; render(); }
+    else if(S.step === 'post'){ S.post = v; finishSession(); }
+  },
+  preAnyway:() => { S.step = 'setup'; render(); },
+  setMode:el => { DB.mode = el.dataset.v; save(); render(); },
+  beginSet:() => beginSet(),
+  blur:() => { if(S && S.run && S.step === 'run'){ S.run.blur++; const c = document.getElementById('blurC'); if(c) c.textContent = S.run.blur; } },
+  pause:() => { if(S.step === 'count'){ clearTimers(); S.step = 'setup'; exitFS(); render(); } else pauseRun(); },
+  resume:() => resumeRun(),
+  endEarly:() => { clearTimers(); exitFS(); releaseAwake(); S.step = 'post'; render(); },
+  stopBad:() => { clearTimers(); exitFS(); releaseAwake(); S.stopped = true; S.step = 'stopBad'; render(); },
+  toPost:() => { S.step = 'post'; render(); },
+  clarity:el => afterClarity(+el.dataset.v),
+  nextSet:() => { clearTimers(); S.setIdx++; beginSet(); },
+  finishNow:() => { clearTimers(); exitFS(); releaseAwake(); S.step = 'post'; render(); },
+  doneSession:() => endSession(),
+  undoChange:() => {
+    const cur = S.result.cur;
+    if(cur.change && cur.change.applied){
+      DB.rx.bpm = cur.change.from.bpm; DB.rx.setSec = cur.change.from.setSec; DB.rx.lastStep = cur.change.prevStep;
+      cur.change.applied = false; save(); toast('Уровень оставлен прежним');
+    }
+    endSession();
+  },
+  copyReport:() => {
+    const txt = reportText();
+    const box = document.getElementById('repbox');
+    const fallback = () => { box.innerHTML = `<div class="note info" style="margin-top:12px">Выделите текст и скопируйте вручную:</div><textarea class="rep" readonly>${esc(txt)}</textarea>`; const ta = box.querySelector('textarea'); ta.focus(); ta.select(); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast('Отчёт скопирован — вставьте в WhatsApp'), fallback);
+      else fallback();
+    }catch(e){ fallback(); }
+  },
+  seg:el => { D[el.dataset.k] = el.dataset.v; const y = window.scrollY; renderRx(); window.scrollTo(0, y); },
+  step:el => {
+    const k = el.dataset.k, st = STEP[k];
+    D[k] = Math.max(st.min, Math.min(st.max, D[k] + st.d * (+el.dataset.d)));
+    const o = document.getElementById('o_' + k); if(o) o.innerHTML = `${D[k]} <small>${st.unit}</small>`;
+  },
+  toggleAuto:el => { D.auto = !D.auto; el.classList.toggle('on', D.auto); },
+  saveRx:() => {
+    if(D.maxBpm < D.bpm) D.maxBpm = D.bpm;
+    if(D.maxSetSec < D.setSec) D.maxSetSec = D.setSec;
+    D.setAt = Date.now();
+    DB.rx = {...D}; save(); D = null; toast('Назначение сохранено'); view = 'home'; render();
+  },
+  resetRx:() => { D = {...DEFAULT_RX, patient:D.patient, specialist:D.specialist}; renderRx(); toast('Стартовые параметры — сохраните, чтобы применить'); },
+  wipe:() => {
+    const m = document.createElement('div'); m.className = 'modal';
+    m.innerHTML = `<div class="card"><h2>Удалить все данные?</h2><p>Дневник тренировок и назначение будут удалены с этого устройства. Отменить нельзя.</p><button class="btn btn-d" data-a="wipeYes">Удалить</button><button class="btn btn-s" data-a="wipeNo">Отмена</button></div>`;
+    document.body.appendChild(m);
+  },
+  wipeYes:() => { document.querySelector('.modal')?.remove(); DB = {rx:{...DEFAULT_RX}, sessions:[], safetyAck:false, mode:'self'}; save(); D = null; view = 'home'; render(); toast('Данные удалены'); },
+  wipeNo:() => document.querySelector('.modal')?.remove()
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-a]');
+  if(!el) return;
+  const fn = A[el.dataset.a];
+  if(fn){ e.preventDefault(); fn(el); }
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if(D && el.matches('input[type=text][data-k]')) D[el.dataset.k] = el.value;
+});
+document.addEventListener('visibilitychange', () => { if(document.hidden && S && S.step === 'run') pauseRun(); });
+
+render();
+</script>
+</body>
+</html>
