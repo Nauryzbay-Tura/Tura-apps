@@ -313,7 +313,7 @@ function renderHome(){
       <button class="navbtn" data-a="go" data-v="rxPaste"><b>Получить назначение</b><span>Ссылка от специалиста TURA</span></button>
     </div>
     ${installCard()}
-    <div class="foot">TURA · VOR×1 · версия 1.1 (камера β)<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
+    <div class="foot">TURA · VOR×1 · версия 1.2 (камера β)<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
   </div>`;
 }
 
@@ -528,15 +528,20 @@ function reportText(){
 
 /* ---------- prescription (specialist) ---------- */
 const STEP = {
-  bpm:{min:40, max:200, d:10, unit:'уд/мин'}, maxBpm:{min:60, max:200, d:10, unit:'уд/мин'},
+  bpm:{min:20, max:200, d:5, unit:'уд/мин'}, maxBpm:{min:20, max:200, d:5, unit:'уд/мин'},
   setSec:{min:15, max:180, d:15, unit:'с'}, maxSetSec:{min:15, max:180, d:15, unit:'с'},
   sets:{min:1, max:5, d:1, unit:''}, restSec:{min:15, max:120, d:15, unit:'с'}, perDay:{min:1, max:6, d:1, unit:'в день'}
 };
+const secPerTurn = bpm => (60 / bpm).toFixed(1).replace('.', ',').replace(',0', '');
+function stepVal(k){
+  const st = STEP[k], v = D[k];
+  return `${v} <small>${st.unit}</small>` + (k === 'bpm' || k === 'maxBpm' ? `<br><small>${secPerTurn(v)} с на поворот</small>` : '');
+}
 function stepper(k, label, hint){
   const st = STEP[k];
   return `<div class="field"><span class="flabel">${label}</span><div class="stepper">
     <button data-a="step" data-k="${k}" data-d="-1" aria-label="Меньше">−</button>
-    <output id="o_${k}">${D[k]} <small>${st.unit}</small></output>
+    <output id="o_${k}">${stepVal(k)}</output>
     <button data-a="step" data-k="${k}" data-d="1" aria-label="Больше">+</button></div>${hint ? `<div class="fhint">${hint}</div>` : ''}</div>`;
 }
 function seg(k, label, opts, hint){
@@ -553,7 +558,9 @@ function renderRx(){
     </div>
     <div class="card"><h2>Упражнение</h2>
       ${seg('dir', 'Направление', L.dir)}
-      ${stepper('bpm', 'Темп — поворотов в минуту', 'Один сигнал = один поворот. Начинать обычно с 60.')}
+      <button class="btn btn-s" data-a="presetSoft">Мягкий старт — для выраженного нистагма<small>20 поворотов в минуту (3 с на поворот), 2 × 20 с, крупная цель</small></button>
+      <div style="height:16px"></div>
+      ${stepper('bpm', 'Темп — поворотов в минуту', 'Один сигнал = один поворот. Обычно начинают с 40–60; при выраженном нистагме и сильной осциллопсии — с 20–30.')}
       ${stepper('setSec', 'Длительность подхода')}
       ${stepper('sets', 'Подходов за тренировку')}
       ${stepper('restSec', 'Отдых между подходами')}
@@ -567,7 +574,7 @@ function renderRx(){
       ${seg('size', 'Размер цели', L.size, 'Чем мельче цель, тем точнее нужна фиксация взгляда.')}
     </div>
     <div class="card"><h2>Автопрогрессия</h2>
-      <button class="switch ${D.auto ? 'on' : ''}" data-a="toggleAuto"><span><b>Повышать нагрузку автоматически</b><br><span class="sub">После 2 хороших тренировок подряд: +10 уд/мин или +15 с по очереди, не чаще раза в день. При плохой переносимости — шаг назад.</span></span><span class="knob"></span></button>
+      <button class="switch ${D.auto ? 'on' : ''}" data-a="toggleAuto"><span><b>Повышать нагрузку автоматически</b><br><span class="sub">После 2 хороших тренировок подряд: +5 уд/мин (ниже 60) или +10 уд/мин, по очереди с +15 с, не чаще раза в день. При плохой переносимости — шаг назад.</span></span><span class="knob"></span></button>
       <div style="height:16px"></div>
       ${stepper('maxBpm', 'Потолок темпа')}
       ${stepper('maxSetSec', 'Потолок длительности')}
@@ -581,7 +588,11 @@ function renderRx(){
     </div>
     <button class="btn btn-p" data-a="saveRx">Сохранить назначение</button>
     <button class="btn btn-s" data-a="resetRx">Стартовые параметры</button>
-    <button class="btn btn-s" data-a="wipe" style="color:var(--danger)">Удалить все данные</button>
+    <div class="card" style="margin-top:14px"><h2>Сброс</h2>
+      <p>«Очистить дневник» — удалить тренировки и тесты, например после пробного занятия или перед новым курсом. Назначение и PIN останутся.</p>
+      <button class="btn btn-s" data-a="wipeDiary" style="color:var(--danger)">Очистить дневник</button>
+      <button class="btn btn-s" data-a="wipe" style="color:var(--danger)">Удалить все данные<small>дневник, назначение и PIN</small></button>
+    </div>
   </div>`;
 }
 
@@ -589,7 +600,7 @@ function renderRx(){
 const MP_VER = '1.2.3';
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER;
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-const TEST_BPM = [60, 80, 100, 120, 140, 160, 180];
+const TEST_BPM = [30, 40, 60, 80, 100, 120, 140, 160, 180];
 const BLINK = 0.12;
 
 const MP_TOTAL_MB = 18;
@@ -1002,7 +1013,7 @@ function renderSession(){
           <li><b>Приложение на экране «Домой» (iPhone):</b> «Настройки» → «Конфиденциальность» → «Камера» или закройте и снова откройте приложение — оно спросит разрешение.</li>
           <li><b>Android, Chrome:</b> значок слева от адреса → «Разрешения» → «Камера» → «Разрешить».</li></ul></div>
         <button class="btn btn-p" data-a="camRetry" id="camRetry" hidden>Повторить</button>
-        <button class="btn btn-p" data-a="startCalib" id="calibBtn" disabled>Калибровка — 12 секунд</button>
+        <button class="btn btn-p" data-a="startCalib" id="calibBtn" disabled>Калибровка — ${S.rx.bpm < 40 ? 16 : 12} секунд</button>
         ${test ? cancel : `<button class="btn btn-s" data-a="noCam">Продолжить без камеры</button>`}
       </div>`;
       if(Cam.state === 'error'){ Cam.state = 'off'; }
@@ -1102,6 +1113,7 @@ function renderExercise(){
     ${S.step === 'count' ? `<div class="overlay" id="ov"><p style="font-weight:800;color:var(--ink);font-size:18px;margin:0">${esc(c.title)} · ${c.bpm} уд/мин</p><div class="count" id="cnt">3</div><p style="font-weight:700">Смотрите на ${L.acc[r.sym]}</p><button class="btn btn-s" data-a="pause" style="max-width:260px">Отмена</button></div>` : ''}
     ${S.step === 'pause' ? `<div class="overlay"><h1>Пауза</h1>
       ${c.kind === 'level' ? `<button class="btn btn-p" data-a="resume">Продолжить тест</button><button class="btn btn-s" data-a="endTest">Показать результат</button>` : `<button class="btn btn-p" data-a="resume">Продолжить</button>
+      ${c.kind === 'set' && S.rx.bpm > 20 ? `<button class="btn btn-s" data-a="slower">Продолжить медленнее<small>${S.rx.bpm} → ${Math.max(20, S.rx.bpm - (S.rx.bpm <= 60 ? 5 : 10))} поворотов в минуту</small></button>` : ''}
       ${c.kind === 'set' ? `<button class="btn btn-s" data-a="endEarly">Закончить тренировку</button>` : `<button class="btn btn-s" data-a="cancelSession">Отменить</button>`}`}
       <button class="btn btn-d" data-a="stopBad">Мне плохо — остановить</button></div>` : ''}
   </div>`;
@@ -1166,7 +1178,7 @@ function clearTimers(){ (S && S.timers || []).forEach(t => clearTimeout(t)); if(
 
 const PHASE = {
   set:   () => ({kind:'set', bpm:S.rx.bpm, dur:S.rx.setSec, title:`Подход ${S.setIdx + 1} из ${S.rx.sets}`}),
-  calib: () => ({kind:'calib', bpm:40, dur:12, title:'Калибровка'}),
+  calib: () => { const b = Math.max(20, Math.min(40, S.rx.bpm)); return {kind:'calib', bpm:b, dur:b < 40 ? 16 : 12, title:'Калибровка'}; },
   level: () => ({kind:'level', bpm:TEST_BPM[S.levelIdx], dur:8, title:`Тест · уровень ${S.levelIdx + 1} из ${TEST_BPM.length}`})
 };
 async function startPhase(kind, chained){
@@ -1350,10 +1362,10 @@ function planChange(code){
   let step = rx.lastStep;
   if(code === 'up'){
     const canB = rx.bpm < rx.maxBpm, canD = rx.setSec < rx.maxSetSec;
-    if(canB && (!canD || rx.lastStep !== 'bpm')){ to.bpm = Math.min(rx.maxBpm, rx.bpm + 10); step = 'bpm'; }
+    if(canB && (!canD || rx.lastStep !== 'bpm')){ to.bpm = Math.min(rx.maxBpm, rx.bpm + (rx.bpm < 60 ? 5 : 10)); step = 'bpm'; }
     else { to.setSec = Math.min(rx.maxSetSec, rx.setSec + 15); step = 'dur'; }
   } else if(code === 'down'){
-    if(rx.bpm > 40) to.bpm = Math.max(40, rx.bpm - 10); else to.setSec = Math.max(15, rx.setSec - 15);
+    if(rx.bpm > 20) to.bpm = Math.max(20, rx.bpm - (rx.bpm <= 60 ? 5 : 10)); else to.setSec = Math.max(15, rx.setSec - 15);
   }
   return {from, to, step, prevStep:rx.lastStep};
 }
@@ -1376,10 +1388,13 @@ function finishSession(){
   const cur = {ts:Date.now(), dir:r.dir, bpm:r.bpm, setSec:r.setSec, setsPlanned:r.sets, setsDone:S.clarity.length,
     bg:r.bg, pos:r.pos, dist:r.dist, sym:r.sym, mode:DB.mode, pre:S.pre, post:S.post,
     clarity:S.clarity.slice(), blur:S.blur.slice(), stopped:S.stopped, cam:camAggregate()};
-  const rec = recommend(cur);
+  let rec = recommend(cur);
+  if(S.slowedFrom && rec.code !== 'down') rec = {code:'down', why:[`темп снижали во время тренировки (${S.slowedFrom} → ${r.bpm})`]};
+  else if(S.slowedFrom) rec.why.unshift(`темп снижали во время тренировки (${S.slowedFrom} → ${r.bpm})`);
   cur.rec = rec.code;
   if(rec.code === 'up' || rec.code === 'down'){
     const ch = planChange(rec.code);
+    if(S.slowedFrom){ ch.to.bpm = Math.min(ch.to.bpm, r.bpm); ch.to.setSec = DB.rx.setSec; }
     cur.change = {from:ch.from, to:ch.to, prevStep:ch.prevStep, applied:false};
     if(DB.rx.auto){
       DB.rx.bpm = ch.to.bpm; DB.rx.setSec = ch.to.setSec;
@@ -1739,6 +1754,23 @@ const A = {
     pauseRun();
   },
   resume:() => resumeRun(),
+  slower:() => {
+    if(!S || S.step !== 'pause' || S.cur.kind !== 'set') return;
+    if(!S.slowedFrom) S.slowedFrom = S.rx.bpm;
+    S.rx.bpm = Math.max(20, S.rx.bpm - (S.rx.bpm <= 60 ? 5 : 10));
+    S.cur.bpm = S.rx.bpm;
+    resumeRun();
+  },
+  presetSoft:() => {
+    Object.assign(D, {bpm:20, maxBpm:Math.max(60, D.maxBpm < 60 ? 60 : Math.min(D.maxBpm, 100)), setSec:20, sets:2, restSec:45, bg:'plain', size:'xl', auto:true});
+    const y = window.scrollY; renderRx(); window.scrollTo(0, y); toast('Мягкий старт выбран — нажмите «Сохранить назначение»');
+  },
+  wipeDiary:() => {
+    const m = document.createElement('div'); m.className = 'modal';
+    m.innerHTML = `<div class="card"><h2>Очистить дневник?</h2><p>Будут удалены все тренировки (${DB.sessions.length}) и тесты (${(DB.tests || []).length}) на этом телефоне. Назначение и PIN останутся. Отменить нельзя.</p><button class="btn btn-d" data-a="wipeDiaryYes">Очистить</button><button class="btn btn-s" data-a="wipeNo">Отмена</button></div>`;
+    document.body.appendChild(m);
+  },
+  wipeDiaryYes:() => { document.querySelector('.modal')?.remove(); DB.sessions = []; DB.tests = []; DB.rx.lastStep = null; save(); clearDraft(); renderRx(); toast('Дневник очищен'); },
   endTest:() => { Cam.stopRec(); finishTest('user'); },
   endEarly:() => { clearTimers(); exitFS(); releaseAwake(); Cam.stop(); S.step = 'post'; render(); },
   stopBad:() => { clearTimers(); Metro.stop(); exitFS(); releaseAwake(); if(S.run) cancelAnimationFrame(S.run.raf); Cam.stop(); S.stopped = true; S.step = 'stopBad'; render(); },
@@ -1768,7 +1800,7 @@ const A = {
   step:el => {
     const k = el.dataset.k, st = STEP[k];
     D[k] = Math.max(st.min, Math.min(st.max, D[k] + st.d * (+el.dataset.d)));
-    const o = document.getElementById('o_' + k); if(o) o.innerHTML = `${D[k]} <small>${st.unit}</small>`;
+    const o = document.getElementById('o_' + k); if(o) o.innerHTML = stepVal(k);
   },
   toggleAuto:el => { D.auto = !D.auto; el.classList.toggle('on', D.auto); },
   saveRx:async () => { if(!(await commitRx())) return; D = null; toast('Назначение сохранено'); view = 'home'; render(); },
