@@ -186,6 +186,33 @@ pre.code{background:#0F1C22;color:#D9E6E6;border-radius:14px;padding:14px;font-s
 .flash{animation:flash .45s ease-in-out 3}
 @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
 .mark{transform-box:fill-box;transform-origin:center;animation:pop .18s ease-out}
+/* поиск в комнате и съёмка комнаты */
+.ar-card{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:4;background:rgba(255,255,255,.96);border-radius:18px;padding:8px 16px 8px 8px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.45);width:max-content;max-width:calc(100% - 24px);pointer-events:none}
+.ar-card img{width:68px;height:68px;border-radius:12px;object-fit:cover;flex:none;background:#ddd}
+.ar-card b{font-size:19px;line-height:1.2;display:block}
+.ar-card small{display:block;font-size:13px;color:var(--ink2);font-weight:700;margin-top:2px}
+.ar-card.big{top:42%;transform:translate(-50%,-50%);flex-direction:column;text-align:center;padding:16px;gap:10px;width:min(340px,calc(100% - 32px))}
+.ar-card.big img{width:min(190px,50vw);height:min(190px,50vw)}
+.ar-card.anchor img{width:96px;height:96px}
+.ar-bottom{position:absolute;left:0;right:0;bottom:calc(12px + var(--sb));z-index:4;display:flex;justify-content:center;align-items:center;gap:10px;padding:0 12px;flex-wrap:wrap}
+.ar-chip{background:rgba(255,255,255,.92);border-radius:999px;padding:9px 13px;font-size:13px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.pill-btn.brand{background:var(--brand)}
+.pill-btn.light{background:rgba(255,255,255,.95);color:var(--ink)}
+.room-panel{position:absolute;left:0;right:0;bottom:0;z-index:5;background:var(--card);border-radius:20px 20px 0 0;padding:14px 16px calc(14px + var(--sb));max-height:60%;overflow:auto;box-shadow:0 -10px 30px -18px rgba(0,0,0,.5);touch-action:pan-y;user-select:text}
+.room-panel p{font-size:15px;margin:0 0 10px}
+.room-panel .btn{min-height:52px;font-size:16px}
+.strip{display:flex;gap:12px;overflow-x:auto;padding:8px 2px 2px;margin-top:12px;touch-action:pan-x}
+.strip .it{flex:none;width:86px;text-align:center;position:relative}
+.strip img{width:86px;height:86px;border-radius:12px;object-fit:cover;display:block;background:#ddd}
+.strip b{display:block;font-size:12px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strip span{display:block;font-size:11px;color:var(--ink2);font-weight:700}
+.strip .del{position:absolute;top:-6px;right:-6px;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:var(--ink);color:#fff;font-weight:800;font-size:15px;line-height:1}
+.namechips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.namechips button{min-height:42px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);padding:0 14px;font-weight:700;font-size:14px}
+.namechips button.on{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+input[type=range]{width:100%;accent-color:var(--brand);height:36px}
+.rotate-hint{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:24px}
+@media (orientation:portrait) and (max-width:700px){.rotate-hint{display:flex}}
 @media (prefers-reduced-motion:reduce){.mark,.stim.shake{animation:none}.tbar i{transition:none}}
 </style>
 </head>
@@ -195,12 +222,13 @@ pre.code{background:#0F1C22;color:#D9E6E6;border-radius:14px;padding:14px;font-s
 <script>
 'use strict';
 /* ===================== TURA · Неглект — прототип v0.1 ===================== */
-const APP_VER = '0.1';
+const APP_VER = '0.2';
 const KEY = 'tura_neglect_v0';
 const DEF_CFG = {
   patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
   manual:false, manualPlan:{spt:8, scan:10, ar:5, alert:2},
-  voice:true, oks:false, camOn:false, leftHand:false, sheetUrl:''
+  voice:true, oks:false, camOn:false, leftHand:false, sheetUrl:'',
+  arMount:'hand', arCue:'auto', arAction:'reach'
 };
 const DEF_LV = {scan:1, spt:1, ar:1, alert:1};
 const KINDS = ['spt','scan','ar','alert'];
@@ -208,7 +236,7 @@ const KINDS = ['spt','scan','ar','alert'];
 let storageOK = true;
 function fresh(){
   return {cfg:{...DEF_CFG, manualPlan:{...DEF_CFG.manualPlan}}, levels:{...DEF_LV}, cbs:[], tests:[], sessions:[], diary:{},
-    head:null, pinHash:null, synced:{}, demo:false};
+    head:null, pinHash:null, synced:{}, demo:false, room:null};
 }
 function load(){
   try{
@@ -224,7 +252,8 @@ function load(){
         diary: d.diary && typeof d.diary === 'object' ? d.diary : {},
         head: d.head || null, pinHash: d.pinHash || null,
         synced: d.synced && typeof d.synced === 'object' ? d.synced : {},
-        demo: !!d.demo
+        demo: !!d.demo,
+        room: d.room && Array.isArray(d.room.items) ? d.room : null
       };
     }
   }catch(e){ storageOK = false; }
@@ -254,6 +283,9 @@ const SW = {
 };
 const w = () => SW[DB.cfg.side] || SW.L;
 const sgn = () => DB.cfg.side === 'R' ? 1 : -1;   // направление игнорируемой стороны по оси x экрана
+const roomItems = () => DB.room && Array.isArray(DB.room.items) ? DB.room.items : [];
+const isNegTh = th => sgn() * th > 5;            // угол от якоря (+ вправо) лежит на стороне неглекта
+function angLabel(raw){ raw = Math.round(raw); return raw < -3 ? `${-raw}° влево` : raw > 3 ? `${raw}° вправо` : 'прямо'; }
 
 /* ---------- помощники ---------- */
 const app = document.getElementById('app');
@@ -313,7 +345,7 @@ const Snd = {
     }catch(e){}
   },
   ok(){ this.tone(880, .12, .09); setTimeout(() => this.tone(1320, .14, .07), 90); },
-  cue(){ this.tone(520, .25, .16, 'triangle', sgn()); setTimeout(() => this.tone(620, .2, .12, 'triangle', sgn()), 180); },
+  cue(pan = sgn()){ this.tone(520, .25, .16, 'triangle', pan); setTimeout(() => this.tone(620, .2, .12, 'triangle', pan), 180); },
   alert(){ this.tone(1050, .08, .09, 'square'); },
   soft(){ this.tone(260, .12, .06); }
 };
@@ -440,6 +472,12 @@ function bearingFrom(e){
   if(Math.hypot(vx, vy) < .25) return null;
   return Math.atan2(vx, vy) / d;
 }
+// наклон задней камеры над горизонтом, градусы
+function elevFrom(e){
+  if(e.beta == null || e.gamma == null) return null;
+  const d = Math.PI / 180, vz = -Math.cos(e.beta*d) * Math.cos(e.gamma*d);
+  return Math.asin(clamp(vz, -1, 1)) / d;
+}
 
 /* ---------- шкала Catherine Bergego (CBS): 10 бытовых ситуаций ---------- */
 function cbsItems(){
@@ -490,8 +528,12 @@ const EX = {
     what:() => `Найти все оранжевые кружки. Оранжевая полоса ${w().adv} показывает, откуда начинать поиск.`,
     how:() => `Найдите и коснитесь всех оранжевых кружков с белой точкой. Начинайте с оранжевой полосы ${w().adv}.`},
   ar:{name:'Поиск в комнате', short:'В комнате', color:'var(--k-ar)',
-    what:() => `Планшет показывает комнату через камеру. Нужно повернуться корпусом ${w().dir} и найти звезду. Тренирует поворот туловища.`,
-    how:() => `Держите планшет перед грудью двумя руками. Поворачивайтесь всем корпусом, пока звезда не окажется в кольце по центру.`},
+    what:() => roomItems().length
+      ? `Телефон показывает комнату через камеру. Пациент ищет предметы своей комнаты и поворачивается корпусом. Подсказки приходят по нарастающей.`
+      : `Телефон показывает комнату через камеру. Нужно повернуться корпусом ${w().dir} и найти звезду. Предметы комнаты настраивает специалист.`,
+    how:() => DB.cfg.arMount === 'chest'
+      ? 'Телефон в креплении на груди. Поворачивайтесь всем корпусом. Чем ближе к предмету, тем чаще звук.'
+      : `Держите телефон перед грудью. Поворачивайтесь всем корпусом, пока ${roomItems().length ? 'предмет' : 'звезда'} не окажется в кольце по центру.`},
   alert:{name:'Бдительность', short:'Бдительность', color:'var(--k-alert)',
     what:() => `Касаться каждой фигуры, кроме красного знака «стоп». Тренирует общее внимание, от которого зависит неглект.`,
     how:() => `Касайтесь экрана, когда появляется фигура. Красный знак «стоп» не трогайте.`}
@@ -610,7 +652,7 @@ function banners(){
   return s;
 }
 function render(){
-  if(MODE === 'run' || MODE === 'test') return;
+  if(MODE === 'run' || MODE === 'test' || MODE === 'room') return;
   if(view === 'spec' && DB.pinHash && !pinUnlocked) view = 'pin';
   const fn = {home:renderHome, assess:renderAssess, cbs:renderCBS, ex:renderEx, diary:renderDiary, progress:renderProgress,
     spec:renderSpec, pin:renderPin, calib:renderCalib, testRes:renderTestRes, sessDone:renderSessDone}[view] || renderHome;
@@ -717,7 +759,7 @@ function renderEx(){
     ${KINDS.map(k => `<div class="card">
       <div class="row-sb"><h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:4px;background:${EX[k].color};display:inline-block"></i>${EX[k].name}</h2><span class="tag mid">Уровень ${DB.levels[k]} из 10</span></div>
       <p>${esc(EX[k].what())}</p>
-      ${k === 'ar' ? sensorsNote : ''}
+      ${k === 'ar' ? `<div class="meta" style="margin-top:0">${roomItems().length ? `Цели: предметы комнаты пациента (${roomItems().length}).` : 'Цели: виртуальная звезда. Предметы комнаты настраивает специалист.'}</div>` + sensorsNote : ''}
       <div class="field" style="margin-top:12px"><div class="seg">${[3,5,10].map(m => `<button data-a="exMin" data-k="${k}" data-v="${m}" class="${exMin[k] === m ? 'on' : ''}">${m} мин</button>`).join('')}</div></div>
       <button class="btn btn-p btn-sm" data-a="startEx" data-v="${k}">Начать</button>
     </div>`).join('')}
@@ -812,6 +854,10 @@ function renderProgress(){
       <div class="meta">Расхождение линий показывает недооценку трудностей пациентом. Сближение линий означает, что осознание растёт.</div>` : `<p>Оценок пока нет.</p>`}
     </div>
     <div class="card"><h2>Дневник семьи</h2><p style="font-size:14px">Трудных бытовых ситуаций в день, из 6.</p><div class="chart">${diaryChart()}</div></div>
+    ${(() => { const arS = DB.sessions.map(x => ({ts:x.ts, b:x.blocks.find(b => b.kind === 'ar' && b.target === 'home' && b.cueMean != null)})).filter(x => x.b).sort((a, b) => a.ts - b.ts);
+      return arS.length ? `<div class="card"><h2>Поиск в комнате: какая подсказка нужна</h2>
+        <div class="chart">${lineChart({labels:arS.map(x => fmtDay(x.ts)), series:[{values:arS.map(x => x.b.cueMean), color:'var(--k-ar)'}], yMin:0, yMax:4, fmt:v => String(Math.round(v * 10) / 10).replace('.', ',')})}</div>
+        <div class="meta">0 — нашёл сам, 1 — звук, 2 — вспышка края, 3 — стрелка, 4 — стрелка и голос. Чем ниже линия, тем самостоятельнее поиск.</div></div>` : ''; })()}
     <div class="card"><h2>Занятия, минут в день</h2><div class="chart">${barChart({labels:mlab, values:minutes, yMax:Math.max(30, ...minutes.filter(v => v != null)), color:'var(--brand)'})}</div>
       <div class="chips" style="margin-top:10px">${KINDS.map(k => `<span class="chip">${EX[k].short}: <b>уровень ${DB.levels[k]}</b></span>`).join('')}</div>
     </div>
@@ -929,6 +975,18 @@ function renderSpec(){
       ${sw('oks', c.oks, 'Движущийся фон в слежении', 'Оптокинетическая стимуляция полосами')}
       ${sw('leftHand', c.leftHand, `Выполнять ${wd.ag} рукой`, 'Напоминание в начале каждого упражнения')}
     </div>
+    <div class="card"><h2>Поиск в комнате</h2>
+      ${(() => { const n = roomItems().length; return `<p style="font-size:14px">${n ? `Комната настроена: ${n} ${plural(n, 'предмет', 'предмета', 'предметов')}. Упражнение ищет их, а не виртуальную звезду.` : 'Комната не настроена, поэтому упражнение ищет виртуальную звезду. Сфотографируйте предметы вокруг пациента.'}</p>
+      <button class="btn btn-p btn-sm" data-a="openRoom">${n ? 'Изменить комнату' : 'Настроить комнату'}</button>`; })()}
+      <div class="field" style="margin-top:16px"><span class="flabel">Как пациент держит телефон</span><div class="seg">
+        ${[['hand','В руке'],['chest','Крепление на груди']].map(([v, l]) => `<button data-a="cfgSet" data-k="arMount" data-v="${v}" class="${c.arMount === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="fhint">На груди руки свободны, а поиск идёт по звуку: чем ближе к предмету, тем чаще сигнал.</div></div>
+      <div class="field"><span class="flabel">Подсказки</span><div class="seg">
+        ${[['auto','По нарастающей'],['always','Стрелка сразу'],['off','Без подсказок']].map(([v, l]) => `<button data-a="cfgSet" data-k="arCue" data-v="${v}" class="${c.arCue === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="fhint">По нарастающей: звук со стороны цели, вспышка края экрана, стрелка, стрелка с голосом. Чем выше уровень, тем позже приходит помощь. Приложение записывает, какая подсказка понадобилась.</div></div>
+      <div class="field" style="margin-bottom:0"><span class="flabel">После того как предмет найден</span><div class="seg">
+        ${[['reach','Показать рукой'],['name','Назвать'],['alternate','Чередовать'],['none','Ничего']].map(([v, l]) => `<button data-a="cfgSet" data-k="arAction" data-v="${v}" class="${c.arAction === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    </div>
     <div class="card"><h2>Контроль поворота головы <span class="beta">β</span></h2>
       <p style="font-size:14px">Фронтальная камера видит, поворачивает ли пациент голову ${wd.dir}. Если нет, звучит подсказка. Видео обрабатывается на устройстве и никуда не отправляется.</p>
       ${camNote}
@@ -1043,6 +1101,7 @@ function startTest(){
     <div class="stage" id="stage" style="display:flex;flex-direction:column">
       <svg id="tsvg" viewBox="0 0 ${TW} ${TH}" preserveAspectRatio="xMidYMid meet" style="position:relative;inset:auto;flex:1 1 0;min-height:0;height:auto;width:100%">${T.items.map(testItemSVG).join('')}<g id="marks"></g></svg>
       <div style="display:flex;justify-content:center;padding:10px 0 calc(12px + var(--sb))"><button class="pill-btn" data-a="testDone">Готово</button></div>
+      <div class="rotate-hint"><h2>Поверните телефон горизонтально</h2><p>Тест рассчитан на широкий экран. На телефоне держите его горизонтально. На планшете звёздочки крупнее.</p></div>
       <div class="overlay" id="tintro" style="background:var(--bg)">
         <h2>Найдите все маленькие звёздочки</h2>
         <div class="kv" style="max-width:420px"><div style="text-align:center"><small>Касайтесь</small>${yes}</div><div style="text-align:center"><small>Не трогайте</small>${no}</div></div>
@@ -1120,7 +1179,7 @@ function blockIntro(){
   document.getElementById('rTitle').textContent = EX[b.kind].name;
   document.getElementById('rSub').textContent = `${RUN.blocks.length > 1 ? `Упражнение ${RUN.i + 1} из ${RUN.blocks.length} · ` : ''}${b.min} мин · уровень ${DB.levels[b.kind]}`;
   RUN.elapsed = 0; setBar();
-  const sensor = b.kind === 'ar' ? (ENV.framed || !ENV.camera ? `<div class="note info" style="max-width:520px;text-align:left">Камера и гироскоп здесь недоступны. Демо-режим: проводите пальцем по экрану, чтобы «поворачиваться».</div>` : `<div class="note info" style="max-width:520px;text-align:left">Приложение попросит доступ к камере и датчику движения. Разрешите оба.</div>`) : '';
+  const sensor = b.kind === 'ar' ? (ENV.framed || !ENV.camera ? `<div class="note info" style="max-width:520px;text-align:left">Камера и гироскоп здесь недоступны. Демо-режим: проводите пальцем по экрану, чтобы «поворачиваться».</div>` : `<div class="note info" style="max-width:520px;text-align:left">Приложение попросит доступ к камере и датчику движения. Разрешите оба.${roomItems().length ? ' Сначала наведите телефон на якорь.' : ''}</div>`) : '';
   st.innerHTML = `<div class="overlay"><h2>${EX[b.kind].name}</h2><p>${esc(EX[b.kind].how())}</p>
     ${DB.cfg.leftHand && b.kind !== 'ar' ? `<div class="note warn" style="max-width:520px"><b>Касайтесь ${wd.ag} рукой</b>Помощник может поддержать руку.</div>` : ''}
     ${sensor}
@@ -1206,7 +1265,9 @@ function blockLine(r){
   switch(r.kind){
     case 'spt': return `замечено оранжевых фигур ${r.hits} из ${r.probes}${r.rt ? ', реакция ' + fmtSec(r.rt) : ''}; в ${wd.ag} трети экрана ${r.zones && r.zones[2][0] ? pct(r.zones[2][1] / r.zones[2][0]) : '—'}`;
     case 'scan': return `найдено ${wd.adv} ${pct(r.negRate)}, с другой стороны ${pct(r.intRate)}; подсказок ${r.cues}${r.oriented != null ? `; голова ${wd.dir} ${pct(r.oriented)} времени` : ''}`;
-    case 'ar': return `найдено целей ${r.found} из ${r.found + r.missed}, поворот корпуса до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`;
+    case 'ar': return r.target === 'home'
+      ? `найдено ${r.found} из ${r.found + r.missed}, сам без подсказки ${pct(r.noCue)}, средняя подсказка ${r.cueMean == null ? '—' : String(r.cueMean).replace('.', ',')} из 4, поворот до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`
+      : `найдено целей ${r.found} из ${r.found + r.missed}, поворот корпуса до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`;
     case 'alert': return `точность ${pct(r.acc)}, реакция ${fmtSec(r.rt)}, ложных касаний ${r.fa}`;
   }
   return '';
@@ -1414,136 +1475,398 @@ function SPT(st, o){
   };
 }
 
-/* --- 3. Поиск в комнате: камера + гироскоп, поворот корпуса --- */
-function AR(st, o){
-  const s = sgn(), wd = w();
-  st.innerHTML = `<video playsinline muted autoplay></video><canvas></canvas><div class="stage-hint" id="arHint">Держите планшет перед грудью и поворачивайтесь корпусом.</div>`;
-  const video = st.querySelector('video'), cv = st.querySelector('canvas'), ctx = cv.getContext('2d');
-  let W = 0, H = 0;
-  const size = () => { const d = Math.min(2, window.devicePixelRatio || 1); W = st.clientWidth || 900; H = st.clientHeight || 560; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
-  size(); window.addEventListener('resize', size);
-  const FOV = 60;
-  let level = o.level, paused = false, done = false, raf = 0, last = performance.now(), stream = null, camOK = false;
-  let mode = 'demo', b0 = null, smooth = null, a = 0, gotOri = false;
-  let tgt = null, phase = 'center', centerT = 0, hold = 0, tStart = 0;
-  const M = {level0:level, found:0, missed:0, times:[], maxA:0};
-  let trio = {n:0, f:0, tt:0};
-  // камера
-  if(ENV.camera && !ENV.framed){
-    navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}}}).then(sm => {
-      if(done){ sm.getTracks().forEach(t => t.stop()); return; }
-      stream = sm; video.srcObject = sm; video.play().catch(() => {}); camOK = true;
-    }).catch(() => { video.style.display = 'none'; });
-  }else video.style.display = 'none';
-  // гироскоп
-  const onOri = e => {
-    const br = bearingFrom(e); if(br == null) return;
-    gotOri = true; if(mode !== 'gyro') mode = 'gyro';
-    if(b0 === null) b0 = br;
-    const rel = wrap180(br - b0);
-    smooth = smooth === null ? rel : smooth + wrap180(rel - smooth) * .25;
-    a = s < 0 ? -smooth : smooth;
+/* --- 3. Поиск в комнате: предметы пациента или звезда; камера + гироскоп, поворот корпуса --- */
+function OriTracker(){
+  const t = {
+    got:false, raw:null, el:null, b0:null, smooth:null, rel:0,
+    handler: e => {
+      const br = bearingFrom(e); if(br == null) return;
+      t.got = true; t.raw = br;
+      const el = elevFrom(e); if(el != null) t.el = el;
+      if(t.b0 === null) return;
+      const r = wrap180(br - t.b0);
+      t.smooth = t.smooth === null ? r : t.smooth + wrap180(r - t.smooth) * .25;
+      t.rel = t.smooth;
+    },
+    start(){ window.addEventListener('deviceorientation', t.handler); },
+    stop(){ window.removeEventListener('deviceorientation', t.handler); },
+    zero(){ if(t.raw != null) t.b0 = t.raw; t.smooth = 0; t.rel = 0; }
   };
-  if(o.motion) window.addEventListener('deviceorientation', onOri);
-  // демо: поворот пальцем
-  let drag = null;
-  const pd = e => { if(mode !== 'demo') return; drag = e.clientX; cv.setPointerCapture && cv.setPointerCapture(e.pointerId); };
-  const pm = e => { if(mode !== 'demo' || drag === null) return; const dx = e.clientX - drag; drag = e.clientX; a = clamp(a + (s < 0 ? dx : -dx) / W * FOV, -60, 120); };
+  return t;
+}
+async function backCamera(video){
+  if(!ENV.camera || ENV.framed) return null;
+  try{
+    const sm = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}});
+    video.srcObject = sm; try{ await video.play(); }catch(e){}
+    return sm;
+  }catch(e){ return null; }
+}
+function arArrow(ctx, x, y, dir, col){   // dir = 1: стрелка влево, −1: вправо
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.fillStyle = col;
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(4, -30); ctx.lineTo(4, -12); ctx.lineTo(34, -12); ctx.lineTo(34, 12); ctx.lineTo(4, 12); ctx.lineTo(4, 30); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function arLabel(ctx, text, x, y){
+  ctx.font = '800 17px Manrope, system-ui, sans-serif'; const tw = ctx.measureText(text).width;
+  ctx.fillStyle = 'rgba(20,34,43,.85)'; ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x - tw / 2 - 14, y - 22, tw + 28, 38, 12); else ctx.rect(x - tw / 2 - 14, y - 22, tw + 28, 38);
+  ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(text, x, y + 4);
+}
+function arRoundImg(ctx, im, x, y, sz){
+  ctx.save(); ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x - sz / 2, y - sz / 2, sz, sz, 12); else ctx.rect(x - sz / 2, y - sz / 2, sz, sz);
+  ctx.clip(); if(im && im.complete && im.naturalWidth) ctx.drawImage(im, x - sz / 2, y - sz / 2, sz, sz); else { ctx.fillStyle = '#CFC8BA'; ctx.fill(); }
+  ctx.restore();
+}
+
+function AR(st, o){
+  const s = sgn(), wd = w(), cfg = DB.cfg, items = roomItems(), home = items.length > 0, chest = cfg.arMount === 'chest';
+  st.innerHTML = `<video playsinline muted autoplay></video><canvas></canvas>
+    <div class="ar-card" id="arCard" hidden></div>
+    <div class="stage-hint" id="arHint" style="top:auto;bottom:calc(84px + var(--sb))">${chest ? 'Телефон в креплении на груди. Поворачивайтесь корпусом и слушайте звук.' : 'Держите телефон перед грудью и поворачивайтесь всем корпусом.'}</div>
+    <div class="ar-bottom" id="arBottom"></div>`;
+  const video = st.querySelector('video'), cv = st.querySelector('canvas'), ctx = cv.getContext('2d');
+  const card = st.querySelector('#arCard'), bottom = st.querySelector('#arBottom'), hint = st.querySelector('#arHint');
+  let W = 0, H = 0;
+  const size = () => { const d = Math.min(2, window.devicePixelRatio || 1); W = st.clientWidth || 390; H = st.clientHeight || 700; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
+  size(); window.addEventListener('resize', size);
+  const fovH = () => H > W ? 46 : 62, fovV = () => H > W ? 62 : 46;
+  let level = o.level, paused = false, pauseAt = 0, done = false, raf = 0, last = performance.now(), stream = null, camOK = false;
+  const ori = OriTracker(); if(!ENV.framed) ori.start();
+  let demoRel = 0, drag = null;
+  const rel = () => ori.got ? ori.rel : demoRel;
+  const elv = () => ori.got && ori.el != null ? ori.el : 0;
+  let phase = 'center', centerT = 0, hold = 0, tStart = 0, tgt = null, cue = 0, maxCue = 0, lastBeep = 0, lastCueSnd = 0, recent = [], pendingRec = null;
+  const M = {level0:level, found:0, missed:0, times:[], maxA:0, cues:[], noCue:0, actDone:0, actFail:0, trials:[]};
+  let trio = {n:0, f:0, cue:0};
+  const imgs = {}; items.forEach(it => { const im = new Image(); im.src = it.photo; imgs[it.id] = im; });
+  const anchor = DB.room && DB.room.anchor; let anchorImg = null;
+  if(anchor && anchor.photo){ anchorImg = new Image(); anchorImg.src = anchor.photo; }
+  backCamera(video).then(sm => {
+    if(done){ if(sm) sm.getTracks().forEach(t => t.stop()); return; }
+    if(sm){ stream = sm; camOK = true; } else video.style.display = 'none';
+  });
+
+  function showCard(title, sub, photo, big){
+    card.hidden = false; card.className = 'ar-card' + (big ? ' big' : '');
+    card.innerHTML = (photo ? `<img src="${photo}" alt="">` : '') + `<div><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+  }
+  const hideCard = () => { card.hidden = true; };
+  const setBottom = html => { bottom.innerHTML = html; };
+  const infoChip = () => `<span class="ar-chip" id="arInfo"></span>`;
+
+  function toAnchor(){
+    phase = 'anchor'; tgt = null;
+    showCard('Наведите на якорь', anchor ? 'Поймайте его в кольцо, как на фото, и нажмите «Это якорь».' : 'Поймайте в кольцо предмет прямо перед пациентом.', anchor && anchor.photo, false);
+    card.classList.add('anchor');
+    setBottom(`<button class="pill-btn brand" data-ar="anchor">Это якорь</button>`);
+    say('Наведите телефон на якорь', true);
+  }
+  function toCenter(){
+    phase = 'center'; centerT = 0; tgt = null; hideCard();
+    setBottom(infoChip() + (home ? `<button class="pill-btn light" data-ar="reanchor">Якорь</button>` : ''));
+  }
+  function newTrial(){
+    tStart = performance.now(); hold = 0; cue = 0; maxCue = 0; lastCueSnd = 0; phase = 'seek';
+    if(home){
+      const pool = items.filter(it => !recent.includes(it.id)), src = pool.length ? pool : items;
+      const wts = src.map(it => isNegTh(it.th) ? 3 : 1), sum = wts.reduce((a, b) => a + b, 0);
+      let r = Math.random() * sum, it = src[0];
+      for(let i = 0; i < src.length; i++){ r -= wts[i]; if(r <= 0){ it = src[i]; break; } }
+      recent.push(it.id); while(recent.length > Math.min(2, items.length - 1)) recent.shift();
+      tgt = {id:it.id, name:it.name, th:it.th, el:it.el == null ? null : it.el, photo:it.photo};
+      showCard('Найдите: ' + it.name, chest ? '' : 'Наведите кольцо на предмет', it.photo, false);
+      say('Найдите: ' + it.name, true);
+      setBottom(infoChip() + `<button class="pill-btn brand" data-ar="found">Нашёл</button>`);
+    }else{
+      const maxT = Math.min(90, 25 + 9 * (level - 1)), minT = Math.min(12 + 3 * level, maxT - 6);
+      tgt = {th:s * (minT + Math.random() * (maxT - minT)), el:null, y:.32 + Math.random() * .3, size:Math.max(.62, 1 - .045 * (level - 1)), name:'звезда'};
+      hideCard(); say(`Найдите звезду ${wd.adv}`); setBottom(infoChip());
+    }
+  }
+  function afterTrial(rec){
+    M.trials.push(rec); M.cues.push(rec.cue);
+    trio.n++; if(rec.found) trio.f++; trio.cue += rec.cue;
+    if(trio.n >= 3){
+      const mc = trio.cue / 3;
+      if(trio.f === 3 && mc <= 1) level = Math.min(10, level + 1);
+      else if(trio.f <= 1 || mc >= 3) level = Math.max(1, level - 1);
+      trio = {n:0, f:0, cue:0};
+    }
+    toCenter();
+  }
+  function found(how){
+    const t = (performance.now() - tStart) / 1000;
+    M.found++; M.times.push(t); if(maxCue === 0) M.noCue++;
+    Snd.ok();
+    const rec = {name:tgt.name, th:Math.round(tgt.th), neg:isNegTh(tgt.th), found:true, t:Math.round(t * 10) / 10, cue:maxCue, how};
+    if(home && cfg.arAction !== 'none'){
+      const act = cfg.arAction === 'alternate' ? (M.found % 2 ? 'reach' : 'name') : cfg.arAction;
+      rec.act = act; pendingRec = rec; phase = 'action';
+      showCard(act === 'reach' ? 'Покажите рукой' : 'Назовите предмет', act === 'reach' ? `Покажите на предмет ${wd.ag} рукой. Если он рядом, дотянитесь.` : 'Скажите вслух, что это.', tgt.photo, false);
+      say(act === 'reach' ? `Покажите ${wd.ag} рукой` : 'Назовите, что это', true);
+      setBottom(`<button class="pill-btn light" data-ar="actFail">Не получилось</button><button class="pill-btn brand" data-ar="actOk">Сделано</button>`);
+    }else afterTrial(rec);
+  }
+  function miss(){
+    M.missed++; Snd.soft();
+    stageMsg(st, home ? `${tgt.name}: не найдено` : 'Не найдено', 1500);
+    afterTrial({name:tgt.name, th:Math.round(tgt.th), neg:isNegTh(tgt.th), found:false, t:null, cue:maxCue});
+  }
+  bottom.addEventListener('click', e => {
+    const b = e.target.closest('[data-ar]'); if(!b || paused || done) return;
+    e.stopPropagation();
+    const a = b.dataset.ar;
+    if(a === 'reanchor'){ toAnchor(); return; }
+    if(a === 'anchor'){ ori.zero(); demoRel = 0; Snd.ok(); toCenter(); return; }
+    if(a === 'found' && phase === 'seek'){ found('manual'); return; }
+    if((a === 'actOk' || a === 'actFail') && phase === 'action' && pendingRec){
+      pendingRec.actOk = a === 'actOk'; if(pendingRec.actOk) M.actDone++; else M.actFail++;
+      const r = pendingRec; pendingRec = null; afterTrial(r);
+    }
+  });
+  // демо без гироскопа: «поворот» пальцем или стрелками клавиатуры
+  const pd = e => { if(ori.got) return; drag = e.clientX; if(cv.setPointerCapture) cv.setPointerCapture(e.pointerId); };
+  const pm = e => { if(ori.got || drag === null) return; const dx = e.clientX - drag; drag = e.clientX; demoRel = clamp(demoRel - dx / W * fovH(), -150, 150); };
   const pu = () => { drag = null; };
   cv.addEventListener('pointerdown', pd); cv.addEventListener('pointermove', pm); cv.addEventListener('pointerup', pu); cv.addEventListener('pointercancel', pu);
-  const kd = e => { if(mode !== 'demo') return; if(e.key === 'ArrowLeft') a += s < 0 ? 4 : -4; if(e.key === 'ArrowRight') a += s < 0 ? -4 : 4; };
+  const kd = e => { if(ori.got) return; if(e.key === 'ArrowLeft') demoRel -= 4; if(e.key === 'ArrowRight') demoRel += 4; };
   window.addEventListener('keydown', kd);
-  const hint = document.getElementById('arHint');
-  setTimeout(() => { if(!gotOri && hint){ hint.textContent = 'Демо-режим: проведите пальцем по экрану в сторону, чтобы «повернуться».'; hint.classList.remove('gone'); } }, 1600);
+  setTimeout(() => { if(!ori.got && hint && !done){ hint.textContent = ENV.framed ? 'Демо-режим: проведите пальцем по экрану, чтобы «повернуться».' : 'Нет данных датчика движения. Разрешите его в настройках браузера. Пока можно «поворачиваться» пальцем.'; hint.classList.remove('gone'); } }, 1600);
 
-  const maxTh = () => Math.min(90, 25 + 9 * (level - 1)), minTh = () => Math.min(12 + 3 * level, maxTh() - 6);
-  function newTarget(){
-    tgt = {th:minTh() + Math.random() * (maxTh() - minTh()), y:.32 + Math.random() * .3, size:Math.max(.62, 1 - .045 * (level - 1))};
-    tStart = performance.now(); hold = 0; phase = 'seek';
-    say(`Найдите звезду ${wd.adv}`);
-  }
-  function afterTarget(ok){
-    trio.n++; if(ok){ trio.f++; trio.tt += (performance.now() - tStart) / 1000; }
-    if(trio.n >= 3){
-      if(trio.f === 3 && trio.tt / 3 < 9) level = Math.min(10, level + 1);
-      else if(trio.f <= 1) level = Math.max(1, level - 1);
-      trio = {n:0, f:0, tt:0};
-    }
-    phase = 'center'; centerT = 0; tgt = null;
-  }
+  const cueDelay = () => 3 + .6 * level;
+  function cueFor(el){ const m = cfg.arCue; if(m === 'off') return 0; if(m === 'always') return el < cueDelay() ? 3 : 4; return clamp(Math.floor(el / cueDelay()), 0, 4); }
+
   function step(now){
     const dt = Math.min(.05, (now - last) / 1000); last = now;
+    if(!home && ori.got && ori.b0 === null) ori.zero();
     if(!paused && !done){
       if(phase === 'center'){
-        if(Math.abs(a) < 10){ centerT += dt; if(centerT > .7) newTarget(); } else centerT = 0;
+        if(Math.abs(rel()) < 10){ centerT += dt; if(centerT > .7) newTrial(); } else centerT = 0;
       }else if(phase === 'seek'){
-        M.maxA = Math.max(M.maxA, a);
-        const off = tgt.th - a, tol = 6 * tgt.size + 3;
-        if(Math.abs(off) < tol){ hold += dt; if(hold >= 1){ M.found++; M.times.push((now - tStart) / 1000); Snd.ok(); afterTarget(true); } }
+        const el = (now - tStart) / 1000, off = tgt.th - rel(), dirW = off < 0 ? 'влево' : 'вправо';
+        M.maxA = Math.max(M.maxA, s * rel());
+        const c = cueFor(el);
+        if(c > cue){
+          cue = c; maxCue = Math.max(maxCue, c);
+          if(c === 1){ Snd.cue(Math.sign(off) || sgn()); lastCueSnd = now; }
+          if(c === 3) say(`Поворачивайтесь ${dirW}`, true);
+          if(c === 4) say(home ? `${tgt.name} ${off < 0 ? 'слева' : 'справа'}. Поворачивайтесь ${dirW}` : `Поворачивайтесь ${dirW}`, true);
+        }
+        const hot = chest ? 2 : 4;
+        if(cue >= 1 && cue < hot && now - lastCueSnd > 4000){ lastCueSnd = now; Snd.cue(Math.sign(off) || sgn()); }
+        if(cue >= hot){
+          const a = Math.min(1, Math.abs(off) / 90), iv = 220 + a * 1100;
+          if(now - lastBeep > iv){ lastBeep = now; Snd.tone(1100 - a * 600, .07, .11, 'sine', clamp(off / 30, -1, 1)); }
+        }
+        const tol = home ? 9 : 6 * tgt.size + 3;
+        const vOK = !home || tgt.el == null || !ori.got || Math.abs(tgt.el - elv()) < 20;
+        if(Math.abs(off) < tol && vOK){ hold += dt; if(hold >= 1) found('auto'); }
         else hold = Math.max(0, hold - dt * 2);
-        if(phase === 'seek' && now - tStart > 25000){ M.missed++; Snd.soft(); afterTarget(false); }
-        if(phase === 'seek' && now - tStart > 7000) say(`Поверните корпус ${wd.dir}`);
+        if(phase === 'seek' && el > (home ? 40 : 25)) miss();
       }
     }
     draw(now);
     raf = requestAnimationFrame(step);
   }
-  const X = th => W / 2 + s * (th - a) * W / FOV;
-  function arrow(x, y, dir, col){
-    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.fillStyle = col;
-    ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(4, -30); ctx.lineTo(4, -12); ctx.lineTo(34, -12); ctx.lineTo(34, 12); ctx.lineTo(4, 12); ctx.lineTo(4, 30); ctx.closePath(); ctx.fill(); ctx.restore();
-  }
-  function label(text, x, y){
-    ctx.font = '800 18px Manrope, system-ui, sans-serif'; const tw = ctx.measureText(text).width;
-    ctx.fillStyle = 'rgba(20,34,43,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - tw / 2 - 14, y - 22, tw + 28, 38, 12) : ctx.rect(x - tw / 2 - 14, y - 22, tw + 28, 38); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(text, x, y + 4);
-  }
+  const X = th => W / 2 + (th - rel()) * W / fovH();
+  const cyBase = () => H * .45;
+  const Yel = e => cyBase() - (e - elv()) * H / fovV();
   function draw(now){
     ctx.clearRect(0, 0, W, H);
     if(!camOK){
       const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#E4ECEC'); g.addColorStop(.62, '#D8E2E2'); g.addColorStop(.621, '#C9C2B4'); g.addColorStop(1, '#B9B1A2');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(20,34,43,.18)'; ctx.lineWidth = 2; ctx.font = '700 13px Manrope, system-ui, sans-serif'; ctx.fillStyle = 'rgba(20,34,43,.45)'; ctx.textAlign = 'center';
-      for(let m = -90; m <= 150; m += 15){ const x = X(m); if(x < -40 || x > W + 40) continue; ctx.beginPath(); ctx.moveTo(x, H * .2); ctx.lineTo(x, H * .62); ctx.stroke(); ctx.fillText((m === 0 ? 'прямо' : Math.abs(m) + '°'), x, H * .18); }
-    }
-    const cx = W / 2, cy = H * (tgt ? tgt.y : .47), rr = Math.min(W, H) * .1;
-    // цель
-    if(tgt && phase === 'seek'){
-      const x = X(tgt.th), ts = rr * .55 * tgt.size, pulse = 1 + .07 * Math.sin(now / 180);
-      if(x > -ts && x < W + ts){
-        ctx.save(); ctx.shadowColor = 'rgba(232,137,42,.8)'; ctx.shadowBlur = 24; ctx.fillStyle = '#E8892A';
-        ctx.beginPath(); const p = new Path2D(starPath(x, cy, ts * pulse)); ctx.fill(p); ctx.restore();
-        ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(new Path2D(starPath(x, cy, ts * pulse)));
-      }else if(level <= 3 || now - tStart > 6000){
-        arrow(s < 0 ? 60 : W - 60, cy, s < 0 ? 1 : -1, '#E8892A');
-        label(`Поверните корпус ${wd.dir}`, W / 2, H - 48);
+      ctx.strokeStyle = 'rgba(20,34,43,.16)'; ctx.lineWidth = 2; ctx.font = '700 12px Manrope, system-ui, sans-serif'; ctx.fillStyle = 'rgba(20,34,43,.45)'; ctx.textAlign = 'center';
+      for(let m = -150; m <= 150; m += 15){
+        const x = X(m); if(x < -40 || x > W + 40) continue;
+        ctx.beginPath(); ctx.moveTo(x, H * .16); ctx.lineTo(x, H * .62); ctx.stroke();
+        ctx.fillText(m === 0 ? (home ? 'якорь' : 'прямо') : Math.abs(m) + '°', x, H * .14);
+      }
+      if(home){
+        const sz = Math.min(W, H) * .2;
+        if(anchorImg) arRoundImg(ctx, anchorImg, X(0), cyBase(), sz);
+        items.forEach(it => { const x = X(it.th); if(x < -sz || x > W + sz) return; arRoundImg(ctx, imgs[it.id], x, it.el != null ? Yel(it.el) : cyBase(), sz); });
       }
     }
-    // прицел
-    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(20,34,43,.6)'; ctx.beginPath(); ctx.arc(cx, cy, rr + 4, 0, Math.PI * 2); ctx.stroke();
-    if(hold > 0){ ctx.lineWidth = 8; ctx.strokeStyle = '#0B6E6E'; ctx.beginPath(); ctx.arc(cx, cy, rr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, hold)); ctx.stroke(); }
-    if(phase === 'center' && Math.abs(a) >= 10){
-      arrow(a > 0 ? (s < 0 ? W - 60 : 60) : (s < 0 ? 60 : W - 60), H * .47, (a > 0) === (s < 0) ? -1 : 1, '#0B6E6E');
-      label('Вернитесь прямо', W / 2, H - 48);
-    }else if(phase === 'center') label('Держите прямо…', W / 2, H - 48);
-    // счёт
-    ctx.textAlign = 'left'; ctx.font = '800 16px Manrope, system-ui, sans-serif';
-    const info = `Найдено: ${M.found}   Поворот: ${Math.round(Math.max(0, a))}°${mode === 'demo' ? '   (демо)' : ''}`;
-    const tw = ctx.measureText(info).width; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(12, H - 46 - 60, tw + 24, 34); ctx.fillStyle = '#14222B'; ctx.fillText(info, 24, H - 46 - 38);
+    const cy = tgt && !home ? H * tgt.y : cyBase(), rr = Math.min(W, H) * .1;
+    if(phase === 'seek' && tgt){
+      const off = tgt.th - rel(), x = X(tgt.th), onScr = x > 20 && x < W - 20;
+      if(!home){
+        const ts = rr * .55 * tgt.size, pulse = 1 + .07 * Math.sin(now / 180);
+        if(onScr){
+          ctx.save(); ctx.shadowColor = 'rgba(232,137,42,.8)'; ctx.shadowBlur = 24; ctx.fillStyle = '#E8892A';
+          const p = new Path2D(starPath(x, cy, ts * pulse)); ctx.fill(p); ctx.restore();
+          ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(new Path2D(starPath(x, cy, ts * pulse)));
+        }
+      }else if(cue >= 4 && onScr){
+        const y = tgt.el != null && ori.got ? Yel(tgt.el) : cyBase(), r2 = rr * 1.15 + 6 * Math.sin(now / 150);
+        ctx.lineWidth = 7; ctx.strokeStyle = '#E8892A'; ctx.beginPath(); ctx.arc(x, y, r2, 0, Math.PI * 2); ctx.stroke();
+        arLabel(ctx, 'здесь', x, y - r2 - 26);
+      }
+      if(cue >= 2 && !onScr){
+        const left = off < 0, a = .55 + .35 * Math.sin(now / 160);
+        const g = ctx.createLinearGradient(left ? 0 : W, 0, left ? 46 : W - 46, 0);
+        g.addColorStop(0, `rgba(232,137,42,${a})`); g.addColorStop(1, 'rgba(232,137,42,0)');
+        ctx.fillStyle = g; ctx.fillRect(left ? 0 : W - 46, 0, 46, H);
+      }
+      if(cue >= 3 && (!onScr || Math.abs(off) > 14)){
+        const left = off < 0;
+        arArrow(ctx, left ? 56 : W - 56, cy, left ? 1 : -1, '#E8892A');
+        arLabel(ctx, `${home ? tgt.name + ': ' : ''}${left ? 'влево' : 'вправо'} ещё ${Math.round(Math.abs(off))}°`, W / 2, H - 104);
+      }
+    }
+    // кольцо-прицел
+    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(W / 2, cy, rr, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(20,34,43,.6)'; ctx.beginPath(); ctx.arc(W / 2, cy, rr + 4, 0, Math.PI * 2); ctx.stroke();
+    if(hold > 0){ ctx.lineWidth = 8; ctx.strokeStyle = '#0B6E6E'; ctx.beginPath(); ctx.arc(W / 2, cy, rr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, hold)); ctx.stroke(); }
+    if(phase === 'center'){
+      if(Math.abs(rel()) >= 10){ const toLeft = rel() > 0; arArrow(ctx, toLeft ? 56 : W - 56, cyBase(), toLeft ? 1 : -1, '#0B6E6E'); arLabel(ctx, home ? 'Вернитесь к якорю' : 'Вернитесь прямо', W / 2, H - 104); }
+      else arLabel(ctx, 'Держите прямо…', W / 2, H - 104);
+    }
+    const ic = st.querySelector('#arInfo');
+    if(ic) ic.textContent = `Найдено ${M.found} · поворот ${Math.round(Math.max(0, s * rel()))}°${ori.got ? '' : ' · демо'}`;
   }
+  if(home) toAnchor(); else toCenter();
   hintFade(st, 5000);
   raf = requestAnimationFrame(step);
   return {
-    pause(){ paused = true; },
-    resume(){ paused = false; last = performance.now(); },
+    pause(){ paused = true; pauseAt = performance.now(); },
+    resume(){ paused = false; const now = performance.now(); last = now; if(phase === 'seek') tStart += now - pauseAt; },
     finish(){
-      done = true; cancelAnimationFrame(raf);
-      window.removeEventListener('deviceorientation', onOri); window.removeEventListener('keydown', kd); window.removeEventListener('resize', size);
+      done = true; cancelAnimationFrame(raf); ori.stop();
+      window.removeEventListener('keydown', kd); window.removeEventListener('resize', size);
       if(stream) stream.getTracks().forEach(t => t.stop());
-      return {level0:M.level0, level1:level, found:M.found, missed:M.missed, meanTime:mean(M.times), maxTurn:Math.round(M.maxA), mode};
+      if(pendingRec) M.trials.push(pendingRec), M.cues.push(pendingRec.cue);
+      const n = M.found + M.missed;
+      return {level0:M.level0, level1:level, target:home ? 'home' : 'star', found:M.found, missed:M.missed, meanTime:mean(M.times),
+        maxTurn:Math.round(M.maxA), mode:ori.got ? 'gyro' : 'demo', cueMean:M.cues.length ? Math.round(mean(M.cues) * 10) / 10 : null,
+        noCue:n ? M.noCue / n : null, actDone:M.actDone, actFail:M.actFail, trials:M.trials.slice(-40)};
     }
   };
+}
+
+/* ---------- комната пациента: съёмка предметов (делает специалист) ---------- */
+const ROOM_MAX = 12;
+const NAME_CHIPS = ['Чашка','Пульт','Телефон','Очки','Часы','Дверь','Окно','Лампа','Картина','Книга'];
+let RM = null;
+async function openRoom(back){
+  Snd.unlock();
+  const motion = ENV.framed ? false : await requestMotion();
+  RM = {back:back || 'spec', step:'anchor', ori:OriTracker(), stream:null, raf:0, video:null, photo:null, th:0, el:null, name:'', manual:false, manualTh:sgn() * 45, file:false, frame:null};
+  if(!ENV.framed) RM.ori.start();
+  if(!motion && !ENV.framed) toast('Нет доступа к датчику движения: угол предмета придётся задавать вручную');
+  MODE = 'room'; document.body.classList.add('lock');
+  app.innerHTML = `<div class="ex"><div class="exbar"><button class="ib" data-a="roomClose" aria-label="Закрыть">✕</button>
+      <div class="t"><b>Комната пациента</b><small>Предметы для «Поиска в комнате»</small></div>
+      <button class="pill-btn brand" data-a="roomClose" style="min-height:48px;padding:0 18px">Готово</button></div>
+    <div class="stage" id="rmStage" style="background:#1B2A30"><video playsinline muted autoplay></video><canvas></canvas><div class="room-panel" id="rmPanel"></div></div></div>`;
+  const st = document.getElementById('rmStage');
+  RM.video = st.querySelector('video');
+  roomPanel(); roomLoop();
+  const sm = await backCamera(RM.video);
+  if(!RM) { if(sm) sm.getTracks().forEach(t => t.stop()); return; }
+  if(sm) RM.stream = sm; else { RM.video.style.display = 'none'; RM.file = true; roomPanel(); }
+}
+function roomPanel(){
+  const p = document.getElementById('rmPanel'); if(!p || !RM) return;
+  const wd = w(), items = roomItems(), an = DB.room && DB.room.anchor;
+  const snapBtn = (label, act) => RM.file
+    ? `<label class="btn btn-p" style="cursor:pointer">${label}<input type="file" accept="image/*" capture="environment" data-room-file="${act}" hidden></label>`
+    : `<button class="btn btn-p" data-a="${act}">${label}</button>`;
+  let h = '';
+  if(RM.step === 'anchor'){
+    h = an
+      ? `<p><b>Шаг 1. Якорь.</b> Сядьте на место пациента и наведите телефон на якорь, как на фото.</p>
+         <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><img src="${an.photo}" alt="Якорь" style="width:84px;height:84px;border-radius:12px;object-fit:cover;flex:none"><div class="meta" style="margin:0">Углы предметов считаются от якоря. Если пациент будет сидеть в другом месте, начните комнату заново.</div></div>
+         <button class="btn btn-p" data-a="roomZero">Навёл на якорь</button><button class="linkbtn" data-a="roomResetAsk">Начать комнату заново</button>`
+      : `<p><b>Шаг 1. Якорь.</b> Сядьте на место, где пациент будет заниматься. Наведите телефон на предмет прямо перед ним: телевизор, окно или картину. От него считаются углы.</p>${snapBtn('Снять якорь', 'roomAnchor')}`;
+  }else if(RM.step === 'reset'){
+    h = `<p><b>Удалить якорь и все предметы комнаты?</b> Фото хранятся только на этом телефоне.</p><div class="row2"><button class="btn btn-s" data-a="roomResetNo">Отмена</button><button class="btn btn-d" data-a="roomReset">Удалить</button></div>`;
+  }else if(RM.step === 'items'){
+    const neg = items.filter(it => isNegTh(it.th)).length, other = items.length - neg;
+    h = `<p><b>Шаг 2. Предметы.</b> Наводите на предметы вокруг пациента и снимайте. Лучше 6–10 штук, большинство ${wd.adv}, на 30–90° от якоря.</p>
+      <div class="kv" style="margin-bottom:10px"><div><small>Сейчас</small><b id="rmAng">${RM.ori.got ? angLabel(RM.ori.rel) : 'угол вручную'}</b></div><div><small>${wd.adv} / с другой стороны</small><b>${neg} / ${other}</b></div></div>
+      ${neg < 4 ? `<div class="note warn" style="margin-bottom:10px">Добавьте предметы ${wd.adv}: там тренировка нужнее всего.</div>` : ''}
+      ${items.length >= ROOM_MAX ? `<div class="note info">Максимум ${ROOM_MAX} предметов. Удалите лишний, чтобы добавить новый.</div>` : snapBtn('Снять предмет', 'roomSnap')}
+      ${items.length ? `<div class="strip">${items.map(it => `<div class="it"><img src="${it.photo}" alt=""><b>${esc(it.name)}</b><span>${angLabel(it.th)}</span><button class="del" data-a="roomDel" data-v="${it.id}" aria-label="Удалить ${esc(it.name)}">×</button></div>`).join('')}</div>` : ''}
+      <button class="linkbtn" data-a="roomRezero">Перезадать якорь</button>`;
+  }else if(RM.step === 'name'){
+    h = `<p><b>Как называется предмет?</b> Название прозвучит голосом во время упражнения.</p>
+      <div style="display:flex;gap:12px;align-items:center"><img src="${RM.photo}" alt="" style="width:84px;height:84px;border-radius:12px;object-fit:cover;flex:none"><div style="flex:1;min-width:0"><input type="text" id="rmName" value="${esc(RM.name)}" placeholder="Например: чашка" autocomplete="off"></div></div>
+      <div class="namechips">${NAME_CHIPS.map(n => `<button data-a="roomChip" data-v="${n}" class="${RM.name === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+      ${RM.manual ? `<div class="field"><label class="flabel" for="rmTh">Где предмет: <span id="rmThL">${angLabel(RM.manualTh)}</span></label><input type="range" id="rmTh" min="-150" max="150" step="5" value="${RM.manualTh}"><div class="fhint">Гироскопа нет, поэтому угол от якоря задайте вручную.</div></div>`
+        : `<div class="meta" style="margin:0 0 10px">Угол от якоря: ${angLabel(RM.th)}</div>`}
+      <div class="row2"><button class="btn btn-s" data-a="roomRetake">Переснять</button><button class="btn btn-p" data-a="roomSave">Сохранить</button></div>`;
+  }
+  p.innerHTML = h;
+}
+function roomLoop(){
+  const st = document.getElementById('rmStage'); if(!st || !RM) return;
+  const cv = st.querySelector('canvas'), ctx = cv.getContext('2d');
+  const step = () => {
+    if(!RM || MODE !== 'room') return;
+    const d = Math.min(2, window.devicePixelRatio || 1), W = st.clientWidth, H = st.clientHeight;
+    if(cv.width !== Math.round(W * d) || cv.height !== Math.round(H * d)){ cv.width = W * d; cv.height = H * d; }
+    ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, W, H);
+    const panel = document.getElementById('rmPanel'), ph = panel ? panel.getBoundingClientRect().height : 0, Hv = Math.max(120, H - ph);
+    const side = Math.min(W, Hv) * .55, cx = W / 2, cy = Hv / 2;
+    RM.frame = {cx, cy, side, W, H};
+    if(RM.file){ ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '700 15px Manrope, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Камера недоступна: снимайте кнопкой ниже', cx, cy); }
+    else{
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; const l = side * .18, x0 = cx - side / 2, y0 = cy - side / 2, x1 = cx + side / 2, y1 = cy + side / 2;
+      ctx.beginPath(); [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([x, y, dx, dy]) => { ctx.moveTo(x, y + dy * l); ctx.lineTo(x, y); ctx.lineTo(x + dx * l, y); }); ctx.stroke();
+    }
+    const rel = RM.ori.got ? RM.ori.rel : 0, fov = H > W ? 46 : 62, X = th => W / 2 + (th - rel) * W / fov;
+    const marks = [{th:0, name:'якорь'}].concat(DB.room && RM.step !== 'anchor' ? roomItems() : []);
+    if(DB.room && RM.step !== 'anchor') marks.forEach(m => {
+      const x = X(m.th); if(x < -60 || x > W + 60) return;
+      arLabel(ctx, m.name, clamp(x, 50, W - 50), 34);
+    });
+    const ang = document.getElementById('rmAng'); if(ang && RM.ori.got) ang.textContent = angLabel(RM.ori.rel);
+    RM.raf = requestAnimationFrame(step);
+  };
+  RM.raf = requestAnimationFrame(step);
+}
+function grabPhoto(){
+  const v = RM && RM.video, f = RM && RM.frame;
+  if(!v || !f || !v.videoWidth) return null;
+  const vw = v.videoWidth, vh = v.videoHeight, sc = Math.max(f.W / vw, f.H / vh), dx = (f.W - vw * sc) / 2, dy = (f.H - vh * sc) / 2;
+  const sx = (f.cx - f.side / 2 - dx) / sc, sy = (f.cy - f.side / 2 - dy) / sc, ss = f.side / sc;
+  const c = document.createElement('canvas'); c.width = c.height = 240;
+  c.getContext('2d').drawImage(v, sx, sy, ss, ss, 0, 0, 240, 240);
+  return c.toDataURL('image/jpeg', .72);
+}
+function fileToPhoto(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { const side = Math.min(im.width, im.height), c = document.createElement('canvas'); c.width = c.height = 240;
+      c.getContext('2d').drawImage(im, (im.width - side) / 2, (im.height - side) / 2, side, side, 0, 0, 240, 240); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', .72)); };
+    im.onerror = rej; im.src = url;
+  });
+}
+function roomSetAnchor(photo){
+  DB.room = {anchor:{photo, el:RM.ori.el != null ? Math.round(RM.ori.el) : null, ts:Date.now()}, items:[], ts:Date.now()};
+  save();
+  if(!storageOK){ DB.room = null; save(); toast('Не хватает памяти устройства'); return; }
+  RM.ori.zero(); RM.step = 'items'; Snd.ok(); roomPanel();
+}
+function roomTakeItem(photo){
+  if(!photo){ toast('Камера ещё не готова'); return; }
+  RM.photo = photo; RM.manual = !RM.ori.got; RM.th = Math.round(RM.ori.rel); RM.el = RM.ori.el != null ? Math.round(RM.ori.el) : null;
+  RM.name = ''; RM.step = 'name'; roomPanel();
+}
+async function roomFromFile(file, act){
+  try{ const ph = await fileToPhoto(file); if(act === 'roomAnchor') roomSetAnchor(ph); else roomTakeItem(ph); }
+  catch(e){ toast('Не удалось открыть фото'); }
+}
+function closeRoom(){
+  if(!RM) return;
+  cancelAnimationFrame(RM.raf); RM.ori.stop();
+  if(RM.stream) RM.stream.getTracks().forEach(t => t.stop());
+  const back = RM.back; RM = null; MODE = null; document.body.classList.remove('lock');
+  go(back);
 }
 
 /* --- 4. Бдительность: go/no-go с предупреждающим сигналом --- */
@@ -1613,6 +1936,28 @@ function demoTest(form, ts, pNeg, pInt, seed){
   const dis = items.filter(i => !i.t && i.x > TW / 2); if(dis.length && rnd() < .7){ const d = dis[Math.floor(rnd() * dis.length)]; taps.splice(3, 0, {i:d.i, t:taps[2] ? taps[2].t + .5 : 5, x:d.x, y:d.y, tg:0, rep:false}); }
   return {id:'demo-t' + seed, ts, form, side:'L', taps, r:scoreTest(items, taps, t + 6)};
 }
+function demoPhoto(kind, label){
+  const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d');
+  const bg = {tv:'#D9E3E6', door:'#E9E1D3', window:'#DCE9F2', clock:'#EDE7DD', lamp:'#EFE6D6', cup:'#E7ECE4', picture:'#E8E1EA'}[kind] || '#E5E5E5';
+  g.fillStyle = bg; g.fillRect(0, 0, 240, 240); g.fillStyle = '#C9C1B2'; g.fillRect(0, 186, 240, 54);
+  g.lineWidth = 6; g.strokeStyle = '#3B4A52';
+  const P = (f, path) => { g.fillStyle = f; g.beginPath(); path(); g.fill(); };
+  if(kind === 'tv'){ g.fillStyle = '#1F2A30'; g.fillRect(40, 56, 160, 96); g.fillRect(112, 152, 16, 22); g.fillRect(80, 172, 80, 8); }
+  if(kind === 'door'){ g.fillStyle = '#A9825A'; g.fillRect(70, 18, 100, 170); P('#E2C27A', () => g.arc(150, 108, 7, 0, 7)); }
+  if(kind === 'window'){ g.fillStyle = '#F7FBFF'; g.fillRect(45, 28, 150, 130); g.strokeStyle = '#8A99A3'; g.strokeRect(45, 28, 150, 130); g.beginPath(); g.moveTo(120, 28); g.lineTo(120, 158); g.moveTo(45, 93); g.lineTo(195, 93); g.stroke(); }
+  if(kind === 'clock'){ P('#fff', () => g.arc(120, 98, 58, 0, 7)); g.beginPath(); g.arc(120, 98, 58, 0, 7); g.stroke(); g.beginPath(); g.moveTo(120, 98); g.lineTo(120, 60); g.moveTo(120, 98); g.lineTo(150, 108); g.stroke(); }
+  if(kind === 'lamp'){ P('#F2C14E', () => { g.moveTo(85, 46); g.lineTo(155, 46); g.lineTo(175, 106); g.lineTo(65, 106); g.closePath(); }); g.fillStyle = '#3B4A52'; g.fillRect(115, 106, 10, 70); g.fillRect(90, 174, 60, 10); }
+  if(kind === 'cup'){ g.fillStyle = '#fff'; g.fillRect(85, 106, 60, 74); g.strokeRect(85, 106, 60, 74); g.beginPath(); g.arc(150, 142, 18, -1.2, 1.2); g.stroke(); }
+  if(kind === 'picture'){ g.fillStyle = '#fff'; g.fillRect(55, 42, 130, 100); g.strokeRect(55, 42, 130, 100); P('#7FA77A', () => { g.moveTo(60, 138); g.lineTo(105, 84); g.lineTo(140, 122); g.lineTo(160, 104); g.lineTo(180, 138); g.closePath(); }); }
+  g.fillStyle = 'rgba(20,34,43,.78)'; g.fillRect(0, 204, 240, 36); g.fillStyle = '#fff'; g.font = '700 18px Manrope, system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('Пример: ' + label, 120, 228);
+  return c.toDataURL('image/jpeg', .8);
+}
+function demoRoom(){
+  const it = (id, kind, name, th, el) => ({id:'demo-' + id, name, photo:demoPhoto(kind, name.toLowerCase()), th, el, ts:Date.now()});
+  return {anchor:{photo:demoPhoto('tv', 'якорь'), el:0, ts:Date.now()}, ts:Date.now(), items:[
+    it('door', 'door', 'Дверь', -80, 4), it('lamp', 'lamp', 'Лампа', -58, -4), it('window', 'window', 'Окно', -42, 12),
+    it('clock', 'clock', 'Часы', -24, 18), it('pic', 'picture', 'Картина', 30, 10), it('cup', 'cup', 'Чашка', 16, -14)]};
+}
 function makeDemo(){
   const d = fresh(), day = 864e5, d0 = new Date(); d0.setHours(10, 0, 0, 0);
   const start = d0.getTime() - 9 * day, rnd = mulberry32(42);
@@ -1630,11 +1975,12 @@ function makeDemo(){
     d.sessions.push({id:'demo-s' + i, ts, sec:1500, mode, leftHand:false, head:false, blocks:[
       {kind:'spt', planMin:mode === 'bottom' ? 11 : 7, sec:mode === 'bottom' ? 660 : 420, level0:a0, level1:a1, probes:14, hits:10 + Math.round(i / 3), rt:.9 - i * .03, zones:[[5,5],[5,4],[4,1 + Math.round(i / 3)]]},
       {kind:'scan', planMin:7, sec:mode === 'bottom' ? 420 : 540, level0:b0, level1:b1, sheets:5, negRate:neg, intRate:.97, fp:1, cues:9 - Math.round(i * .7), early:2, oriented:null},
-      {kind:'ar', planMin:4, sec:mode === 'bottom' ? 240 : 360, level0:c0, level1:c1, found:5 + Math.round(i / 2), missed:2, meanTime:11 - i * .5, maxTurn:35 + i * 5, mode:'gyro'},
+      {kind:'ar', planMin:4, sec:mode === 'bottom' ? 240 : 360, level0:c0, level1:c1, target:'home', found:5 + Math.round(i / 2), missed:Math.max(0, 2 - Math.floor(i / 4)), meanTime:11 - i * .5, maxTurn:35 + i * 5, mode:'gyro', cueMean:Math.round((2.7 - i * .22 + (rnd() - .5) * .3) * 10) / 10, noCue:Math.min(1, .08 + i * .07), actDone:4 + Math.round(i / 2), actFail:1},
       {kind:'alert', planMin:3, sec:180, level0:e0, level1:e1, trials:70, hits:52, miss:4, fa:3, acc:.9 + i * .005, rt:.61 - i * .01, rtSD:.14}
     ]});
   }
   d.levels = lv;
+  d.room = demoRoom();
   for(let i = 0; i < 10; i++){
     const ts = start + i * day + 3600e3 * 10, k = isoDay(ts), yesN = Math.max(0, Math.round(5 - i * .4 + (rnd() - .5) * 1.5));
     const a = [0,0,0,0,0,0]; const order = [0,1,2,3,4,5].sort(() => rnd() - .5); for(let j = 0; j < yesN && j < 6; j++) a[order[j]] = 1;
@@ -1692,7 +2038,8 @@ const ACT = {
   sync: () => syncNow(),
   gas: () => { gasOpen = !gasOpen; const y = window.scrollY; render(); window.scrollTo(0, y); },
   copyGas: async () => { try{ await navigator.clipboard.writeText(GAS_CODE); toast('Код скопирован'); }catch(e){ toast('Не удалось скопировать. Выделите код вручную.'); } },
-  copyJson: async () => { const txt = JSON.stringify({app:'tura-neglect', v:APP_VER, exported:new Date().toISOString(), ...DB, pinHash:undefined}, null, 1); try{ await navigator.clipboard.writeText(txt); toast('Данные скопированы'); }catch(e){ toast('Не удалось скопировать'); } },
+  copyJson: async () => { const txt = JSON.stringify({app:'tura-neglect', v:APP_VER, exported:new Date().toISOString(), ...DB, pinHash:undefined,
+    room:DB.room ? {items:roomItems().map(({photo, ...r}) => r)} : null}, null, 1); try{ await navigator.clipboard.writeText(txt); toast('Данные скопированы'); }catch(e){ toast('Не удалось скопировать'); } },
   setPin: async () => { const v = (document.getElementById('f_pin') || {}).value || ''; if(!/^\d{4}$/.test(v)){ toast('PIN: ровно 4 цифры'); return; } DB.pinHash = await hashPin(v); pinUnlocked = true; save(); toast('PIN установлен'); render(); },
   clearPin: () => { DB.pinHash = null; save(); toast('PIN убран'); render(); },
   pin: async el => {
@@ -1701,14 +2048,42 @@ const ACT = {
     if(pinBuf.length === 4){ const h = await hashPin(pinBuf); pinBuf = ''; if(h === DB.pinHash){ pinUnlocked = true; view = 'spec'; } else pinErr = true; }
     render();
   },
-  calStart: () => runCalib()
+  calStart: () => runCalib(),
+  cfgSet: el => { DB.cfg[el.dataset.k] = el.dataset.v; save(); const y = window.scrollY; render(); window.scrollTo(0, y); },
+  openRoom: () => openRoom(view),
+  roomClose: () => closeRoom(),
+  roomAnchor: () => { const ph = grabPhoto(); if(!ph){ toast('Камера ещё не готова'); return; } roomSetAnchor(ph); },
+  roomZero: () => { RM.ori.zero(); RM.step = 'items'; Snd.ok(); roomPanel(); },
+  roomRezero: () => { RM.step = 'anchor'; roomPanel(); },
+  roomResetAsk: () => { RM.step = 'reset'; roomPanel(); },
+  roomResetNo: () => { RM.step = 'anchor'; roomPanel(); },
+  roomReset: () => { DB.room = null; save(); RM.step = 'anchor'; roomPanel(); toast('Комната очищена'); },
+  roomSnap: () => roomTakeItem(grabPhoto()),
+  roomChip: el => { RM.name = el.dataset.v; const inp = document.getElementById('rmName'); if(inp) inp.value = RM.name; document.querySelectorAll('[data-a=roomChip]').forEach(b => b.classList.toggle('on', b.dataset.v === RM.name)); },
+  roomRetake: () => { RM.photo = null; RM.step = 'items'; roomPanel(); },
+  roomSave: () => {
+    const inp = document.getElementById('rmName'), name = ((inp && inp.value) || RM.name || '').trim();
+    if(!name){ toast('Введите название предмета'); return; }
+    const item = {id:uid(), name:name.slice(0, 40), photo:RM.photo, th:RM.manual ? RM.manualTh : RM.th, el:RM.manual ? null : RM.el, ts:Date.now()};
+    DB.room.items.push(item); DB.room.ts = Date.now(); save();
+    if(!storageOK){ DB.room.items.pop(); save(); toast('Не хватает памяти. Удалите лишние предметы.'); return; }
+    Snd.ok(); RM.photo = null; RM.step = 'items'; roomPanel();
+  },
+  roomDel: el => { DB.room.items = roomItems().filter(it => it.id !== el.dataset.v); save(); roomPanel(); }
 };
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]'); if(!el || el.disabled) return;
   const fn = ACT[el.dataset.a]; if(fn){ e.preventDefault(); fn(el); }
 });
+document.addEventListener('input', e => {
+  const el = e.target; if(!RM) return;
+  if(el.id === 'rmName') RM.name = el.value;
+  if(el.id === 'rmTh'){ RM.manualTh = +el.value; const l = document.getElementById('rmThL'); if(l) l.textContent = angLabel(RM.manualTh); }
+});
 document.addEventListener('change', e => {
-  const el = e.target; if(!el.dataset || !el.dataset.f) return;
+  const el = e.target;
+  if(el.dataset && el.dataset.roomFile){ const f = el.files && el.files[0]; if(f && RM) roomFromFile(f, el.dataset.roomFile); return; }
+  if(!el.dataset || !el.dataset.f) return;
   DB.cfg[el.dataset.f] = el.value.trim(); save();
 });
 document.addEventListener('visibilitychange', () => { if(document.hidden && RUN && RUN.ctrl && !RUN.paused) runPause(); });
