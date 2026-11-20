@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B6E6E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Неглект">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>TURA Неглект</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Токены TURA (как в VOR×1). Раскладка: меню в одну колонку до 640px, упражнения на весь экран. Одна светлая тема. */
+:root{
+  color-scheme: light;
+  --bg:#F4F3EF; --card:#FFFFFF; --ink:#14222B; --ink2:#4A5963; --muted:#7A8790; --line:#E3E1DA;
+  --brand:#0B6E6E; --brand-dark:#085858; --brand-soft:#DDEFEE;
+  --cue:#E8892A; --cue-soft:#FDEBD0; --blue:#2A78D6;
+  --danger:#B42318; --danger-soft:#FDE7E4; --ok:#1C7C3A; --ok-soft:#E3F3E7; --warn-soft:#FFF1D6;
+  --k-spt:#0B6E6E; --k-scan:#E8892A; --k-ar:#2A78D6; --k-alert:#6B5BA8;
+  --r:20px; --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  --font:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body{min-height:100vh}
+body.lock{overflow:hidden;position:fixed;inset:0}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding:calc(14px + var(--st)) 16px calc(28px + var(--sb))}
+.top{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+.logo{width:46px;height:46px;flex:none;border-radius:14px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;letter-spacing:.08em}
+.ttl{font-size:20px;font-weight:800;line-height:1.1}
+.sub{font-size:13px;color:var(--ink2);margin-top:2px}
+.backbar{display:flex;align-items:center;gap:8px;margin:2px 0 12px}
+.back{background:var(--card);border:1px solid var(--line);border-radius:14px;min-height:46px;padding:0 16px;font-weight:700;font-size:15px;color:var(--ink2)}
+h1{font-size:26px;line-height:1.15;margin:6px 0 10px;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:17px;margin:0 0 10px;font-weight:800;text-wrap:balance}
+p{line-height:1.5;margin:0 0 12px;color:var(--ink2);font-size:16px}
+.card{background:var(--card);border-radius:var(--r);padding:18px;margin:0 0 14px;border:1px solid var(--line);box-shadow:0 8px 24px -18px rgba(20,34,43,.35)}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;border-radius:16px;border:0;font-size:18px;font-weight:800;padding:14px 18px;text-align:center;line-height:1.2}
+.btn-p{background:var(--brand);color:#fff}
+.btn-p:active{background:var(--brand-dark)}
+.btn-s{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+.btn-d{background:var(--danger);color:#fff}
+.btn-sm{min-height:46px;font-size:15px;border-radius:14px;padding:10px 14px}
+.btn + .btn{margin-top:10px}
+.btn:disabled{opacity:.45}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2 .btn + .btn{margin-top:0}
+.navgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.navbtn{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:86px;text-align:left;display:flex;flex-direction:column;gap:4px}
+.navbtn b{font-size:16px}
+.navbtn span{font-size:13px;color:var(--ink2);line-height:1.35}
+.navgrid .navbtn:last-child:nth-child(odd){grid-column:1/-1}
+.eyebrow{display:block;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.big{font-size:30px;font-weight:800;line-height:1.1}
+.row-sb{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.mixbar{display:flex;height:16px;border-radius:8px;overflow:hidden;margin:14px 0 8px;gap:2px}
+.mixbar i{display:block;height:100%}
+.mixleg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:12px}
+.mixleg span{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:var(--ink2)}
+.mixleg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.why{font-size:14px;margin-bottom:14px}
+.tag{font-size:12px;font-weight:800;border-radius:999px;padding:5px 10px;white-space:nowrap;align-self:flex-start}
+.tag.bottom{background:var(--brand-soft);color:var(--brand)}
+.tag.mid{background:#EEF0F2;color:var(--ink2)}
+.tag.top{background:var(--cue-soft);color:#7A4600}
+.tag.manual{background:#ECE8F6;color:#4B3D8A}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat3 > div{background:var(--bg);border-radius:14px;padding:10px 12px;min-width:0}
+.stat3 small{display:block;font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.stat3 b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat3 em{display:block;font-style:normal;font-size:12px;color:var(--ink2);font-weight:600;margin-top:2px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv div{background:var(--bg);border-radius:14px;padding:10px 12px}
+.kv small{display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.kv b{font-size:15px;line-height:1.3}
+.kv svg{max-width:100%;height:auto;display:block;margin:4px auto 0}
+.meta{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.4}
+.note{border-radius:16px;padding:14px 16px;font-size:15px;line-height:1.45;margin:0 0 14px}
+.note b{display:block;margin-bottom:4px;font-size:16px}
+.note.ok{background:var(--ok-soft);color:#0F4D24}
+.note.warn{background:var(--warn-soft);color:#5C3500}
+.note.danger{background:var(--danger-soft);color:#7A160F}
+.note.info{background:var(--brand-soft);color:#063F3F}
+.note .btn{margin-top:10px}
+.seg{display:flex;background:var(--bg);border-radius:14px;padding:4px;gap:4px;flex-wrap:wrap}
+.seg button{flex:1;min-width:0;min-height:46px;border:0;border-radius:11px;background:transparent;font-size:14px;font-weight:700;color:var(--ink2);padding:6px 8px;line-height:1.2}
+.seg button.on{background:var(--card);color:var(--brand);box-shadow:0 1px 4px rgba(20,34,43,.16)}
+.field{margin:0 0 18px}
+.flabel{display:block;font-size:13px;font-weight:800;color:var(--ink2);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.fhint{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}
+input[type=text],input[type=url],input[type=password]{width:100%;min-height:52px;border-radius:14px;border:1.5px solid var(--line);padding:0 14px;font:inherit;font-size:16px;background:var(--card);color:var(--ink)}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg);border-radius:14px;padding:12px 14px;border:0;width:100%;text-align:left;margin-bottom:8px}
+.switch .knob{width:52px;height:32px;border-radius:16px;background:#C9CCC8;position:relative;flex:none;transition:background .15s}
+.switch .knob::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch.on .knob{background:var(--brand)}
+.switch.on .knob::after{left:23px}
+.switch b{font-size:15px;display:block}
+.switch span{font-size:13px;color:var(--ink2)}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:50px;height:50px;flex:none;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-size:24px;font-weight:700}
+.stepper output{flex:1;text-align:center;font-size:20px;font-weight:800}
+.stepper output small{font-size:13px;color:var(--ink2);font-weight:600}
+.cbs-item{border-top:1px solid var(--line);padding:14px 0}
+.cbs-item:first-of-type{border-top:0;padding-top:4px}
+.cbs-item .q{font-size:16px;font-weight:700;line-height:1.4;margin-bottom:10px}
+.cbs-item .q i{font-style:normal;color:var(--muted);font-weight:800;margin-right:6px}
+.cbs-item .seg button{font-size:13px}
+.sticky{position:sticky;bottom:0;padding:12px 0 calc(12px + var(--sb));background:linear-gradient(to top,var(--bg) 70%,rgba(244,243,239,0))}
+.yn{display:grid;grid-template-columns:1fr 92px 92px;gap:8px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
+.yn:first-of-type{border-top:0}
+.yn span{font-size:16px;line-height:1.35;font-weight:600}
+.yn button{min-height:52px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-weight:800;font-size:16px}
+.yn button.on.y{background:var(--cue-soft);border-color:var(--cue);color:#7A4600}
+.yn button.on.n{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.list-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;border-top:1px solid var(--line);padding:12px 0;align-items:center}
+.list-row:first-of-type{border-top:0}
+.list-row b{font-size:15px}
+.list-row span{font-size:14px;color:var(--ink2)}
+.linkbtn{background:none;border:0;color:var(--brand);font-weight:800;font-size:15px;padding:8px 0}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .ax{font-size:11px;fill:var(--muted);font-family:var(--font)}
+.chart .dl{font-size:12px;fill:var(--ink);font-weight:800;font-family:var(--font)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink2);font-weight:700;margin-bottom:6px}
+.legend i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--ink2)}
+.chip b{color:var(--ink)}
+pre.code{background:#0F1C22;color:#D9E6E6;border-radius:14px;padding:14px;font-size:12px;line-height:1.5;overflow-x:auto;white-space:pre;margin:0 0 10px}
+.foot{font-size:12px;color:#7A8790;text-align:center;margin-top:24px;line-height:1.5}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:320px;margin:0 auto}
+.pinpad button{min-height:64px;border-radius:16px;border:1.5px solid var(--line);background:var(--card);font-size:26px;font-weight:800}
+.pindots{display:flex;gap:16px;justify-content:center;margin:8px 0 18px}
+.pindots i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--brand)}
+.pindots i.on{background:var(--brand)}
+.resmap{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.toast{position:fixed;left:50%;bottom:calc(24px + var(--sb));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;z-index:100;max-width:90vw;text-align:center;font-size:15px}
+.camwrap{position:relative;width:min(72vw,300px);aspect-ratio:3/4;margin:4px auto 14px;border-radius:22px;overflow:hidden;background:#0D1A20}
+.camv.parked{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1}
+.camv.preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.beta{font-size:10px;font-weight:800;color:var(--brand);background:var(--brand-soft);border-radius:6px;padding:1px 5px;margin-left:5px;vertical-align:middle}
+.demo-banner{background:#ECE8F6;color:#3B2F70;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:700;margin-bottom:14px;line-height:1.4}
+/* ---------- полноэкранные упражнения ---------- */
+.ex{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;touch-action:none;user-select:none;-webkit-user-select:none}
+.exbar{display:flex;align-items:center;gap:10px;padding:calc(8px + var(--st)) 12px 8px;background:var(--card);border-bottom:1px solid var(--line)}
+.ib{width:48px;height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-size:18px;font-weight:800;flex:none}
+.exbar .t{flex:1;min-width:0}
+.exbar .t b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exbar .t small{font-size:12px;color:var(--muted);font-weight:700}
+.tbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:5px}
+.tbar i{display:block;height:100%;background:var(--brand);width:0;transition:width .25s linear}
+.clock{font-variant-numeric:tabular-nums;font-weight:800;font-size:18px;min-width:52px;text-align:right}
+.headchip{font-size:12px;font-weight:800;border-radius:999px;padding:6px 10px;background:var(--bg);color:var(--ink2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.headchip.on{background:var(--ok-soft);color:var(--ok)}
+.stage{position:relative;flex:1;min-height:0;overflow:hidden;background:#fff}
+.stage > svg,.stage > canvas,.stage > video{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stage > video{object-fit:cover;background:#1B2A30}
+.stage-foot{position:absolute;left:50%;bottom:calc(14px + var(--sb));transform:translateX(-50%);z-index:3;display:flex;gap:10px}
+.pill-btn{min-height:54px;padding:0 24px;border-radius:999px;border:0;background:var(--ink);color:#fff;font-weight:800;font-size:16px;box-shadow:0 6px 18px -8px rgba(0,0,0,.5);white-space:nowrap}
+.stage-hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:3;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:15px;font-weight:700;color:var(--ink2);max-width:min(560px,90%);text-align:center;transition:opacity .6s;pointer-events:none}
+.stage-hint.gone{opacity:0}
+.stage-msg{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:4;background:var(--ink);color:#fff;border-radius:16px;padding:14px 22px;font-size:20px;font-weight:800;pointer-events:none;text-align:center;max-width:86%}
+.edgeflash{position:absolute;top:0;bottom:0;width:22px;background:var(--cue);z-index:2;pointer-events:none}
+.overlay{position:absolute;inset:0;z-index:6;background:rgba(244,243,239,.98);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px;text-align:center;overflow:auto}
+.overlay .btn{max-width:440px}
+.overlay h2{font-size:24px;margin:0}
+.overlay p{max-width:540px;margin:0}
+.overlay .kv{max-width:440px;width:100%;text-align:left}
+.ov-actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:440px;align-items:stretch}
+.ov-actions .btn + .btn{margin-top:0}
+.alert-stage{position:absolute;inset:0;display:grid;place-items:center}
+.stim{width:min(42vmin,280px);height:min(42vmin,280px);transition:transform .12s}
+.stim svg{width:100%;height:100%;display:block}
+.stim.shake{animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.anchor-pulse{animation:pulse 1.2s ease-in-out infinite}
+@keyframes flash{0%,100%{opacity:1}25%,75%{opacity:.1}}
+.flash{animation:flash .45s ease-in-out 3}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+.mark{transform-box:fill-box;transform-origin:center;animation:pop .18s ease-out}
+@media (prefers-reduced-motion:reduce){.mark,.stim.shake{animation:none}.tbar i{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+'use strict';
+/* ===================== TURA · Неглект — прототип v0.1 ===================== */
+const APP_VER = '0.1';
+const KEY = 'tura_neglect_v0';
+const DEF_CFG = {
+  patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
+  manual:false, manualPlan:{spt:8, scan:10, ar:5, alert:2},
+  voice:true, oks:false, camOn:false, leftHand:false, sheetUrl:''
+};
+const DEF_LV = {scan:1, spt:1, ar:1, alert:1};
+const KINDS = ['spt','scan','ar','alert'];
+
+let storageOK = true;
+function fresh(){
+  return {cfg:{...DEF_CFG, manualPlan:{...DEF_CFG.manualPlan}}, levels:{...DEF_LV}, cbs:[], tests:[], sessions:[], diary:{},
+    head:null, pinHash:null, synced:{}, demo:false};
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){
+      const d = JSON.parse(raw), c = d.cfg || {};
+      return {
+        cfg: Object.assign({}, DEF_CFG, c, {manualPlan: Object.assign({}, DEF_CFG.manualPlan, c.manualPlan || {})}),
+        levels: Object.assign({}, DEF_LV, d.levels || {}),
+        cbs: Array.isArray(d.cbs) ? d.cbs : [],
+        tests: Array.isArray(d.tests) ? d.tests : [],
+        sessions: Array.isArray(d.sessions) ? d.sessions : [],
+        diary: d.diary && typeof d.diary === 'object' ? d.diary : {},
+        head: d.head || null, pinHash: d.pinHash || null,
+        synced: d.synced && typeof d.synced === 'object' ? d.synced : {},
+        demo: !!d.demo
+      };
+    }
+  }catch(e){ storageOK = false; }
+  return fresh();
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(DB)); storageOK = true; }
+  catch(e){ storageOK = false; }
+}
+let DB = load();
+
+/* ---------- окружение ---------- */
+const ENV = {
+  framed: (() => { try{ return window.self !== window.top; }catch(e){ return true; } })(),
+  secure: !!window.isSecureContext
+};
+ENV.camPolicy = (() => {
+  try{ const fp = document.permissionsPolicy || document.featurePolicy; if(fp && fp.allowsFeature) return fp.allowsFeature('camera'); }catch(e){}
+  return true;
+})();
+ENV.camera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && ENV.secure && ENV.camPolicy;
+
+/* ---------- сторона неглекта ---------- */
+const SW = {
+  L:{adv:'слева', dir:'влево', turn:'налево', a:'левая', ag:'левой', am:'левый', aa:'левую', half:'левой половине', name:'Левосторонний'},
+  R:{adv:'справа', dir:'вправо', turn:'направо', a:'правая', ag:'правой', am:'правый', aa:'правую', half:'правой половине', name:'Правосторонний'}
+};
+const w = () => SW[DB.cfg.side] || SW.L;
+const sgn = () => DB.cfg.side === 'R' ? 1 : -1;   // направление игнорируемой стороны по оси x экрана
+
+/* ---------- помощники ---------- */
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const fmtDay = ts => { const d = new Date(ts); return pad(d.getDate()) + '.' + pad(d.getMonth()+1); };
+const fmtDT = ts => { const d = new Date(ts); return fmtDay(ts) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const isoDay = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); };
+const fmtClock = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60) + ':' + pad(s%60); };
+const fmtSec = s => s == null || !isFinite(s) ? '—' : (s < 10 ? s.toFixed(2).replace('.', ',') : Math.round(s)) + ' с';
+const fmtNum = (v, d=2) => v == null || !isFinite(v) ? '—' : (v > 0 && d ? '+' : '') + v.toFixed(d).replace('.', ',');
+const fmtCoc = v => v == null ? '—' : fmtNum(v, 2);
+const pct = v => v == null || !isFinite(v) ? '—' : Math.round(v * 100) + '%';
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+const median = a => { if(!a.length) return null; const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m-1] + b[m]) / 2; };
+const sd = a => { const m = mean(a); return a.length > 1 ? Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / (a.length - 1)) : null; };
+const wrap180 = a => { a = ((a + 180) % 360 + 360) % 360 - 180; return a; };
+function plural(n, a, b, c){ const m10 = n % 10, m100 = n % 100; if(m10 === 1 && m100 !== 11) return a; if(m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return b; return c; }
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function starPath(cx, cy, R, r = R * .45, n = 5){
+  let d = '';
+  for(let i = 0; i < n * 2; i++){ const rr = i % 2 ? r : R, a = -Math.PI / 2 + i * Math.PI / n; d += (i ? 'L' : 'M') + (cx + rr * Math.cos(a)).toFixed(1) + ' ' + (cy + rr * Math.sin(a)).toFixed(1); }
+  return d + 'Z';
+}
+function svgPt(svg, e){
+  const m = svg.getScreenCTM(); if(!m) return {x:0, y:0};
+  const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+  return p.matrixTransform(m.inverse());
+}
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+function restartAnim(el, cls){ if(!el) return; el.classList.remove(cls); void el.getBoundingClientRect(); el.classList.add(cls); }
+
+/* ---------- звук и голос ---------- */
+const Snd = {
+  ctx:null,
+  unlock(){
+    try{
+      if(!this.ctx){ const C = window.AudioContext || window.webkitAudioContext; if(C) this.ctx = new C(); }
+      if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    }catch(e){}
+  },
+  tone(f = 880, d = .14, v = .12, type = 'sine', pan = 0){
+    const c = this.ctx; if(!c) return;
+    try{
+      const o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      let node = o.connect(g);
+      if(pan && c.createStereoPanner){ const p = c.createStereoPanner(); p.pan.value = pan; node = node.connect(p); }
+      node.connect(c.destination); o.start(t); o.stop(t + d + .03);
+    }catch(e){}
+  },
+  ok(){ this.tone(880, .12, .09); setTimeout(() => this.tone(1320, .14, .07), 90); },
+  cue(){ this.tone(520, .25, .16, 'triangle', sgn()); setTimeout(() => this.tone(620, .2, .12, 'triangle', sgn()), 180); },
+  alert(){ this.tone(1050, .08, .09, 'square'); },
+  soft(){ this.tone(260, .12, .06); }
+};
+let lastSay = 0;
+function say(text, force){
+  if(!DB.cfg.voice) return;
+  const now = Date.now(); if(!force && now - lastSay < 15000) return; lastSay = now;
+  try{
+    if(!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; u.rate = .95;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){}
+}
+let wakeLock = null;
+async function keepAwake(on){
+  try{
+    if(on && 'wakeLock' in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); }
+    else if(!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){ wakeLock = null; }
+}
+
+/* ---------- камера: контроль поворота головы (MediaPipe Face Landmarker, как в VOR×1) ---------- */
+const MP_VER = '1.2.3';
+const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER;
+const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+function camErrText(e){
+  const n = e && e.name;
+  if(n === 'NotAllowedError' || n === 'SecurityError') return 'Доступ к камере запрещён. Разрешите камеру в настройках браузера.';
+  if(n === 'NotFoundError' || n === 'OverconstrainedError') return 'Фронтальная камера не найдена.';
+  if(n === 'NotReadableError') return 'Камера занята другим приложением.';
+  return 'Не удалось загрузить распознавание лица. Проверьте интернет.';
+}
+const Cam = {
+  state:'off', err:'', video:null, stream:null, lm:null, raf:0, lastVT:-1, yaw:NaN, face:false, hist:[],
+  available(){ return ENV.camera; },
+  ensureVideo(){
+    if(!this.video){
+      const v = document.createElement('video');
+      v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.muted = true; v.autoplay = true;
+      v.className = 'camv parked'; document.body.appendChild(v); this.video = v;
+    }
+    return this.video;
+  },
+  async start(){
+    if(this.state === 'ready') return true;
+    if(this.state === 'loading') return false;
+    if(!this.available()){ this.state = 'error'; this.err = 'Камера в этой версии недоступна.'; return false; }
+    this.state = 'loading'; this.err = '';
+    try{
+      const v = this.ensureVideo();
+      this.stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:'user', width:{ideal:640}, height:{ideal:480}}});
+      v.srcObject = this.stream; try{ await v.play(); }catch(e){}
+      if(!this.lm){
+        const mod = await import(MP_BASE + '/vision_bundle.mjs');
+        const files = await mod.FilesetResolver.forVisionTasks(MP_BASE + '/wasm');
+        const opts = d => ({baseOptions:{modelAssetPath:MODEL_URL, delegate:d}, runningMode:'VIDEO', numFaces:1,
+          outputFacialTransformationMatrixes:true, outputFaceBlendshapes:false});
+        try{ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('GPU')); }
+        catch(e){ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('CPU')); }
+      }
+      this.state = 'ready'; this.loop(); return true;
+    }catch(e){
+      console.warn('camera', e); this.stop(); this.state = 'error'; this.err = camErrText(e); return false;
+    }
+  },
+  loop(){
+    cancelAnimationFrame(this.raf);
+    const step = () => {
+      if(this.state !== 'ready') return;
+      const v = this.video;
+      if(v && v.readyState >= 2 && v.currentTime !== this.lastVT){
+        this.lastVT = v.currentTime;
+        let res = null; try{ res = this.lm.detectForVideo(v, performance.now()); }catch(e){}
+        this.process(res);
+      }
+      this.raf = requestAnimationFrame(step);
+    };
+    this.raf = requestAnimationFrame(step);
+  },
+  process(res){
+    let yaw = NaN, face = false;
+    if(res && res.faceLandmarks && res.faceLandmarks.length){
+      face = true;
+      const mt = res.facialTransformationMatrixes && res.facialTransformationMatrixes[0];
+      const m = mt && (mt.data || mt);
+      if(m && m.length >= 11) yaw = Math.atan2(m[8], m[10]) * 180 / Math.PI;
+    }
+    this.face = face; this.yaw = yaw;
+    const t = performance.now() / 1000;
+    this.hist.push({t, yaw});
+    while(this.hist.length && t - this.hist[0].t > 20) this.hist.shift();
+  },
+  turn(){ const h = DB.head; if(!h || !isFinite(this.yaw)) return NaN; return h.sign * (this.yaw - h.base); },
+  orientedWithin(sec, thr){
+    const h = DB.head; if(!h) return true;
+    const t = performance.now() / 1000;
+    return this.hist.some(s => t - s.t <= sec && isFinite(s.yaw) && h.sign * (s.yaw - h.base) >= thr);
+  },
+  stop(){
+    cancelAnimationFrame(this.raf); this.raf = 0;
+    if(this.stream){ this.stream.getTracks().forEach(tr => tr.stop()); this.stream = null; }
+    if(this.video){ this.video.srcObject = null; this.video.className = 'camv parked'; if(this.video.parentNode !== document.body) document.body.appendChild(this.video); }
+    if(this.state !== 'error') this.state = 'off';
+    this.hist = []; this.yaw = NaN; this.face = false; this.lastVT = -1;
+  }
+};
+const headThr = () => DB.head ? Math.max(8, DB.head.range * .4) : 10;
+const headLive = () => Cam.state === 'ready' && !!DB.head;
+
+/* ---------- гироскоп ---------- */
+async function requestMotion(){
+  try{
+    if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+      return (await DeviceOrientationEvent.requestPermission()) === 'granted';
+    }
+    return typeof DeviceOrientationEvent !== 'undefined';
+  }catch(e){ return false; }
+}
+// направление задней камеры в горизонтальной плоскости, градусы (по часовой стрелке)
+function bearingFrom(e){
+  if(e.alpha == null || e.beta == null || e.gamma == null) return null;
+  const d = Math.PI / 180, ca = Math.cos(e.alpha*d), sa = Math.sin(e.alpha*d), cb = Math.cos(e.beta*d), sb = Math.sin(e.beta*d), cg = Math.cos(e.gamma*d), sg = Math.sin(e.gamma*d);
+  const vx = -(ca*sg + sa*sb*cg), vy = ca*sb*cg - sa*sg;
+  if(Math.hypot(vx, vy) < .25) return null;
+  return Math.atan2(vx, vy) / d;
+}
+
+/* ---------- шкала Catherine Bergego (CBS): 10 бытовых ситуаций ---------- */
+function cbsItems(){
+  const s = w();
+  return [
+    {cur:`Забывает умыть, побрить или накрасить ${s.aa} половину лица`, pt:`Я забываю умыть или побрить ${s.aa} сторону лица`},
+    {cur:`С трудом надевает ${s.am} рукав или ${s.am} тапок`, pt:`Мне трудно надеть ${s.am} рукав или тапок`},
+    {cur:`Оставляет еду на ${s.half} тарелки`, pt:`Я оставляю еду на ${s.half} тарелки`},
+    {cur:`После еды не вытирает рот ${s.adv}`, pt:`После еды я забываю вытереть рот ${s.adv}`},
+    {cur:`Сам не смотрит ${s.dir}`, pt:`Мне трудно смотреть ${s.dir}`},
+    {cur:`Забывает о ${s.ag} половине тела: рука свисает, нога «забыта»`, pt:`Я забываю про свою ${s.aa} руку или ногу`},
+    {cur:`Не реагирует на людей и звуки ${s.adv}`, pt:`Я не замечаю людей или звуки ${s.adv}`},
+    {cur:`Задевает людей и предметы ${s.adv} при ходьбе или в коляске`, pt:`Я задеваю предметы ${s.adv}, когда хожу или еду в коляске`},
+    {cur:`Не находит дорогу, если нужно повернуть ${s.turn}, даже в знакомом месте`, pt:`Мне трудно найти дорогу, если нужно повернуть ${s.turn}`},
+    {cur:`Не находит свои вещи, если они лежат ${s.adv}`, pt:`Я не могу найти вещи, которые лежат ${s.adv}`}
+  ];
+}
+const CBS_SCALE = {cur:['Нет','Легко','Умеренно','Выраженно'], pt:['Никогда','Иногда','Часто','Всегда']};
+function cbsTotal(ans){
+  const a = ans.filter(v => v != null);
+  if(!a.length) return null;
+  return Math.round(a.reduce((s, v) => s + v, 0) * 10 / a.length * 10) / 10;
+}
+const latestCBS = who => DB.cbs.filter(c => c.who === who).sort((a, b) => b.ts - a.ts)[0] || null;
+function anosoGap(){ const c = latestCBS('cur'), p = latestCBS('pt'); if(!c || !p) return null; return Math.round((c.total - p.total) * 10) / 10; }
+
+/* ---------- дневник семьи ---------- */
+function diaryQ(){
+  const s = w();
+  return [
+    `Оставлял(а) еду на ${s.half} тарелки`,
+    `Задевал(а) дверной проём или мебель ${s.adv}`,
+    `Не замечал(а) человека, который говорил ${s.adv}`,
+    `Не мог(ла) найти вещь, которая лежала ${s.adv}`,
+    `Забывал(а) про ${s.aa} руку: свисала или оказалась зажата`,
+    `Не умыл(а) или не побрил(а) ${s.aa} сторону лица`
+  ];
+}
+const diaryScore = e => e && Array.isArray(e.a) ? e.a.filter(v => v === 1).length : null;
+const diaryAnswered = e => e && Array.isArray(e.a) ? e.a.filter(v => v === 0 || v === 1).length : 0;
+
+/* ---------- упражнения ---------- */
+const EX = {
+  spt:{name:'Плавное слежение', short:'Слежение', color:'var(--k-spt)',
+    what:() => `Фигуры медленно плывут ${w().dir}. Взгляд и внимание идут за ними сами. Работает, даже если пациент не замечает своих трудностей.`,
+    how:() => `Следите глазами за фигурами. Когда одна станет оранжевой, коснитесь её.`},
+  scan:{name:'Поиск и сканирование', short:'Сканирование', color:'var(--k-scan)',
+    what:() => `Найти все оранжевые кружки. Оранжевая полоса ${w().adv} показывает, откуда начинать поиск.`,
+    how:() => `Найдите и коснитесь всех оранжевых кружков с белой точкой. Начинайте с оранжевой полосы ${w().adv}.`},
+  ar:{name:'Поиск в комнате', short:'В комнате', color:'var(--k-ar)',
+    what:() => `Планшет показывает комнату через камеру. Нужно повернуться корпусом ${w().dir} и найти звезду. Тренирует поворот туловища.`,
+    how:() => `Держите планшет перед грудью двумя руками. Поворачивайтесь всем корпусом, пока звезда не окажется в кольце по центру.`},
+  alert:{name:'Бдительность', short:'Бдительность', color:'var(--k-alert)',
+    what:() => `Касаться каждой фигуры, кроме красного знака «стоп». Тренирует общее внимание, от которого зависит неглект.`,
+    how:() => `Касайтесь экрана, когда появляется фигура. Красный знак «стоп» не трогайте.`}
+};
+
+/* ---------- правила выбора плана ---------- */
+const MODE_LABEL = {bottom:'Упор на автоматическое внимание', mid:'Сбалансированный план', top:'Упор на активный поиск', manual:'План специалиста'};
+const SHARES = {
+  bottom:{spt:.44, scan:.28, ar:.16, alert:.12},
+  mid:{spt:.28, scan:.36, ar:.24, alert:.12},
+  top:{spt:.16, scan:.38, ar:.34, alert:.12}
+};
+function planFor(){
+  const c = DB.cfg, g = anosoGap();
+  let mode, why;
+  if(c.manual){
+    mode = 'manual'; why = 'Состав занятия задал специалист вручную.';
+  }else if(g === null){
+    mode = 'mid'; why = 'Нет пары оценок по шкале CBS (куратор и пациент), поэтому план сбалансированный. Проведите оценку, и план подстроится.';
+  }else if(g >= c.gapHigh){
+    mode = 'bottom'; why = `Пациент оценивает свои трудности на ${String(g).replace('.', ',')} балла ниже, чем куратор. Это выраженная недооценка, поэтому больше упражнений, которые работают без осознания дефицита.`;
+  }else if(g >= c.gapLow){
+    mode = 'mid'; why = `Разница оценок куратора и пациента ${String(g).replace('.', ',')} балла: умеренная недооценка. Автоматическое и активное внимание тренируются поровну.`;
+  }else{
+    mode = 'top'; why = 'Пациент видит свои трудности почти так же, как куратор. Больше активного поиска и поворотов корпуса.';
+  }
+  let blocks;
+  if(mode === 'manual'){
+    blocks = KINDS.map(k => ({kind:k, min:Math.max(0, Math.round(c.manualPlan[k] || 0))})).filter(b => b.min > 0);
+  }else{
+    const total = c.sessionMin, sh = SHARES[mode];
+    blocks = KINDS.map(k => ({kind:k, min:Math.max(2, Math.round(total * sh[k]))}));
+    const diff = total - blocks.reduce((s, b) => s + b.min, 0);
+    blocks[1].min = Math.max(2, blocks[1].min + diff);
+  }
+  return {mode, why, gap:g, blocks, total:blocks.reduce((s, b) => s + b.min, 0)};
+}
+
+/* ---------- тест вычёркивания ---------- */
+const TW = 1000, TH = 640, LETTERS = 'АБВГДЕЖКМНПРСТУ';
+function genTest(form){
+  const rnd = mulberry32(1000 + form * 7919), cols = 12, rows = 8, x0 = 40, x1 = 960, y0 = 30, y1 = 610;
+  const cw = (x1 - x0) / cols, rh = (y1 - y0) / rows, items = [];
+  for(let c = 0; c < cols; c++){
+    const idx = [...Array(rows).keys()];
+    for(let i = idx.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+    const tRows = new Set(idx.slice(0, 3));
+    for(let r = 0; r < rows; r++){
+      const x = Math.round(x0 + cw * (c + .5) + (rnd() - .5) * cw * .45), y = Math.round(y0 + rh * (r + .5) + (rnd() - .5) * rh * .4);
+      const rot = Math.round((rnd() - .5) * 30);
+      if(tRows.has(r)) items.push({x, y, t:1, kind:'star', rot});
+      else{
+        const k = rnd();
+        items.push(k < .38 ? {x, y, t:0, kind:'bigstar', rot} : k < .72 ? {x, y, t:0, kind:'letter', ch:LETTERS[Math.floor(rnd() * LETTERS.length)]} : k < .86 ? {x, y, t:0, kind:'tri'} : {x, y, t:0, kind:'dot'});
+      }
+    }
+  }
+  return items.map((it, i) => ({...it, i}));
+}
+function testItemSVG(it){
+  const x = it.x, y = it.y, ink = '#14222B';
+  switch(it.kind){
+    case 'star': return `<path d="${starPath(x, y, 12)}" transform="rotate(${it.rot} ${x} ${y})" fill="${ink}"/>`;
+    case 'bigstar': return `<path d="${starPath(x, y, 22)}" transform="rotate(${it.rot} ${x} ${y})" fill="${ink}"/>`;
+    case 'letter': return `<text x="${x}" y="${y + 9}" text-anchor="middle" font-size="27" font-weight="700" font-family="Manrope,system-ui,sans-serif" fill="${ink}">${it.ch}</text>`;
+    case 'tri': return `<path d="M${x} ${y - 12}L${x + 11} ${y + 8}L${x - 11} ${y + 8}Z" fill="${ink}"/>`;
+    default: return `<circle cx="${x}" cy="${y}" r="7" fill="${ink}"/>`;
+  }
+}
+function segX(p1, p2, p3, p4){
+  const d = (a, b, c) => (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+  const d1 = d(p3, p4, p1), d2 = d(p3, p4, p2), d3 = d(p1, p2, p3), d4 = d(p1, p2, p4);
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+}
+function scoreTest(items, taps, dur){
+  const tg = items.filter(i => i.t), xs = tg.map(i => i.x), mn = Math.min(...xs), mx = Math.max(...xs);
+  const nx = x => (x - mn) / (mx - mn) * 2 - 1;
+  const seq = [], seen = new Set();
+  for(const t of taps){ if(t.tg && !seen.has(t.i)){ seen.add(t.i); seq.push(t); } }
+  const hitItems = tg.filter(i => seen.has(i.i));
+  const meanAll = mean(tg.map(i => nx(i.x)));
+  // центр вычёркивания (CoC, Rorden & Karnath 2010): средняя горизонтальная позиция найденных целей, −1…+1
+  const coc = hitItems.length ? mean(hitItems.map(i => nx(i.x))) - meanAll : null;
+  const L = tg.filter(i => i.x < TW / 2), R = tg.filter(i => i.x >= TW / 2);
+  let path = 0; for(let k = 1; k < seq.length; k++) path += Math.hypot(seq[k].x - seq[k-1].x, seq[k].y - seq[k-1].y);
+  let cross = 0; for(let a = 1; a < seq.length; a++) for(let b = a + 2; b < seq.length; b++) if(segX(seq[a-1], seq[a], seq[b-1], seq[b])) cross++;
+  return {
+    n:tg.length, hits:hitItems.length,
+    hitsL:L.filter(i => seen.has(i.i)).length, nL:L.length, hitsR:R.filter(i => seen.has(i.i)).length, nR:R.length,
+    coc: coc === null ? null : Math.round(coc * 1000) / 1000,
+    fp:taps.filter(t => t.i >= 0 && !t.tg).length, rep:taps.filter(t => t.rep).length, blank:taps.filter(t => t.i < 0).length,
+    dur:Math.round(dur * 10) / 10, path:Math.round(path / 100) / 10, cross,
+    firstX: seq.length ? Math.round(nx(seq[0].x) * 100) / 100 : null
+  };
+}
+const negHits = r => DB.cfg.side === 'R' ? [r.hitsR, r.nR] : [r.hitsL, r.nL];
+function cocText(coc){
+  if(coc === null) return 'Не найдено ни одной цели, поэтому центр вычёркивания не рассчитывается.';
+  const a = Math.abs(coc), toR = coc > 0;
+  if(a <= .08) return 'Поиск сбалансирован: найденные цели распределены почти поровну по обеим сторонам.';
+  const typical = (toR && DB.cfg.side === 'L') || (!toR && DB.cfg.side === 'R');
+  return `Найденные цели смещены ${toR ? 'вправо' : 'влево'}. ` + (typical ? `Это типичная картина: ${w().name.toLowerCase()} неглект.` : 'Смещение в необычную сторону. Проверьте настройку стороны неглекта у специалиста.');
+}
+const lastTest = () => [...DB.tests].sort((a, b) => b.ts - a.ts)[0] || null;
+
+/* ===================== ЭКРАНЫ ===================== */
+let view = 'home', MODE = null, CB = null, testForm = 1, exMin = {spt:5, scan:5, ar:5, alert:3}, viewTest = null, lastSession = null, gasOpen = false;
+function header(){
+  return `<div class="top"><div class="logo">TURA</div><div><div class="ttl">Неглект</div><div class="sub">Тренажёр пространственного внимания</div></div></div>`;
+}
+function backbar(to = 'home'){ return `<div class="backbar"><button class="back" data-a="go" data-v="${to}">← Назад</button></div>`; }
+function banners(){
+  let s = '';
+  if(DB.demo) s += `<div class="demo-banner">Демо-данные курса из 10 дней. Перед работой с пациентом удалите их в разделе «Специалист».</div>`;
+  if(!storageOK) s += `<div class="note warn"><b>Данные не сохраняются</b>Браузер запрещает хранить данные. После закрытия страницы результаты пропадут.</div>`;
+  return s;
+}
+function render(){
+  if(MODE === 'run' || MODE === 'test') return;
+  if(view === 'spec' && DB.pinHash && !pinUnlocked) view = 'pin';
+  const fn = {home:renderHome, assess:renderAssess, cbs:renderCBS, ex:renderEx, diary:renderDiary, progress:renderProgress,
+    spec:renderSpec, pin:renderPin, calib:renderCalib, testRes:renderTestRes, sessDone:renderSessDone}[view] || renderHome;
+  fn();
+  if(view !== 'calib' && Cam.state !== 'off' && !MODE) Cam.stop();
+  window.scrollTo(0, 0);
+}
+function go(v){ view = v; render(); }
+
+function mixBar(blocks){
+  const tot = blocks.reduce((s, b) => s + b.min, 0) || 1;
+  return `<div class="mixbar" role="img" aria-label="Состав занятия">${blocks.map(b => `<i style="flex:${b.min / tot};background:${EX[b.kind].color}"></i>`).join('')}</div>
+    <div class="mixleg">${blocks.map(b => `<span><i style="background:${EX[b.kind].color}"></i>${EX[b.kind].short} ${b.min} мин</span>`).join('')}</div>`;
+}
+
+function renderHome(){
+  const p = planFor(), lt = lastTest(), c = latestCBS('cur'), pt = latestCBS('pt'), g = anosoGap();
+  const doneToday = DB.sessions.filter(s => isoDay(s.ts) === isoDay(Date.now())).length;
+  const nh = lt ? negHits(lt.r) : null;
+  const hasData = DB.tests.length || DB.cbs.length || DB.sessions.length;
+  app.innerHTML = `<div class="wrap">${header()}${banners()}
+    <div class="card">
+      <div class="row-sb"><div><span class="eyebrow">Занятие на сегодня</span><div class="big">${p.total} мин</div></div><span class="tag ${p.mode}">${MODE_LABEL[p.mode]}</span></div>
+      ${mixBar(p.blocks)}
+      <p class="why">${esc(p.why)}</p>
+      <button class="btn btn-p" data-a="startPlan">${doneToday ? 'Начать ещё одно занятие' : 'Начать занятие'}</button>
+      ${doneToday ? `<div class="meta">Сегодня выполнено занятий: ${doneToday}</div>` : ''}
+    </div>
+    <div class="card">
+      <h2>Последняя оценка</h2>
+      ${lt || c || pt ? `<div class="stat3">
+        <div><small>CoC</small><b>${lt ? fmtCoc(lt.r.coc) : '—'}</b><em>${lt ? 'тест ' + fmtDay(lt.ts) : 'теста нет'}</em></div>
+        <div><small>Найдено ${w().adv}</small><b>${nh ? nh[0] + '/' + nh[1] : '—'}</b><em>${lt ? 'целей' : ''}</em></div>
+        <div><small>CBS</small><b>${c ? String(c.total).replace('.', ',') : '—'}</b><em>${pt ? 'пациент: ' + String(pt.total).replace('.', ',') : 'нет самооценки'}</em></div>
+      </div>
+      ${g !== null ? `<div class="meta">Разница «куратор минус пациент»: <b>${String(g).replace('.', ',')}</b> из 30. Чем больше, тем сильнее пациент недооценивает свои трудности.</div>` : ''}`
+      : `<p>Оценки ещё нет. Начните курс с теста вычёркивания и шкалы CBS: от них зависит план занятий.</p>
+         <button class="btn btn-s btn-sm" data-a="go" data-v="assess">Перейти к оценке</button>
+         ${!hasData ? `<button class="linkbtn" data-a="loadDemo">Посмотреть на демо-данных</button>` : ''}`}
+    </div>
+    <div class="navgrid">
+      <button class="navbtn" data-a="go" data-v="assess"><b>Оценка</b><span>Тест вычёркивания и шкала CBS</span></button>
+      <button class="navbtn" data-a="go" data-v="ex"><b>Упражнения</b><span>Отдельно, по одному</span></button>
+      <button class="navbtn" data-a="go" data-v="diary"><b>Дневник семьи</b><span>Минута в день: что было в быту</span></button>
+      <button class="navbtn" data-a="go" data-v="progress"><b>Прогресс</b><span>Графики курса</span></button>
+      <button class="navbtn" data-a="go" data-v="spec"><b>Специалист</b><span>Настройки, камера, отправка в CRM</span></button>
+    </div>
+    <div class="foot">Выполняется по назначению специалиста TURA и не заменяет консультацию врача.<br>Прототип v${APP_VER}. Данные хранятся только на этом устройстве.</div>
+  </div>`;
+}
+
+function renderAssess(){
+  const lt = lastTest(), c = latestCBS('cur'), pt = latestCBS('pt'), g = anosoGap();
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Оценка</h1>
+    <p>Проводите в первый и последний день курса. Во время теста помощник не подсказывает и не показывает на экран.</p>
+    <div class="card">
+      <h2>Тест вычёркивания</h2>
+      <p>36 маленьких звёздочек среди больших звёзд, букв и фигур, по 18 с каждой стороны. Приложение считает центр вычёркивания (CoC), пропуски по сторонам и путь поиска.</p>
+      <div class="field"><span class="flabel">Форма теста</span>
+        <div class="seg">${[1,2,3].map(f => `<button data-a="form" data-v="${f}" class="${testForm === f ? 'on' : ''}">Форма ${f}</button>`).join('')}</div>
+        <div class="fhint">Разные формы с одинаковым устройством: для повторных тестов, чтобы пациент не запоминал расположение.</div></div>
+      <button class="btn btn-p" data-a="startTest">Начать тест</button>
+      ${lt ? `<div class="meta">Последний: ${fmtDT(lt.ts)}, CoC ${fmtCoc(lt.r.coc)}. <button class="linkbtn" data-a="openTest" data-v="${lt.id}">Открыть</button></div>` : ''}
+    </div>
+    <div class="card">
+      <h2>Шкала Catherine Bergego (CBS)</h2>
+      <p>10 бытовых ситуаций, от 0 до 3 баллов каждая. Куратор оценивает по наблюдению, пациент оценивает себя сам. Разница двух оценок показывает, насколько пациент недооценивает трудности.</p>
+      <div class="row2">
+        <button class="btn btn-s btn-sm" data-a="cbs" data-v="cur">Оценка куратора</button>
+        <button class="btn btn-s btn-sm" data-a="cbs" data-v="pt">Самооценка пациента</button>
+      </div>
+      <div class="kv" style="margin-top:12px">
+        <div><small>Куратор</small><b>${c ? String(c.total).replace('.', ',') + ' из 30 · ' + fmtDay(c.ts) : 'нет'}</b></div>
+        <div><small>Пациент</small><b>${pt ? String(pt.total).replace('.', ',') + ' из 30 · ' + fmtDay(pt.ts) : 'нет'}</b></div>
+      </div>
+      ${g !== null ? `<div class="meta">Разница: ${String(g).replace('.', ',')}. План занятий подстраивается под неё автоматически.</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderCBS(){
+  const who = CB.who, items = cbsItems(), sc = CBS_SCALE[who], n = CB.ans.filter(v => v != null).length, tot = cbsTotal(CB.ans);
+  app.innerHTML = `<div class="wrap">${backbar('assess')}
+    <h1>${who === 'cur' ? 'CBS: оценка куратора' : 'CBS: самооценка пациента'}</h1>
+    ${who === 'cur' ? `<p>Оцените по наблюдению за последние дни. 0 — нет трудностей, 3 — выраженные. Ситуацию, которую не наблюдали, пропустите.</p>`
+      : `<p>Прочитайте пациенту вслух, если ему трудно читать. Отмечайте так, как считает сам пациент, без подсказок.</p>`}
+    <div class="card">
+      ${items.map((it, i) => `<div class="cbs-item"><div class="q"><i>${i + 1}</i>${esc(it[who])}</div>
+        <div class="seg">${sc.map((l, v) => `<button data-a="cbsAns" data-i="${i}" data-v="${v}" class="${CB.ans[i] === v ? 'on' : ''}">${v} · ${l}</button>`).join('')}</div></div>`).join('')}
+    </div>
+    <div class="sticky">
+      <div class="meta" style="margin:0 0 8px">Отмечено ${n} из 10${tot !== null ? ` · сумма ${String(tot).replace('.', ',')} из 30${n < 10 ? ' (пересчитано на 10 пунктов)' : ''}` : ''}</div>
+      <button class="btn btn-p" data-a="cbsSave" ${n < 6 ? 'disabled' : ''}>${n < 6 ? 'Отметьте хотя бы 6 пунктов' : 'Сохранить оценку'}</button>
+    </div>
+  </div>`;
+}
+
+function renderEx(){
+  const sensorsNote = ENV.framed || !ENV.camera ? `<div class="note info" style="margin:10px 0 0">В этой версии нет доступа к камере и гироскопу. Откроется демо-режим: «поворот» пальцем по экрану.</div>` : '';
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Упражнения</h1>
+    <p>Каждое можно запустить отдельно. Уровень сложности подстраивается сам и сохраняется между занятиями.</p>
+    ${KINDS.map(k => `<div class="card">
+      <div class="row-sb"><h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:4px;background:${EX[k].color};display:inline-block"></i>${EX[k].name}</h2><span class="tag mid">Уровень ${DB.levels[k]} из 10</span></div>
+      <p>${esc(EX[k].what())}</p>
+      ${k === 'ar' ? sensorsNote : ''}
+      <div class="field" style="margin-top:12px"><div class="seg">${[3,5,10].map(m => `<button data-a="exMin" data-k="${k}" data-v="${m}" class="${exMin[k] === m ? 'on' : ''}">${m} мин</button>`).join('')}</div></div>
+      <button class="btn btn-p btn-sm" data-a="startEx" data-v="${k}">Начать</button>
+    </div>`).join('')}
+  </div>`;
+}
+
+function diaryChart(days = 14){
+  const labels = [], vals = [];
+  for(let i = days - 1; i >= 0; i--){ const ts = Date.now() - i * 864e5, k = isoDay(ts), e = DB.diary[k]; labels.push(fmtDay(ts)); vals.push(diaryAnswered(e) ? diaryScore(e) : null); }
+  return barChart({labels, values:vals, yMax:6, color:'var(--cue)', unit:'ситуаций'});
+}
+function renderDiary(){
+  const k = isoDay(Date.now()), e = DB.diary[k] || {a:[null,null,null,null,null,null]}, qs = diaryQ();
+  const yes = diaryScore(e), ans = diaryAnswered(e);
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Дневник семьи</h1>
+    <p>Заполняет родственник раз в день, вечером. Отметьте, что было <b>сегодня</b>. Это занимает минуту и показывает, переносится ли тренировка в быт.</p>
+    <div class="card">
+      <span class="eyebrow">Сегодня, ${fmtDay(Date.now())}</span>
+      ${qs.map((q, i) => `<div class="yn"><span>${esc(q)}</span>
+        <button class="y ${e.a[i] === 1 ? 'on' : ''}" data-a="diary" data-i="${i}" data-v="1">Да</button>
+        <button class="n ${e.a[i] === 0 ? 'on' : ''}" data-a="diary" data-i="${i}" data-v="0">Нет</button></div>`).join('')}
+      <div class="meta">${ans ? `Отмечено ${ans} из 6. Трудных ситуаций сегодня: <b>${yes}</b>.` : 'Ответы сохраняются сразу.'}</div>
+    </div>
+    <div class="card"><h2>Трудные ситуации за 14 дней</h2><p style="font-size:14px">Чем ниже столбик, тем лучше.</p><div class="chart">${diaryChart()}</div></div>
+    <div class="card"><h2>Как помогать дома</h2>
+      <ul style="margin:0;padding-left:20px;line-height:1.6;color:var(--ink2)">
+        <li>Подходите и говорите со стороны, которую пациент замечает хуже, если специалист не советует иначе.</li>
+        <li>Не делайте всё за пациента: подскажите «посмотри ${w().dir}» и дайте найти самому.</li>
+        <li>Перед едой поверните тарелку или скажите, что еда есть и ${w().adv}.</li>
+        <li>Следите за безопасностью: дверные проёмы, углы, горячие предметы ${w().adv}.</li>
+      </ul>
+    </div>
+  </div>`;
+}
+
+/* ---------- графики ---------- */
+function niceTicks(a, b, n = 4){ const step = (b - a) / n; return Array.from({length:n + 1}, (_, i) => a + step * i); }
+function lineChart({labels, series, yMin, yMax, band, zero, fmt = v => v, h = 190}){
+  const W = 560, H = h, pl = 40, pr = 40, pt = 14, pb = 26, n = labels.length;
+  const X = i => n <= 1 ? pl + (W - pl - pr) / 2 : pl + i * (W - pl - pr) / (n - 1);
+  const Y = v => pt + (yMax - v) / (yMax - yMin) * (H - pt - pb);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  if(band) s += `<rect x="${pl}" y="${Y(band[1])}" width="${W - pl - pr}" height="${Y(band[0]) - Y(band[1])}" fill="var(--ok-soft)"/>`;
+  niceTicks(yMin, yMax).forEach(t => { s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text class="ax" x="${pl - 6}" y="${Y(t) + 4}" text-anchor="end">${fmt(t)}</text>`; });
+  if(zero) s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink2)" stroke-dasharray="4 4"/>`;
+  const idx = n <= 6 ? labels.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
+  idx.forEach(i => { s += `<text class="ax" x="${X(i)}" y="${H - 6}" text-anchor="middle">${labels[i]}</text>`; });
+  series.forEach(se => {
+    const pts = se.values.map((v, i) => v == null ? null : [X(i), Y(clamp(v, yMin, yMax))]).filter(Boolean);
+    if(pts.length > 1) s += `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="${se.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+    pts.forEach((p, i) => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="${i === pts.length - 1 ? 5.5 : 3.5}" fill="${i === pts.length - 1 ? se.color : '#fff'}" stroke="${se.color}" stroke-width="2.5"/>`; });
+    const lastI = se.values.map((v, i) => v == null ? -1 : i).filter(i => i >= 0).pop();
+    if(lastI != null) s += `<text class="dl" x="${X(lastI) + 9}" y="${Y(clamp(se.values[lastI], yMin, yMax)) + 4}">${fmt(se.values[lastI])}</text>`;
+  });
+  return s + '</svg>';
+}
+function barChart({labels, values, yMax, color, h = 150}){
+  const W = 560, H = h, pl = 28, pr = 10, pt = 14, pb = 26, n = labels.length, bw = (W - pl - pr) / n;
+  const Y = v => pt + (yMax - v) / yMax * (H - pt - pb);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  [0, yMax / 2, yMax].forEach(t => { s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text class="ax" x="${pl - 6}" y="${Y(t) + 4}" text-anchor="end">${Math.round(t)}</text>`; });
+  values.forEach((v, i) => {
+    const x = pl + i * bw + bw * .18, bwi = bw * .64;
+    if(v == null){ s += `<rect x="${x}" y="${Y(0) - 2}" width="${bwi}" height="2" fill="var(--line)"/>`; return; }
+    const y = Y(Math.max(v, 0)); s += `<rect x="${x}" y="${Math.min(y, Y(0) - 3)}" width="${bwi}" height="${Math.max(3, Y(0) - y)}" rx="3" fill="${color}"/>`;
+    if(i === values.length - 1 || n <= 10) s += `<text class="dl" x="${x + bwi / 2}" y="${Math.min(y, Y(0) - 3) - 4}" text-anchor="middle">${Math.round(v)}</text>`;
+  });
+  [0, Math.floor((n - 1) / 2), n - 1].forEach(i => { s += `<text class="ax" x="${pl + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${labels[i]}</text>`; });
+  return s + '</svg>';
+}
+
+function renderProgress(){
+  const tests = [...DB.tests].sort((a, b) => a.ts - b.ts), cbsC = DB.cbs.filter(c => c.who === 'cur').sort((a, b) => a.ts - b.ts), cbsP = DB.cbs.filter(c => c.who === 'pt').sort((a, b) => a.ts - b.ts);
+  // CBS: объединяем даты оценок
+  const days = [...new Set(DB.cbs.map(c => isoDay(c.ts)))].sort();
+  const byDay = (arr, d) => { const x = arr.filter(c => isoDay(c.ts) === d).pop(); return x ? x.total : null; };
+  const minutes = [], mlab = [];
+  for(let i = 13; i >= 0; i--){ const ts = Date.now() - i * 864e5, k = isoDay(ts); mlab.push(fmtDay(ts)); const m = DB.sessions.filter(s => isoDay(s.ts) === k).reduce((s, x) => s + (x.sec || 0), 0) / 60; minutes.push(m ? Math.round(m) : null); }
+  const cocMax = Math.max(.5, ...tests.map(t => Math.abs(t.r.coc || 0))) ;
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Прогресс</h1>
+    <div class="card"><h2>Тест вычёркивания: центр поиска (CoC)</h2>
+      ${tests.length ? `<p style="font-size:14px">0 — поиск по центру. ${DB.cfg.side === 'L' ? 'Плюс' : 'Минус'} — смещение в сторону, которую пациент замечает. Зелёная полоса: ±0,08.</p>
+      <div class="chart">${lineChart({labels:tests.map(t => fmtDay(t.ts)), series:[{values:tests.map(t => t.r.coc), color:'var(--brand)'}], yMin:-Math.ceil(cocMax * 10) / 10, yMax:Math.ceil(cocMax * 10) / 10, band:[-.08, .08], zero:true, fmt:v => (Math.abs(v) < 1e-9 ? '0' : fmtNum(v, 2))})}</div>
+      ${[...tests].reverse().map(t => { const nh = negHits(t.r); return `<div class="list-row"><div><b>${fmtDT(t.ts)}</b> <span>· форма ${t.form}</span><br><span>CoC ${fmtCoc(t.r.coc)} · ${w().adv} ${nh[0]}/${nh[1]} · ${Math.round(t.r.dur)} с</span></div><button class="linkbtn" data-a="openTest" data-v="${t.id}">Карта</button></div>`; }).join('')}`
+      : `<p>Тестов пока нет.</p>`}
+    </div>
+    <div class="card"><h2>Шкала CBS, баллы из 30</h2>
+      ${days.length ? `<div class="legend"><span><i style="background:var(--brand)"></i>Куратор</span><span><i style="background:var(--cue)"></i>Пациент о себе</span></div>
+      <div class="chart">${lineChart({labels:days.map(d => d.slice(8) + '.' + d.slice(5, 7)), series:[{values:days.map(d => byDay(cbsC, d)), color:'var(--brand)'}, {values:days.map(d => byDay(cbsP, d)), color:'var(--cue)'}], yMin:0, yMax:30, fmt:v => String(Math.round(v * 10) / 10).replace('.', ',')})}</div>
+      <div class="meta">Расхождение линий показывает недооценку трудностей пациентом. Сближение линий означает, что осознание растёт.</div>` : `<p>Оценок пока нет.</p>`}
+    </div>
+    <div class="card"><h2>Дневник семьи</h2><p style="font-size:14px">Трудных бытовых ситуаций в день, из 6.</p><div class="chart">${diaryChart()}</div></div>
+    <div class="card"><h2>Занятия, минут в день</h2><div class="chart">${barChart({labels:mlab, values:minutes, yMax:Math.max(30, ...minutes.filter(v => v != null)), color:'var(--brand)'})}</div>
+      <div class="chips" style="margin-top:10px">${KINDS.map(k => `<span class="chip">${EX[k].short}: <b>уровень ${DB.levels[k]}</b></span>`).join('')}</div>
+    </div>
+  </div>`;
+}
+
+function testMapSVG(t){
+  const items = genTest(t.form), seen = new Set(t.taps.filter(x => x.tg).map(x => x.i));
+  const seq = []; const s2 = new Set(); for(const x of t.taps){ if(x.tg && !s2.has(x.i)){ s2.add(x.i); seq.push(x); } }
+  let s = `<svg viewBox="0 0 ${TW} ${TH}" role="img" aria-label="Карта поиска"><line x1="${TW/2}" x2="${TW/2}" y1="10" y2="${TH-10}" stroke="var(--line)" stroke-width="2" stroke-dasharray="8 8"/>`;
+  items.filter(i => !i.t).forEach(i => { s += `<circle cx="${i.x}" cy="${i.y}" r="4" fill="#D5D3CC"/>`; });
+  if(seq.length > 1) s += `<polyline points="${seq.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="rgba(20,34,43,.35)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  items.filter(i => i.t).forEach(i => {
+    s += seen.has(i.i) ? `<circle cx="${i.x}" cy="${i.y}" r="11" fill="var(--brand)"/>` : `<circle cx="${i.x}" cy="${i.y}" r="11" fill="#fff" stroke="var(--danger)" stroke-width="3.5"/>`;
+  });
+  t.taps.filter(x => x.i >= 0 && !x.tg).forEach(x => { s += `<path d="M${x.x-8} ${x.y-8}L${x.x+8} ${x.y+8}M${x.x+8} ${x.y-8}L${x.x-8} ${x.y+8}" stroke="var(--cue)" stroke-width="3"/>`; });
+  if(seq[0]) s += `<circle cx="${seq[0].x}" cy="${seq[0].y}" r="17" fill="none" stroke="var(--ink)" stroke-width="3"/><text x="${seq[0].x}" y="${seq[0].y - 24}" text-anchor="middle" font-size="22" font-weight="800" fill="var(--ink)" font-family="Manrope,sans-serif">старт</text>`;
+  return s + '</svg>';
+}
+function renderTestRes(){
+  const t = DB.tests.find(x => x.id === viewTest); if(!t){ go('home'); return; }
+  const r = t.r;
+  app.innerHTML = `<div class="wrap">${backbar('assess')}
+    <h1>Тест вычёркивания</h1>
+    <p>${fmtDT(t.ts)} · форма ${t.form}</p>
+    <div class="card">
+      <div class="stat3">
+        <div><small>CoC</small><b>${fmtCoc(r.coc)}</b><em>центр поиска</em></div>
+        <div><small>Слева</small><b>${r.hitsL}/${r.nL}</b><em>найдено</em></div>
+        <div><small>Справа</small><b>${r.hitsR}/${r.nR}</b><em>найдено</em></div>
+      </div>
+      <p style="margin:12px 0 0">${esc(cocText(r.coc))}</p>
+      <div class="meta">Ориентир ±0,08 взят из бумажных тестов (Rorden и Karnath, 2010). Для этого теста нормы ещё не собраны.</div>
+    </div>
+    <div class="card"><h2>Карта поиска</h2>
+      <div class="legend"><span><i style="background:var(--brand)"></i>Найдено</span><span><i style="background:var(--danger)"></i>Пропущено</span><span><i style="background:var(--cue)"></i>Ложное касание</span></div>
+      <div class="resmap">${testMapSVG(t)}</div>
+    </div>
+    <div class="card"><div class="kv">
+      <div><small>Время</small><b>${fmtSec(r.dur)}</b></div>
+      <div><small>Начало поиска</small><b>${r.firstX == null ? '—' : r.firstX < -.33 ? 'слева' : r.firstX > .33 ? 'справа' : 'в центре'}</b></div>
+      <div><small>Пересечения пути</small><b>${r.cross}</b></div>
+      <div><small>Длина пути</small><b>${String(r.path).replace('.', ',')} ширины листа</b></div>
+      <div><small>Ложные касания</small><b>${r.fp}</b></div>
+      <div><small>Повторные</small><b>${r.rep}</b></div>
+    </div>
+    <div class="meta">Много пересечений и повторных касаний говорят о неорганизованном поиске. Начало справа типично для левостороннего неглекта.</div></div>
+    <button class="btn btn-s" data-a="go" data-v="home">На главную</button>
+  </div>`;
+}
+
+/* ---------- специалист ---------- */
+let pinUnlocked = false, pinBuf = '', pinErr = false;
+async function hashPin(pin){
+  const msg = 'tura-neglect:' + pin;
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }catch(e){ let h = 0; for(const ch of msg) h = (h * 31 + ch.charCodeAt(0)) | 0; return 'x' + h; }
+}
+function renderPin(){
+  let dots = ''; for(let i = 0; i < 4; i++) dots += `<i class="${i < pinBuf.length ? 'on' : ''}"></i>`;
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','del'].map(k => k === '' ? '<span></span>' : `<button data-a="pin" data-v="${k}" aria-label="${k === 'del' ? 'Стереть' : k}">${k === 'del' ? '⌫' : k}</button>`).join('');
+  app.innerHTML = `<div class="wrap">${backbar()}<h1>PIN специалиста</h1><p>Раздел защищён. Введите 4 цифры.</p>
+    <div class="pindots">${dots}</div>${pinErr ? '<div class="note danger" style="text-align:center">Неверный PIN</div>' : ''}<div class="pinpad">${keys}</div></div>`;
+  pinErr = false;
+}
+function sw(id, on, title, sub){ return `<button class="switch ${on ? 'on' : ''}" data-a="toggle" data-v="${id}"><div><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</div><span class="knob"></span></button>`; }
+function stepper(id, val, unit){ return `<div class="stepper"><button data-a="step" data-v="${id}" data-d="-1" aria-label="Меньше">−</button><output>${val} <small>${unit}</small></output><button data-a="step" data-v="${id}" data-d="1" aria-label="Больше">+</button></div>`; }
+const GAS_CODE = `/** TURA Неглект → Google Sheets.
+ * 1. В таблице CRM: Расширения → Apps Script, вставьте этот код.
+ * 2. Развернуть → Новое развертывание → Веб-приложение.
+ *    Запуск от имени: я. У кого есть доступ: все.
+ * 3. Скопируйте URL веб-приложения в приложение «Неглект». */
+function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Neglect') || ss.insertSheet('Neglect');
+  if (sh.getLastRow() === 0) {
+    sh.appendRow(['Получено', 'Код пациента', 'Тип', 'Дата', 'Кратко', 'ID', 'Данные (JSON)']);
+  }
+  (data.records || []).forEach(function (r) {
+    sh.appendRow([new Date(), data.patient, r.type, r.date, r.summary, r.id, JSON.stringify(r.data)]);
+  });
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, n: (data.records || []).length }))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+function renderSpec(){
+  const c = DB.cfg, wd = w(), pend = pendingRecords().length;
+  const camNote = !ENV.camera ? `<div class="note info">Камера в этой версии недоступна. Контроль головы работает в приложении, открытом по ссылке GitHub Pages.</div>` : '';
+  app.innerHTML = `<div class="wrap">${backbar()}
+    <h1>Специалист</h1>
+    <div class="card"><h2>Пациент</h2>
+      <div class="field"><label class="flabel" for="f_patient">Код пациента из CRM</label><input type="text" id="f_patient" data-f="patient" value="${esc(c.patient)}" placeholder="PAT_982245" autocomplete="off">
+        <div class="fhint">Без имени и фамилии: в таблицу уходит только код.</div></div>
+      <div class="field"><label class="flabel" for="f_spec">Специалист</label><input type="text" id="f_spec" data-f="specialist" value="${esc(c.specialist)}" autocomplete="off"></div>
+      <div class="field"><span class="flabel">Сторона неглекта</span><div class="seg">
+        <button data-a="side" data-v="L" class="${c.side === 'L' ? 'on' : ''}">Левая (поражение справа)</button>
+        <button data-a="side" data-v="R" class="${c.side === 'R' ? 'on' : ''}">Правая (поражение слева)</button></div></div>
+    </div>
+    <div class="card"><h2>Занятие</h2>
+      <div class="field"><span class="flabel">Длительность</span><div class="seg">${[15,20,25,30].map(m => `<button data-a="sessMin" data-v="${m}" class="${c.sessionMin === m ? 'on' : ''}">${m} мин</button>`).join('')}</div>
+        <div class="fhint">25 минут соответствуют дозе в РКИ Negami: 10 сессий по 25 минут за 2 недели.</div></div>
+      <div class="field"><span class="flabel">Правило выбора по разнице CBS</span>
+        <p style="font-size:14px">Разница = оценка куратора минус самооценка пациента. Пороги стартовые, подберите их по своему опыту.</p>
+        <div class="fhint" style="margin:0 0 6px">Выраженная недооценка, от</div>${stepper('gapHigh', c.gapHigh, 'баллов')}
+        <div class="fhint" style="margin:12px 0 6px">Умеренная недооценка, от</div>${stepper('gapLow', c.gapLow, 'баллов')}
+      </div>
+      ${sw('manual', c.manual, 'Задать план вручную', 'Отключает автоматический выбор')}
+      ${c.manual ? KINDS.map(k => `<div class="fhint" style="margin:10px 0 6px">${EX[k].name}</div>${stepper('mp_' + k, c.manualPlan[k], 'мин')}`).join('') : ''}
+    </div>
+    <div class="card"><h2>Подсказки</h2>
+      ${sw('voice', c.voice, 'Голосовые подсказки', `«Посмотрите ${wd.dir}» и инструкции`)}
+      ${sw('oks', c.oks, 'Движущийся фон в слежении', 'Оптокинетическая стимуляция полосами')}
+      ${sw('leftHand', c.leftHand, `Выполнять ${wd.ag} рукой`, 'Напоминание в начале каждого упражнения')}
+    </div>
+    <div class="card"><h2>Контроль поворота головы <span class="beta">β</span></h2>
+      <p style="font-size:14px">Фронтальная камера видит, поворачивает ли пациент голову ${wd.dir}. Если нет, звучит подсказка. Видео обрабатывается на устройстве и никуда не отправляется.</p>
+      ${camNote}
+      ${sw('camOn', c.camOn, 'Включить во время занятий', DB.head ? `Калибровка от ${fmtDay(DB.head.ts)}, поворот ${Math.round(DB.head.range)}°` : 'Нужна калибровка')}
+      <button class="btn btn-s btn-sm" data-a="go" data-v="calib" ${ENV.camera ? '' : 'disabled'}>Калибровка</button>
+    </div>
+    <div class="card"><h2>Отправка в CRM (Google Sheets)</h2>
+      <div class="field"><label class="flabel" for="f_url">URL веб-приложения Apps Script</label><input type="url" id="f_url" data-f="sheetUrl" value="${esc(c.sheetUrl)}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
+      <div class="row2"><button class="btn btn-p btn-sm" data-a="sync">Отправить (${pend})</button><button class="btn btn-s btn-sm" data-a="gas">${gasOpen ? 'Скрыть код' : 'Код Apps Script'}</button></div>
+      ${gasOpen ? `<pre class="code" style="margin-top:12px">${esc(GAS_CODE)}</pre><button class="btn btn-s btn-sm" data-a="copyGas">Скопировать код</button>` : ''}
+      <div class="fhint">Новых записей к отправке: ${pend}. Любой, у кого есть URL, сможет добавить строки, поэтому не публикуйте его.</div>
+    </div>
+    <div class="card"><h2>PIN и данные</h2>
+      <div class="field"><label class="flabel" for="f_pin">${DB.pinHash ? 'Новый PIN (4 цифры)' : 'PIN специалиста (4 цифры)'}</label>
+        <div class="row2"><input type="password" id="f_pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"><button class="btn btn-s btn-sm" data-a="setPin">${DB.pinHash ? 'Сменить' : 'Установить'}</button></div>
+        ${DB.pinHash ? `<button class="linkbtn" data-a="clearPin">Убрать PIN</button>` : `<div class="fhint">Чтобы пациент случайно не изменил настройки.</div>`}</div>
+      <button class="btn btn-s btn-sm" data-a="copyJson">Скопировать все данные (JSON)</button>
+      <button class="btn btn-s btn-sm" data-a="loadDemo">Загрузить демо-данные</button>
+      <button class="btn btn-s btn-sm" data-a="askWipe" style="color:var(--danger)">Удалить все данные</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- калибровка головы ---------- */
+let CAL = null;
+function renderCalib(){
+  const wd = w();
+  app.innerHTML = `<div class="wrap">${backbar('spec')}
+    <h1>Калибровка поворота головы</h1>
+    <p>Планшет стоит перед пациентом на уровне глаз. Лицо целиком в кадре.</p>
+    <div class="camwrap" id="camwrap"></div>
+    <div class="card" id="calCard">
+      <div class="note info" id="calMsg">${Cam.state === 'error' ? esc(Cam.err) : Cam.state === 'ready' ? 'Камера готова.' : 'Включаю камеру…'}</div>
+      <div class="kv"><div><small>Лицо</small><b id="calFace">—</b></div><div><small>Поворот ${wd.dir}</small><b id="calYaw">—</b></div></div>
+      <button class="btn btn-p" data-a="calStart" style="margin-top:14px" ${Cam.state === 'ready' ? '' : 'disabled'} id="calBtn">Начать калибровку</button>
+    </div>
+  </div>`;
+  const placeVideo = () => { const v = Cam.video, wrap = document.getElementById('camwrap'); if(v && wrap){ v.className = 'camv preview'; wrap.appendChild(v); } };
+  if(Cam.state !== 'ready'){
+    Cam.start().then(ok => { if(view !== 'calib'){ Cam.stop(); return; } placeVideo(); const m = document.getElementById('calMsg'), b = document.getElementById('calBtn'); if(m) m.textContent = ok ? 'Камера готова. Нажмите «Начать калибровку».' : Cam.err; if(b) b.disabled = !ok; });
+  }else placeVideo();
+  const live = () => {
+    if(view !== 'calib') return;
+    const f = document.getElementById('calFace'), y = document.getElementById('calYaw');
+    if(f) f.textContent = Cam.state === 'ready' ? (Cam.face ? 'видно' : 'не видно') : '—';
+    if(y){ const t = Cam.turn(); y.textContent = isFinite(t) ? Math.round(t) + '°' : (DB.head ? '—' : 'после калибровки'); }
+    requestAnimationFrame(live);
+  };
+  requestAnimationFrame(live);
+}
+function runCalib(){
+  const wd = w(), msg = document.getElementById('calMsg'), btn = document.getElementById('calBtn');
+  if(!msg || Cam.state !== 'ready') return;
+  btn.disabled = true; Snd.unlock();
+  const A = [], B = []; let phase = 1; const t0 = performance.now();
+  msg.textContent = 'Смотрите прямо в экран. Не двигайтесь 3 секунды.'; say('Смотрите прямо в экран', true);
+  const tick = () => {
+    if(view !== 'calib') return;
+    const t = (performance.now() - t0) / 1000;
+    if(Cam.face && isFinite(Cam.yaw)) (phase === 1 ? A : B).push(Cam.yaw);
+    if(phase === 1 && t > 3){ phase = 2; Snd.cue(); msg.textContent = `Медленно поверните голову ${wd.dir} до упора и задержитесь.`; say(`Поверните голову ${wd.dir}`, true); }
+    if(phase === 2 && t > 7){
+      const base = median(A), tail = B.slice(Math.floor(B.length / 2)), turn = median(tail);
+      btn.disabled = false;
+      if(base == null || turn == null || A.length < 10 || B.length < 10){ msg.textContent = 'Лицо плохо видно. Улучшите освещение и повторите.'; return; }
+      const range = Math.abs(turn - base);
+      if(range < 8){ msg.textContent = `Поворот всего ${Math.round(range)}°. Повторите и поверните голову сильнее.`; return; }
+      DB.head = {base, sign:Math.sign(turn - base) || 1, range, ts:Date.now()}; DB.cfg.camOn = true; save();
+      msg.textContent = `Готово. Поворот ${Math.round(range)}°. Подсказка сработает, если пациент долго не поворачивает голову хотя бы на ${Math.round(headThr())}°.`;
+      Snd.ok(); return;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/* ---------- синхронизация с Google Sheets ---------- */
+function pendingRecords(){
+  const out = [], S = DB.synced, side = DB.cfg.side;
+  DB.tests.forEach(t => { if(!S[t.id]) out.push({id:t.id, type:'Тест вычёркивания', date:isoDay(t.ts), summary:`CoC ${fmtCoc(t.r.coc)}; слева ${t.r.hitsL}/${t.r.nL}; справа ${t.r.hitsR}/${t.r.nR}; ${Math.round(t.r.dur)} с`, data:{...t.r, form:t.form, side}}); });
+  DB.cbs.forEach(c => { if(!S[c.id]) out.push({id:c.id, type:c.who === 'cur' ? 'CBS куратор' : 'CBS пациент', date:isoDay(c.ts), summary:`${c.total} из 30`, data:{ans:c.ans, total:c.total, side}}); });
+  DB.sessions.forEach(s => { if(!S[s.id]) out.push({id:s.id, type:'Занятие', date:isoDay(s.ts), summary:`${Math.round(s.sec / 60)} мин; ` + s.blocks.map(b => EX[b.kind].short + ' ур.' + b.level1).join(', '), data:s}); });
+  Object.keys(DB.diary).forEach(k => { const e = DB.diary[k]; const id = 'd' + k; if(diaryAnswered(e) && S[id] !== e.ts) out.push({id, type:'Дневник семьи', date:k, summary:`трудных ситуаций: ${diaryScore(e)} из ${diaryAnswered(e)}`, data:e, _v:e.ts}); });
+  return out;
+}
+async function syncNow(){
+  const url = (DB.cfg.sheetUrl || '').trim();
+  if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)){ toast('Вставьте URL веб-приложения Apps Script'); return; }
+  const recs = pendingRecords();
+  if(!recs.length){ toast('Новых записей нет'); return; }
+  const body = JSON.stringify({app:'tura-neglect', v:APP_VER, patient:DB.cfg.patient || 'без кода', records:recs.map(({_v, ...r}) => r)});
+  let ok = false;
+  try{ const r = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body}); ok = r.ok; }
+  catch(e){
+    try{ await fetch(url, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body}); ok = 'blind'; }
+    catch(e2){ ok = false; }
+  }
+  if(ok){ recs.forEach(r => { DB.synced[r.id] = r._v || 1; }); save(); toast(ok === 'blind' ? `Отправлено ${recs.length}. Проверьте таблицу.` : `Отправлено записей: ${recs.length}`); }
+  else toast(ENV.framed ? 'В этой версии отправка недоступна. Откройте приложение по ссылке GitHub Pages.' : 'Не удалось отправить. Проверьте интернет и URL.');
+  if(view === 'spec') render();
+}
+
+/* ===================== ТЕСТ ВЫЧЁРКИВАНИЯ (полный экран) ===================== */
+let T = null;
+function startTest(){
+  Snd.unlock();
+  T = {form:testForm, items:genTest(testForm), taps:[], t0:0, found:new Set()};
+  MODE = 'test'; document.body.classList.add('lock');
+  const yes = `<svg viewBox="0 0 60 60" width="60" height="60" aria-label="маленькая звёздочка"><path d="${starPath(30, 30, 12)}" fill="#14222B"/></svg>`;
+  const no = `<svg viewBox="0 0 200 60" width="200" height="60" aria-label="большая звезда, буква, треугольник"><path d="${starPath(32, 30, 22)}" fill="#14222B"/><text x="100" y="40" text-anchor="middle" font-size="28" font-weight="700" font-family="Manrope,sans-serif" fill="#14222B">К</text><path d="M168 18L179 38L157 38Z" fill="#14222B"/></svg>`;
+  app.innerHTML = `<div class="ex"><div class="exbar"><button class="ib" data-a="testQuit" aria-label="Выйти">✕</button><div class="t"><b>Тест вычёркивания · форма ${T.form}</b><small>Без подсказок помощника</small></div></div>
+    <div class="stage" id="stage" style="display:flex;flex-direction:column">
+      <svg id="tsvg" viewBox="0 0 ${TW} ${TH}" preserveAspectRatio="xMidYMid meet" style="position:relative;inset:auto;flex:1 1 0;min-height:0;height:auto;width:100%">${T.items.map(testItemSVG).join('')}<g id="marks"></g></svg>
+      <div style="display:flex;justify-content:center;padding:10px 0 calc(12px + var(--sb))"><button class="pill-btn" data-a="testDone">Готово</button></div>
+      <div class="overlay" id="tintro" style="background:var(--bg)">
+        <h2>Найдите все маленькие звёздочки</h2>
+        <div class="kv" style="max-width:420px"><div style="text-align:center"><small>Касайтесь</small>${yes}</div><div style="text-align:center"><small>Не трогайте</small>${no}</div></div>
+        <p>Коснитесь каждой <b>маленькой</b> звёздочки на странице. Большие звёзды, буквы и фигуры не трогайте. Когда закончите, нажмите «Готово».</p>
+        <div class="ov-actions"><button class="btn btn-p" data-a="testGo">Начать</button></div>
+      </div>
+    </div></div>`;
+  const svg = document.getElementById('tsvg');
+  svg.addEventListener('pointerdown', testTap);
+}
+function testTap(e){
+  if(!T || !T.t0) return;
+  e.preventDefault();
+  const svg = e.currentTarget, p = svgPt(svg, e), t = (performance.now() - T.t0) / 1000;
+  let best = null, bd = 1e9;
+  for(const it of T.items){ const d = Math.hypot(it.x - p.x, it.y - p.y); if(d < bd){ bd = d; best = it; } }
+  const marks = document.getElementById('marks');
+  if(best && bd <= 34){
+    const rep = !!(best.t && T.found.has(best.i));
+    T.taps.push({i:best.i, t:Math.round(t * 100) / 100, x:best.x, y:best.y, tg:best.t, rep});
+    if(best.t) T.found.add(best.i);
+    marks.insertAdjacentHTML('beforeend', `<circle class="mark" cx="${best.x}" cy="${best.y}" r="23" fill="none" stroke="#0B6E6E" stroke-width="3.5"/>`);
+  }else{
+    T.taps.push({i:-1, t:Math.round(t * 100) / 100, x:Math.round(p.x), y:Math.round(p.y), tg:0});
+    marks.insertAdjacentHTML('beforeend', `<circle class="mark" cx="${p.x}" cy="${p.y}" r="5" fill="#0B6E6E" opacity=".5"/>`);
+  }
+}
+function testAskDone(){
+  const st = document.getElementById('stage'); if(!st || !T.t0) return;
+  st.insertAdjacentHTML('beforeend', `<div class="overlay" id="tconfirm"><h2>Посмотрите ещё раз на всю страницу</h2><p>Нашли все маленькие звёздочки?</p>
+    <div class="ov-actions"><button class="btn btn-s" data-a="testMore">Ещё поищу</button><button class="btn btn-p" data-a="testFinish">Завершить тест</button></div></div>`);
+}
+function testFinish(){
+  const dur = (performance.now() - T.t0) / 1000;
+  const rec = {id:uid(), ts:Date.now(), form:T.form, side:DB.cfg.side, taps:T.taps, r:scoreTest(T.items, T.taps, dur)};
+  DB.tests.push(rec); save();
+  T = null; MODE = null; document.body.classList.remove('lock');
+  viewTest = rec.id; testForm = testForm % 3 + 1; go('testRes');
+}
+
+/* ===================== ЗАНЯТИЕ (полный экран) ===================== */
+let RUN = null;
+function startSession(blocks, kindLabel){
+  Snd.unlock(); keepAwake(true);
+  try{ if(!ENV.framed && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); }catch(e){}
+  RUN = {blocks, i:0, results:[], plan:kindLabel, t0:Date.now(), ctrl:null, timer:0, elapsed:0, last:0, paused:false};
+  MODE = 'run'; document.body.classList.add('lock');
+  app.innerHTML = `<div class="ex" id="ex"><div class="exbar">
+      <button class="ib" data-a="runPause" aria-label="Пауза или выход">✕</button>
+      <div class="t"><b id="rTitle"></b><small id="rSub"></small><div class="tbar"><i id="rBar"></i></div></div>
+      <span class="headchip" id="rHead" hidden></span>
+      <div class="clock" id="rClock">0:00</div>
+      <button class="ib" data-a="runPause" aria-label="Пауза">II</button>
+    </div><div class="stage" id="stage"></div></div>`;
+  if(DB.cfg.camOn && DB.head && Cam.available()) Cam.start();
+  blockIntro();
+}
+const curBlock = () => RUN && RUN.blocks[RUN.i];
+function setBar(){
+  const b = curBlock(); if(!b) return;
+  const tot = b.min * 60000, el = document.getElementById('rBar'), ck = document.getElementById('rClock');
+  if(el) el.style.width = clamp(RUN.elapsed / tot * 100, 0, 100) + '%';
+  if(ck) ck.textContent = fmtClock((tot - RUN.elapsed) / 1000);
+  const hc = document.getElementById('rHead');
+  if(hc){
+    if(headLive() && b.kind !== 'ar'){
+      hc.hidden = false; const t = Cam.turn();
+      hc.className = 'headchip' + (isFinite(t) && t >= headThr() ? ' on' : '');
+      hc.textContent = !Cam.face ? 'лицо не видно' : !isFinite(t) ? '—' : t >= headThr() ? `голова ${w().dir} ${Math.round(t)}°` : 'голова прямо';
+    }else hc.hidden = true;
+  }
+}
+function blockIntro(){
+  const b = curBlock(), wd = w(), st = document.getElementById('stage');
+  document.getElementById('rTitle').textContent = EX[b.kind].name;
+  document.getElementById('rSub').textContent = `${RUN.blocks.length > 1 ? `Упражнение ${RUN.i + 1} из ${RUN.blocks.length} · ` : ''}${b.min} мин · уровень ${DB.levels[b.kind]}`;
+  RUN.elapsed = 0; setBar();
+  const sensor = b.kind === 'ar' ? (ENV.framed || !ENV.camera ? `<div class="note info" style="max-width:520px;text-align:left">Камера и гироскоп здесь недоступны. Демо-режим: проводите пальцем по экрану, чтобы «поворачиваться».</div>` : `<div class="note info" style="max-width:520px;text-align:left">Приложение попросит доступ к камере и датчику движения. Разрешите оба.</div>`) : '';
+  st.innerHTML = `<div class="overlay"><h2>${EX[b.kind].name}</h2><p>${esc(EX[b.kind].how())}</p>
+    ${DB.cfg.leftHand && b.kind !== 'ar' ? `<div class="note warn" style="max-width:520px"><b>Касайтесь ${wd.ag} рукой</b>Помощник может поддержать руку.</div>` : ''}
+    ${sensor}
+    <div class="ov-actions"><button class="btn btn-p" data-a="blockGo">Начать</button>${RUN.blocks.length > 1 ? '<button class="btn btn-s" data-a="runSkip">Пропустить это упражнение</button>' : ''}</div></div>`;
+}
+async function blockGo(){
+  const b = curBlock(), st = document.getElementById('stage');
+  Snd.unlock();
+  let opts = {level:DB.levels[b.kind]};
+  if(b.kind === 'ar'){
+    if(Cam.state === 'ready' || Cam.state === 'loading') Cam.stop();
+    opts.motion = ENV.framed ? false : await requestMotion();
+  }else if(DB.cfg.camOn && DB.head && Cam.available() && Cam.state === 'off') Cam.start();
+  st.innerHTML = '';
+  say(EX[b.kind].how(), true);
+  RUN.ctrl = MODS[b.kind](st, opts);
+  RUN.elapsed = 0; RUN.last = performance.now(); RUN.paused = false;
+  clearInterval(RUN.timer);
+  RUN.timer = setInterval(runTick, 250);
+}
+function runTick(){
+  if(!RUN || !RUN.ctrl) return;
+  const now = performance.now();
+  if(!RUN.paused) RUN.elapsed += now - RUN.last;
+  RUN.last = now; setBar();
+  if(RUN.elapsed >= curBlock().min * 60000) endBlock();
+}
+function endBlock(skipped){
+  const b = curBlock();
+  clearInterval(RUN.timer); RUN.timer = 0;
+  if(RUN.ctrl){
+    const res = RUN.ctrl.finish(); RUN.ctrl = null;
+    if(res && res.level1) DB.levels[b.kind] = res.level1;
+    RUN.results.push({kind:b.kind, planMin:b.min, sec:Math.round(RUN.elapsed / 1000), ...res});
+    save();
+  }
+  RUN.i++;
+  if(RUN.i >= RUN.blocks.length){ finishSession(); return; }
+  if(skipped){ blockIntro(); return; }
+  const last = RUN.results[RUN.results.length - 1], nb = curBlock();
+  document.getElementById('stage').innerHTML = `<div class="overlay"><h2>Отлично, упражнение завершено</h2>
+    ${last ? `<p>${esc(EX[last.kind].name)}: ${esc(blockLine(last))}</p>` : ''}
+    <p>Отдохните полминуты. Дальше: <b>${EX[nb.kind].name}</b>, ${nb.min} мин.</p>
+    <div class="ov-actions"><button class="btn btn-p" data-a="nextBlock">Продолжить</button></div></div>`;
+  Snd.ok();
+}
+function runPause(){
+  if(!RUN) return;
+  const st = document.getElementById('stage');
+  if(!RUN.ctrl){ // на экране инструкции или отдыха
+    st.insertAdjacentHTML('beforeend', pauseOverlay()); return;
+  }
+  if(RUN.paused) return;
+  RUN.paused = true; RUN.ctrl.pause();
+  st.insertAdjacentHTML('beforeend', pauseOverlay());
+}
+function pauseOverlay(){
+  return `<div class="overlay" id="pauseOv"><h2>Пауза</h2><p>Можно отдохнуть, затем продолжить.</p>
+    <div class="ov-actions">${RUN.ctrl ? '<button class="btn btn-p" data-a="runResume">Продолжить</button>' : '<button class="btn btn-p" data-a="runClosePause">Вернуться</button>'}
+    ${RUN.blocks.length > 1 && RUN.ctrl ? '<button class="btn btn-s" data-a="runSkip">Закончить это упражнение</button>' : ''}
+    <button class="btn btn-s" data-a="runEnd">Закончить занятие</button></div></div>`;
+}
+function runResume(){
+  const ov = document.getElementById('pauseOv'); if(ov) ov.remove();
+  if(RUN && RUN.ctrl){ RUN.paused = false; RUN.last = performance.now(); RUN.ctrl.resume(); }
+}
+function finishSession(){
+  clearInterval(RUN.timer);
+  if(RUN.ctrl){ const b = curBlock(); const res = RUN.ctrl.finish(); RUN.ctrl = null; if(res && res.level1) DB.levels[b.kind] = res.level1; RUN.results.push({kind:b.kind, planMin:b.min, sec:Math.round(RUN.elapsed / 1000), ...res}); }
+  const sec = RUN.results.reduce((s, r) => s + (r.sec || 0), 0);
+  if(RUN.results.length && sec >= 20){
+    lastSession = {id:uid(), ts:RUN.t0, sec, mode:RUN.plan, leftHand:DB.cfg.leftHand, head:headLive(), blocks:RUN.results};
+    DB.sessions.push(lastSession); save();
+  }else lastSession = null;
+  Cam.stop(); keepAwake(false);
+  try{ if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }catch(e){}
+  RUN = null; MODE = null; document.body.classList.remove('lock');
+  try{ speechSynthesis.cancel(); }catch(e){}
+  go(lastSession ? 'sessDone' : 'home');
+}
+function blockLine(r){
+  const wd = w();
+  switch(r.kind){
+    case 'spt': return `замечено оранжевых фигур ${r.hits} из ${r.probes}${r.rt ? ', реакция ' + fmtSec(r.rt) : ''}; в ${wd.ag} трети экрана ${r.zones && r.zones[2][0] ? pct(r.zones[2][1] / r.zones[2][0]) : '—'}`;
+    case 'scan': return `найдено ${wd.adv} ${pct(r.negRate)}, с другой стороны ${pct(r.intRate)}; подсказок ${r.cues}${r.oriented != null ? `; голова ${wd.dir} ${pct(r.oriented)} времени` : ''}`;
+    case 'ar': return `найдено целей ${r.found} из ${r.found + r.missed}, поворот корпуса до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`;
+    case 'alert': return `точность ${pct(r.acc)}, реакция ${fmtSec(r.rt)}, ложных касаний ${r.fa}`;
+  }
+  return '';
+}
+function renderSessDone(){
+  const s = lastSession; if(!s){ go('home'); return; }
+  app.innerHTML = `<div class="wrap">${header()}
+    <h1>Занятие завершено</h1>
+    <p>${s.sec < 60 ? s.sec + ' с' : Math.round(s.sec / 60) + ' мин'}. Результаты сохранены на устройстве.</p>
+    <div class="card">${s.blocks.map(b => `<div class="list-row"><div><b>${EX[b.kind].name}</b><br><span>${esc(blockLine(b))}</span></div><span class="tag ${b.level1 > b.level0 ? 'top' : 'mid'}">ур. ${b.level0}${b.level1 !== b.level0 ? ' → ' + b.level1 : ''}</span></div>`).join('')}</div>
+    ${DB.cfg.sheetUrl ? `<button class="btn btn-s" data-a="sync">Отправить специалисту</button>` : ''}
+    <button class="btn btn-p" data-a="go" data-v="home">На главную</button>
+  </div>`;
+}
+
+/* ===================== МОДУЛИ УПРАЖНЕНИЙ ===================== */
+const MODS = {scan:SCAN, spt:SPT, ar:AR, alert:ALERT};
+function hintFade(st, ms = 6000){ const h = st.querySelector('.stage-hint'); if(h) setTimeout(() => h.classList.add('gone'), ms); }
+function stageMsg(st, text, ms = 1400){
+  const old = st.querySelector('.stage-msg'); if(old) old.remove();
+  const d = document.createElement('div'); d.className = 'stage-msg'; d.textContent = text; st.appendChild(d);
+  setTimeout(() => d.remove(), ms);
+}
+
+/* --- 1. Поиск и сканирование (top-down) --- */
+function SCAN(st, o){
+  const s = sgn(), wd = w(), Wp = st.clientWidth || 900, Hp = st.clientHeight || 560;
+  const VW = 1000, VH = Math.max(420, Math.round(VW * Hp / Wp)), footU = 100 * VH / Hp;
+  let level = o.level, sheet = null, paused = false, done = false, nextT = 0;
+  const M = {level0:level, sheets:0, negHit:0, negTot:0, intHit:0, intTot:0, fp:0, cues:0, early:0, oN:0, oY:0};
+  st.innerHTML = `<svg viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="none"></svg><div class="stage-foot"><button class="pill-btn" id="scDone">Я всё нашёл</button></div>`;
+  const svg = st.querySelector('svg');
+  const isNeg = x => s < 0 ? x < VW / 2 : x >= VW / 2;
+  const P = L => ({nT:Math.min(26, 6 + 2 * L), nD:Math.min(44, 4 * L), wf:Math.min(1, .55 + .09 * (L - 1)),
+    anchor: L <= 3 ? 'pulse' : L <= 6 ? 'on' : L <= 8 ? 'faint' : 'none', conj: L >= 6, r: Math.max(19, 31 - L)});
+  function newSheet(){
+    const p = P(level), fw = VW * p.wf, fx0 = (VW - fw) / 2, fx1 = fx0 + fw, fy0 = 26, fy1 = VH - footU - 8, items = [], minD = p.r * 2.7;
+    const place = cond => { for(let k = 0; k < 500; k++){ const x = fx0 + p.r + 34 + Math.random() * (fw - 2 * p.r - 68), y = fy0 + p.r + Math.random() * (fy1 - fy0 - 2 * p.r); if(!cond(x)) continue; if(items.every(it => Math.hypot(it.x - x, it.y - y) >= minD)) return {x, y}; } return null; };
+    const nNeg = Math.round(p.nT * .6);
+    for(let k = 0; k < p.nT; k++){ const q = place(x => k < nNeg ? isNeg(x) : !isNeg(x)); if(q) items.push({...q, t:1, f:0}); }
+    const kinds = p.conj ? ['bc','bs','bt','os','ot'] : ['bc','bs','bt'];
+    for(let k = 0; k < p.nD; k++){ const q = place(() => true); if(q) items.push({...q, t:0, k:kinds[Math.floor(Math.random() * kinds.length)]}); }
+    sheet = {items, p, fx0, fx1, fy0, fy1, t0:performance.now(), lastNeg:performance.now(), warned:false};
+    draw();
+  }
+  function shape(it, r){
+    const O = '#E8892A', B = '#2A78D6', x = it.x.toFixed(1), y = it.y.toFixed(1);
+    if(it.t) return `<circle cx="${x}" cy="${y}" r="${r}" fill="${O}"/><circle cx="${x}" cy="${y}" r="${(r * .32).toFixed(1)}" fill="#fff"/>`;
+    const c = it.k[0] === 'o' ? O : B, k = it.k[1];
+    if(k === 'c') return `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/>`;
+    if(k === 's') return `<rect x="${(it.x - r * .88).toFixed(1)}" y="${(it.y - r * .88).toFixed(1)}" width="${(r * 1.76).toFixed(1)}" height="${(r * 1.76).toFixed(1)}" rx="5" fill="${c}"/>`;
+    return `<path d="M${x} ${(it.y - r).toFixed(1)}L${(it.x + r).toFixed(1)} ${(it.y + r * .8).toFixed(1)}L${(it.x - r).toFixed(1)} ${(it.y + r * .8).toFixed(1)}Z" fill="${c}"/>`;
+  }
+  function draw(){
+    const p = sheet.p, ax = s < 0 ? sheet.fx0 + 4 : sheet.fx1 - 22;
+    let h = `<rect x="${sheet.fx0}" y="${sheet.fy0 - 10}" width="${sheet.fx1 - sheet.fx0}" height="${sheet.fy1 - sheet.fy0 + 20}" rx="18" fill="#FBFAF7"/>`;
+    if(p.anchor !== 'none') h += `<rect class="anchor ${p.anchor === 'pulse' ? 'anchor-pulse' : ''}" x="${ax}" y="${sheet.fy0}" width="18" height="${sheet.fy1 - sheet.fy0}" rx="9" fill="#E8892A" opacity="${p.anchor === 'faint' ? .35 : 1}"/>`;
+    h += sheet.items.map(it => `<g data-i>${shape(it, p.r)}</g>`).join('') + '<g id="scMarks"></g>';
+    svg.innerHTML = h;
+  }
+  function markFound(it){
+    const g = svg.querySelector('#scMarks'), r = sheet.p.r;
+    g.insertAdjacentHTML('beforeend', `<g class="mark"><circle cx="${it.x}" cy="${it.y}" r="${r + 7}" fill="rgba(255,255,255,.72)" stroke="#0B6E6E" stroke-width="4"/><path d="M${it.x - r * .45} ${it.y}l${r * .32} ${r * .34}l${r * .6} -${r * .66}" fill="none" stroke="#0B6E6E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>`);
+  }
+  function cue(){
+    M.cues++;
+    const a = svg.querySelector('.anchor');
+    if(a){ a.classList.remove('anchor-pulse'); restartAnim(a, 'flash'); setTimeout(() => { if(sheet && sheet.p.anchor === 'pulse') a.classList.add('anchor-pulse'); }, 1500); }
+    else{ const d = document.createElement('div'); d.className = 'edgeflash flash'; d.style[s < 0 ? 'left' : 'right'] = '0'; st.appendChild(d); setTimeout(() => d.remove(), 1500); }
+    Snd.cue(); say(`Посмотрите ${wd.dir}`);
+  }
+  function endSheet(){
+    const T2 = sheet.items.filter(i => i.t), neg = T2.filter(i => isNeg(i.x)), int = T2.filter(i => !isNeg(i.x));
+    const nh = neg.filter(i => i.f).length, ih = int.filter(i => i.f).length;
+    M.negHit += nh; M.negTot += neg.length; M.intHit += ih; M.intTot += int.length; M.sheets++;
+    const rate = neg.length ? nh / neg.length : 1;
+    if(rate >= .9 && !sheet.warned) level = Math.min(10, level + 1);
+    else if(rate < .6) level = Math.max(1, level - 1);
+    stageMsg(st, rate === 1 && ih === int.length ? 'Отлично! Все найдены' : `Найдено ${nh + ih} из ${T2.length}`);
+    sheet = null; nextT = setTimeout(() => { if(!done) newSheet(); }, 1300);
+  }
+  svg.addEventListener('pointerdown', e => {
+    if(paused || done || !sheet) return; e.preventDefault();
+    const p = svgPt(svg, e); let best = null, bd = 1e9;
+    for(const it of sheet.items){ const d = Math.hypot(it.x - p.x, it.y - p.y); if(d < bd){ bd = d; best = it; } }
+    if(!best || bd > sheet.p.r * 1.6) return;
+    if(best.t){
+      if(best.f) return;
+      best.f = 1; markFound(best); Snd.ok();
+      if(isNeg(best.x)) sheet.lastNeg = performance.now();
+      if(sheet.items.every(it => !it.t || it.f)) endSheet();
+    }else{ M.fp++; Snd.soft(); }
+  });
+  st.querySelector('#scDone').addEventListener('click', () => {
+    if(paused || done || !sheet) return;
+    const rem = sheet.items.filter(it => it.t && !it.f), remNeg = rem.filter(it => isNeg(it.x)).length;
+    if(rem.length && !sheet.warned){ sheet.warned = true; M.early++; stageMsg(st, remNeg ? `Ещё не всё. Посмотрите ${wd.adv}` : 'Ещё не всё. Посмотрите внимательно', 2000); if(remNeg) cue(); return; }
+    endSheet();
+  });
+  const cueDelay = () => level <= 4 ? 7000 : 11000;
+  const iv = setInterval(() => {
+    if(paused || done || !sheet) return;
+    if(headLive()){ M.oN++; if(Cam.turn() >= headThr()) M.oY++; }
+    const now = performance.now(), remNeg = sheet.items.some(it => it.t && !it.f && isNeg(it.x));
+    if(remNeg && now - sheet.lastNeg > cueDelay()){
+      const need = headLive() ? !Cam.orientedWithin(cueDelay() / 1000, headThr()) : true;
+      if(need) cue();
+      sheet.lastNeg = now;
+    }
+  }, 500);
+  newSheet();
+  return {
+    pause(){ paused = true; },
+    resume(){ paused = false; if(sheet) sheet.lastNeg = performance.now(); },
+    finish(){
+      done = true; clearInterval(iv); clearTimeout(nextT);
+      return {level0:M.level0, level1:level, sheets:M.sheets, negRate:M.negTot ? M.negHit / M.negTot : null, intRate:M.intTot ? M.intHit / M.intTot : null,
+        fp:M.fp, cues:M.cues, early:M.early, oriented:M.oN ? M.oY / M.oN : null};
+    }
+  };
+}
+
+/* --- 2. Плавное слежение и оптокинетическая стимуляция (bottom-up) --- */
+function SPT(st, o){
+  st.innerHTML = `<canvas></canvas><div class="stage-hint">Следите глазами за фигурами. Оранжевую коснитесь.</div>`;
+  const cv = st.querySelector('canvas'), ctx = cv.getContext('2d'), s = sgn();
+  let W = 0, H = 0;
+  const size = () => { const d = Math.min(2, window.devicePixelRatio || 1); W = st.clientWidth || 900; H = st.clientHeight || 560; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
+  size(); window.addEventListener('resize', size);
+  let level = o.level, paused = false, done = false, raf = 0, last = performance.now(), objs = [], bg = 0, act = 0;
+  let nextProbe = 2500 + Math.random() * 2000;
+  const M = {level0:level, probes:0, hits:0, rts:[], zones:[[0,0],[0,0],[0,0]]};
+  let ep = {p:0, h:0, t:0};
+  const ROWS = [.26, .5, .74], COLS = ['#0B6E6E', '#14222B', '#2A78D6'];
+  const R = () => clamp(Math.min(W, H) * .045, 16, 34), gap = () => W * .22;
+  const speed = () => W * (.035 + .011 * level);
+  const mk = (x, row) => ({x, row, y:H * ROWS[row] + (Math.random() - .5) * H * .06, c:COLS[Math.floor(Math.random() * 3)], sh:Math.random() < .5 ? 'c' : 's', probe:false, used:false, pt:0, z:0});
+  for(let row = 0; row < 3; row++){ const off = Math.random() * gap(); for(let x = off; x < W + gap(); x += gap()) objs.push(mk(x, row)); }
+  const edgeIn = () => s < 0 ? W + R() : -R();
+  const progress = x => s < 0 ? 1 - x / W : x / W;   // 0 у замечаемого края, 1 у игнорируемого
+  function step(now){
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    if(!paused && !done){
+      act += dt; ep.t += dt;
+      const v = speed();
+      bg = (bg + s * v * 1.15 * dt) % (W * .12);
+      objs.forEach(ob => { ob.x += s * v * dt; });
+      objs = objs.filter(ob => {
+        const out = s < 0 ? ob.x < -R() * 1.5 : ob.x > W + R() * 1.5;
+        if(out && ob.probe){ ob.probe = false; Snd.soft(); }
+        return !out;
+      });
+      for(let row = 0; row < 3; row++){
+        const rowObjs = objs.filter(ob => ob.row === row), ex = edgeIn();
+        const nearest = rowObjs.reduce((m, ob) => Math.min(m, Math.abs(ob.x - ex)), Infinity);
+        if(nearest >= gap()) objs.push(mk(ex, row));
+      }
+      const probe = objs.find(ob => ob.probe);
+      if(probe && now - probe.pt > 2600){ probe.probe = false; }
+      nextProbe -= dt * 1000;
+      if(!probe && nextProbe <= 0){
+        const cand = objs.filter(ob => !ob.used && ob.x > W * .1 && ob.x < W * .9);
+        if(cand.length){
+          const ob = cand[Math.floor(Math.random() * cand.length)], pr = progress(ob.x);
+          ob.probe = true; ob.used = true; ob.pt = now; ob.z = pr < 1/3 ? 0 : pr < 2/3 ? 1 : 2;
+          M.probes++; ep.p++; M.zones[ob.z][0]++;
+        }
+        nextProbe = 3200 + Math.random() * 3600;
+      }
+      if(ep.t >= 45){
+        if(ep.p >= 4){ const r = ep.h / ep.p; if(r >= .85) level = Math.min(10, level + 1); else if(r < .5) level = Math.max(1, level - 1); }
+        ep = {p:0, h:0, t:0};
+      }
+    }
+    draw(now);
+    raf = requestAnimationFrame(step);
+  }
+  function draw(now){
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+    if(DB.cfg.oks){
+      const sw2 = W * .06; ctx.fillStyle = '#E9EFEF';
+      for(let x = -W * .12 + bg; x < W + W * .12; x += W * .12) ctx.fillRect(x, 0, sw2, H);
+    }
+    const r = R();
+    objs.forEach(ob => {
+      ctx.fillStyle = ob.probe ? '#E8892A' : ob.c;
+      if(ob.probe){ ctx.save(); ctx.strokeStyle = 'rgba(232,137,42,.35)'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(ob.x, ob.y, r + 9 + 3 * Math.sin(now / 120), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+      if(ob.sh === 'c' || ob.probe){ ctx.beginPath(); ctx.arc(ob.x, ob.y, r, 0, Math.PI * 2); ctx.fill(); }
+      else{ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(ob.x - r * .88, ob.y - r * .88, r * 1.76, r * 1.76, 6) : ctx.rect(ob.x - r * .88, ob.y - r * .88, r * 1.76, r * 1.76); ctx.fill(); }
+    });
+  }
+  cv.addEventListener('pointerdown', e => {
+    if(paused || done) return; e.preventDefault();
+    const b = cv.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
+    const ob = objs.find(q => q.probe && Math.hypot(q.x - x, q.y - y) <= R() * 1.9 + 14);
+    if(ob){ ob.probe = false; M.hits++; ep.h++; M.zones[ob.z][1]++; M.rts.push((performance.now() - ob.pt) / 1000); Snd.ok(); }
+  });
+  hintFade(st);
+  raf = requestAnimationFrame(step);
+  return {
+    pause(){ paused = true; },
+    resume(){ paused = false; last = performance.now(); },
+    finish(){ done = true; cancelAnimationFrame(raf); window.removeEventListener('resize', size);
+      return {level0:M.level0, level1:level, probes:M.probes, hits:M.hits, rt:mean(M.rts), zones:M.zones}; }
+  };
+}
+
+/* --- 3. Поиск в комнате: камера + гироскоп, поворот корпуса --- */
+function AR(st, o){
+  const s = sgn(), wd = w();
+  st.innerHTML = `<video playsinline muted autoplay></video><canvas></canvas><div class="stage-hint" id="arHint">Держите планшет перед грудью и поворачивайтесь корпусом.</div>`;
+  const video = st.querySelector('video'), cv = st.querySelector('canvas'), ctx = cv.getContext('2d');
+  let W = 0, H = 0;
+  const size = () => { const d = Math.min(2, window.devicePixelRatio || 1); W = st.clientWidth || 900; H = st.clientHeight || 560; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
+  size(); window.addEventListener('resize', size);
+  const FOV = 60;
+  let level = o.level, paused = false, done = false, raf = 0, last = performance.now(), stream = null, camOK = false;
+  let mode = 'demo', b0 = null, smooth = null, a = 0, gotOri = false;
+  let tgt = null, phase = 'center', centerT = 0, hold = 0, tStart = 0;
+  const M = {level0:level, found:0, missed:0, times:[], maxA:0};
+  let trio = {n:0, f:0, tt:0};
+  // камера
+  if(ENV.camera && !ENV.framed){
+    navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}}}).then(sm => {
+      if(done){ sm.getTracks().forEach(t => t.stop()); return; }
+      stream = sm; video.srcObject = sm; video.play().catch(() => {}); camOK = true;
+    }).catch(() => { video.style.display = 'none'; });
+  }else video.style.display = 'none';
+  // гироскоп
+  const onOri = e => {
+    const br = bearingFrom(e); if(br == null) return;
+    gotOri = true; if(mode !== 'gyro') mode = 'gyro';
+    if(b0 === null) b0 = br;
+    const rel = wrap180(br - b0);
+    smooth = smooth === null ? rel : smooth + wrap180(rel - smooth) * .25;
+    a = s < 0 ? -smooth : smooth;
+  };
+  if(o.motion) window.addEventListener('deviceorientation', onOri);
+  // демо: поворот пальцем
+  let drag = null;
+  const pd = e => { if(mode !== 'demo') return; drag = e.clientX; cv.setPointerCapture && cv.setPointerCapture(e.pointerId); };
+  const pm = e => { if(mode !== 'demo' || drag === null) return; const dx = e.clientX - drag; drag = e.clientX; a = clamp(a + (s < 0 ? dx : -dx) / W * FOV, -60, 120); };
+  const pu = () => { drag = null; };
+  cv.addEventListener('pointerdown', pd); cv.addEventListener('pointermove', pm); cv.addEventListener('pointerup', pu); cv.addEventListener('pointercancel', pu);
+  const kd = e => { if(mode !== 'demo') return; if(e.key === 'ArrowLeft') a += s < 0 ? 4 : -4; if(e.key === 'ArrowRight') a += s < 0 ? -4 : 4; };
+  window.addEventListener('keydown', kd);
+  const hint = document.getElementById('arHint');
+  setTimeout(() => { if(!gotOri && hint){ hint.textContent = 'Демо-режим: проведите пальцем по экрану в сторону, чтобы «повернуться».'; hint.classList.remove('gone'); } }, 1600);
+
+  const maxTh = () => Math.min(90, 25 + 9 * (level - 1)), minTh = () => Math.min(12 + 3 * level, maxTh() - 6);
+  function newTarget(){
+    tgt = {th:minTh() + Math.random() * (maxTh() - minTh()), y:.32 + Math.random() * .3, size:Math.max(.62, 1 - .045 * (level - 1))};
+    tStart = performance.now(); hold = 0; phase = 'seek';
+    say(`Найдите звезду ${wd.adv}`);
+  }
+  function afterTarget(ok){
+    trio.n++; if(ok){ trio.f++; trio.tt += (performance.now() - tStart) / 1000; }
+    if(trio.n >= 3){
+      if(trio.f === 3 && trio.tt / 3 < 9) level = Math.min(10, level + 1);
+      else if(trio.f <= 1) level = Math.max(1, level - 1);
+      trio = {n:0, f:0, tt:0};
+    }
+    phase = 'center'; centerT = 0; tgt = null;
+  }
+  function step(now){
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    if(!paused && !done){
+      if(phase === 'center'){
+        if(Math.abs(a) < 10){ centerT += dt; if(centerT > .7) newTarget(); } else centerT = 0;
+      }else if(phase === 'seek'){
+        M.maxA = Math.max(M.maxA, a);
+        const off = tgt.th - a, tol = 6 * tgt.size + 3;
+        if(Math.abs(off) < tol){ hold += dt; if(hold >= 1){ M.found++; M.times.push((now - tStart) / 1000); Snd.ok(); afterTarget(true); } }
+        else hold = Math.max(0, hold - dt * 2);
+        if(phase === 'seek' && now - tStart > 25000){ M.missed++; Snd.soft(); afterTarget(false); }
+        if(phase === 'seek' && now - tStart > 7000) say(`Поверните корпус ${wd.dir}`);
+      }
+    }
+    draw(now);
+    raf = requestAnimationFrame(step);
+  }
+  const X = th => W / 2 + s * (th - a) * W / FOV;
+  function arrow(x, y, dir, col){
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.fillStyle = col;
+    ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(4, -30); ctx.lineTo(4, -12); ctx.lineTo(34, -12); ctx.lineTo(34, 12); ctx.lineTo(4, 12); ctx.lineTo(4, 30); ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function label(text, x, y){
+    ctx.font = '800 18px Manrope, system-ui, sans-serif'; const tw = ctx.measureText(text).width;
+    ctx.fillStyle = 'rgba(20,34,43,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - tw / 2 - 14, y - 22, tw + 28, 38, 12) : ctx.rect(x - tw / 2 - 14, y - 22, tw + 28, 38); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(text, x, y + 4);
+  }
+  function draw(now){
+    ctx.clearRect(0, 0, W, H);
+    if(!camOK){
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#E4ECEC'); g.addColorStop(.62, '#D8E2E2'); g.addColorStop(.621, '#C9C2B4'); g.addColorStop(1, '#B9B1A2');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = 'rgba(20,34,43,.18)'; ctx.lineWidth = 2; ctx.font = '700 13px Manrope, system-ui, sans-serif'; ctx.fillStyle = 'rgba(20,34,43,.45)'; ctx.textAlign = 'center';
+      for(let m = -90; m <= 150; m += 15){ const x = X(m); if(x < -40 || x > W + 40) continue; ctx.beginPath(); ctx.moveTo(x, H * .2); ctx.lineTo(x, H * .62); ctx.stroke(); ctx.fillText((m === 0 ? 'прямо' : Math.abs(m) + '°'), x, H * .18); }
+    }
+    const cx = W / 2, cy = H * (tgt ? tgt.y : .47), rr = Math.min(W, H) * .1;
+    // цель
+    if(tgt && phase === 'seek'){
+      const x = X(tgt.th), ts = rr * .55 * tgt.size, pulse = 1 + .07 * Math.sin(now / 180);
+      if(x > -ts && x < W + ts){
+        ctx.save(); ctx.shadowColor = 'rgba(232,137,42,.8)'; ctx.shadowBlur = 24; ctx.fillStyle = '#E8892A';
+        ctx.beginPath(); const p = new Path2D(starPath(x, cy, ts * pulse)); ctx.fill(p); ctx.restore();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(new Path2D(starPath(x, cy, ts * pulse)));
+      }else if(level <= 3 || now - tStart > 6000){
+        arrow(s < 0 ? 60 : W - 60, cy, s < 0 ? 1 : -1, '#E8892A');
+        label(`Поверните корпус ${wd.dir}`, W / 2, H - 48);
+      }
+    }
+    // прицел
+    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(20,34,43,.6)'; ctx.beginPath(); ctx.arc(cx, cy, rr + 4, 0, Math.PI * 2); ctx.stroke();
+    if(hold > 0){ ctx.lineWidth = 8; ctx.strokeStyle = '#0B6E6E'; ctx.beginPath(); ctx.arc(cx, cy, rr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, hold)); ctx.stroke(); }
+    if(phase === 'center' && Math.abs(a) >= 10){
+      arrow(a > 0 ? (s < 0 ? W - 60 : 60) : (s < 0 ? 60 : W - 60), H * .47, (a > 0) === (s < 0) ? -1 : 1, '#0B6E6E');
+      label('Вернитесь прямо', W / 2, H - 48);
+    }else if(phase === 'center') label('Держите прямо…', W / 2, H - 48);
+    // счёт
+    ctx.textAlign = 'left'; ctx.font = '800 16px Manrope, system-ui, sans-serif';
+    const info = `Найдено: ${M.found}   Поворот: ${Math.round(Math.max(0, a))}°${mode === 'demo' ? '   (демо)' : ''}`;
+    const tw = ctx.measureText(info).width; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(12, H - 46 - 60, tw + 24, 34); ctx.fillStyle = '#14222B'; ctx.fillText(info, 24, H - 46 - 38);
+  }
+  hintFade(st, 5000);
+  raf = requestAnimationFrame(step);
+  return {
+    pause(){ paused = true; },
+    resume(){ paused = false; last = performance.now(); },
+    finish(){
+      done = true; cancelAnimationFrame(raf);
+      window.removeEventListener('deviceorientation', onOri); window.removeEventListener('keydown', kd); window.removeEventListener('resize', size);
+      if(stream) stream.getTracks().forEach(t => t.stop());
+      return {level0:M.level0, level1:level, found:M.found, missed:M.missed, meanTime:mean(M.times), maxTurn:Math.round(M.maxA), mode};
+    }
+  };
+}
+
+/* --- 4. Бдительность: go/no-go с предупреждающим сигналом --- */
+function ALERT(st, o){
+  st.innerHTML = `<div class="alert-stage"><div class="stim" id="stim"></div></div><div class="stage-hint">Касайтесь экрана, когда появляется фигура. Красный знак «стоп» не трогайте.</div>`;
+  const stim = st.querySelector('#stim');
+  let level = o.level, paused = false, done = false, timer = 0, cur = null;
+  const M = {level0:level, n:0, go:0, hit:0, miss:0, nogo:0, fa:0, rts:[]};
+  let ep = {n:0, c:0};
+  const disp = () => Math.max(520, 1150 - 60 * level), isi = () => 700 + Math.random() * Math.max(500, 1700 - 70 * level);
+  const GO = [
+    '<circle cx="50" cy="50" r="40" fill="#0B6E6E"/>',
+    '<rect x="14" y="14" width="72" height="72" rx="14" fill="#2A78D6"/>',
+    `<path d="${starPath(50, 52, 44)}" fill="#E8892A"/>`,
+    '<path d="M50 8L92 88H8Z" fill="#6B5BA8"/>'
+  ];
+  const NOGO = '<path d="M33 6H67L94 33V67L67 94H33L6 67V33Z" fill="#B42318"/><text x="50" y="58" text-anchor="middle" font-size="21" font-weight="800" fill="#fff" font-family="Manrope,system-ui,sans-serif">СТОП</text>';
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(trial, isi()); };
+  function trial(){
+    if(paused || done) return;
+    const nogo = Math.random() < .2, warn = Math.random() < .3;
+    const show = () => {
+      if(paused || done) return;
+      cur = {nogo, t:performance.now(), resp:false};
+      const jx = level >= 5 ? (Math.random() - .5) * (level - 4) * 7 : 0;
+      stim.style.transform = `translateX(${jx}vw)`;
+      stim.innerHTML = `<svg viewBox="0 0 100 100">${nogo ? NOGO : GO[Math.floor(Math.random() * GO.length)]}</svg>`;
+      timer = setTimeout(endStim, disp());
+    };
+    if(warn){ Snd.alert(); timer = setTimeout(show, 450); } else show();
+  }
+  function endStim(){
+    if(!cur) return;
+    M.n++; ep.n++;
+    if(cur.nogo){ M.nogo++; if(!cur.resp) ep.c++; }
+    else{ M.go++; if(cur.resp) ep.c++; else M.miss++; }
+    cur = null; stim.innerHTML = '';
+    if(ep.n >= 20){ const acc = ep.c / ep.n; if(acc >= .9) level = Math.min(10, level + 1); else if(acc < .7) level = Math.max(1, level - 1); ep = {n:0, c:0}; }
+    schedule();
+  }
+  const tap = e => {
+    if(paused || done || !cur || cur.resp) return; e.preventDefault();
+    cur.resp = true;
+    if(cur.nogo){ M.fa++; Snd.soft(); restartAnim(stim, 'shake'); }
+    else{ M.hit++; M.rts.push((performance.now() - cur.t) / 1000); Snd.ok(); stim.innerHTML = ''; }
+  };
+  st.addEventListener('pointerdown', tap);
+  hintFade(st);
+  schedule();
+  return {
+    pause(){ paused = true; clearTimeout(timer); cur = null; stim.innerHTML = ''; },
+    resume(){ paused = false; schedule(); },
+    finish(){
+      done = true; clearTimeout(timer); st.removeEventListener('pointerdown', tap);
+      const correct = M.hit + (M.nogo - M.fa);
+      return {level0:M.level0, level1:level, trials:M.n, hits:M.hit, miss:M.miss, fa:M.fa, acc:M.n ? correct / M.n : null, rt:mean(M.rts), rtSD:sd(M.rts)};
+    }
+  };
+}
+
+/* ===================== ДЕМО-ДАННЫЕ ===================== */
+function demoTest(form, ts, pNeg, pInt, seed){
+  const rnd = mulberry32(seed), items = genTest(form), tg = items.filter(i => i.t);
+  const found = tg.filter(i => rnd() < (i.x < TW / 2 ? pNeg * (.55 + i.x / TW) : pInt));
+  found.sort((a, b) => (b.x - a.x) + (rnd() - .5) * 160);
+  let t = 2; const taps = found.map(i => { t += 1.4 + rnd() * 2.2; return {i:i.i, t:Math.round(t * 100) / 100, x:i.x, y:i.y, tg:1, rep:false}; });
+  const dis = items.filter(i => !i.t && i.x > TW / 2); if(dis.length && rnd() < .7){ const d = dis[Math.floor(rnd() * dis.length)]; taps.splice(3, 0, {i:d.i, t:taps[2] ? taps[2].t + .5 : 5, x:d.x, y:d.y, tg:0, rep:false}); }
+  return {id:'demo-t' + seed, ts, form, side:'L', taps, r:scoreTest(items, taps, t + 6)};
+}
+function makeDemo(){
+  const d = fresh(), day = 864e5, d0 = new Date(); d0.setHours(10, 0, 0, 0);
+  const start = d0.getTime() - 9 * day, rnd = mulberry32(42);
+  d.demo = true; d.cfg.patient = 'PAT_DEMO'; d.cfg.specialist = 'Демо';
+  const cb = (id, ts, who, ans) => ({id, ts, who, ans, total:cbsTotal(ans)});
+  d.cbs.push(cb('demo-c1', start, 'cur', [2,2,3,1,2,2,2,1,1,1]), cb('demo-c2', start + 9e5, 'pt', [0,1,1,0,1,0,1,0,0,1]),
+    cb('demo-c3', start + 9 * day - 3600e3 * 2, 'cur', [1,1,2,1,1,1,1,1,0,1]), cb('demo-c4', start + 9 * day - 3600e3 * 2 + 9e5, 'pt', [1,1,1,0,1,1,1,0,0,1]));
+  d.tests.push(demoTest(1, start + 18e5, .42, .97, 11), demoTest(2, start + 4 * day + 18e5, .66, 1, 12), demoTest(3, start + 9 * day - 3600e3, .86, 1, 13));
+  const lv = {spt:1, scan:1, ar:1, alert:1};
+  for(let i = 0; i < 9; i++){
+    const ts = start + i * day + 3600e3 * 5, mode = i < 5 ? 'bottom' : 'mid';
+    const up = k => { const l0 = lv[k]; if(rnd() < .55) lv[k] = Math.min(10, lv[k] + 1); return [l0, lv[k]]; };
+    const [a0, a1] = up('spt'), [b0, b1] = up('scan'), [c0, c1] = up('ar'), [e0, e1] = up('alert');
+    const neg = .55 + i * .04 + rnd() * .05;
+    d.sessions.push({id:'demo-s' + i, ts, sec:1500, mode, leftHand:false, head:false, blocks:[
+      {kind:'spt', planMin:mode === 'bottom' ? 11 : 7, sec:mode === 'bottom' ? 660 : 420, level0:a0, level1:a1, probes:14, hits:10 + Math.round(i / 3), rt:.9 - i * .03, zones:[[5,5],[5,4],[4,1 + Math.round(i / 3)]]},
+      {kind:'scan', planMin:7, sec:mode === 'bottom' ? 420 : 540, level0:b0, level1:b1, sheets:5, negRate:neg, intRate:.97, fp:1, cues:9 - Math.round(i * .7), early:2, oriented:null},
+      {kind:'ar', planMin:4, sec:mode === 'bottom' ? 240 : 360, level0:c0, level1:c1, found:5 + Math.round(i / 2), missed:2, meanTime:11 - i * .5, maxTurn:35 + i * 5, mode:'gyro'},
+      {kind:'alert', planMin:3, sec:180, level0:e0, level1:e1, trials:70, hits:52, miss:4, fa:3, acc:.9 + i * .005, rt:.61 - i * .01, rtSD:.14}
+    ]});
+  }
+  d.levels = lv;
+  for(let i = 0; i < 10; i++){
+    const ts = start + i * day + 3600e3 * 10, k = isoDay(ts), yesN = Math.max(0, Math.round(5 - i * .4 + (rnd() - .5) * 1.5));
+    const a = [0,0,0,0,0,0]; const order = [0,1,2,3,4,5].sort(() => rnd() - .5); for(let j = 0; j < yesN && j < 6; j++) a[order[j]] = 1;
+    d.diary[k] = {a, ts};
+  }
+  return d;
+}
+
+/* ===================== СОБЫТИЯ ===================== */
+const ACT = {
+  go: el => go(el.dataset.v),
+  loadDemo: () => { const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg}}; DB = makeDemo(); if(keep.cfg.sheetUrl) DB.cfg.sheetUrl = keep.cfg.sheetUrl; DB.pinHash = keep.pinHash; save(); toast('Загружены демо-данные'); go('home'); },
+  askWipe: () => {
+    app.insertAdjacentHTML('beforeend', `<div class="overlay" id="wipeOv" style="position:fixed;z-index:30"><h2>Удалить все данные на этом устройстве?</h2><p>Тесты, оценки, занятия и дневник будут удалены без возможности восстановления. Отправленные в CRM записи останутся в таблице.</p>
+      <div class="ov-actions"><button class="btn btn-d" data-a="wipe">Удалить</button><button class="btn btn-s" data-a="closeOv" data-v="wipeOv">Отмена</button></div></div>`);
+  },
+  wipe: () => { DB = fresh(); save(); pinUnlocked = false; toast('Данные удалены'); go('home'); },
+  closeOv: el => { const o = document.getElementById(el.dataset.v); if(o) o.remove(); },
+  startPlan: () => { const p = planFor(); if(!p.blocks.length){ toast('План пуст. Задайте минуты у специалиста.'); return; } startSession(p.blocks, p.mode); },
+  startEx: el => startSession([{kind:el.dataset.v, min:exMin[el.dataset.v]}], 'single'),
+  exMin: el => { exMin[el.dataset.k] = +el.dataset.v; const y = window.scrollY; render(); window.scrollTo(0, y); },
+  form: el => { testForm = +el.dataset.v; render(); },
+  startTest: () => startTest(),
+  testGo: () => { const o = document.getElementById('tintro'); if(o) o.remove(); T.t0 = performance.now(); },
+  testDone: () => testAskDone(),
+  testMore: () => { const o = document.getElementById('tconfirm'); if(o) o.remove(); },
+  testFinish: () => testFinish(),
+  testQuit: () => {
+    if(!T || !T.t0){ T = null; MODE = null; document.body.classList.remove('lock'); go('assess'); return; }
+    document.getElementById('stage').insertAdjacentHTML('beforeend', `<div class="overlay" id="tquit"><h2>Прервать тест?</h2><p>Результат не сохранится.</p><div class="ov-actions"><button class="btn btn-d" data-a="testAbort">Прервать</button><button class="btn btn-s" data-a="closeOv" data-v="tquit">Продолжить тест</button></div></div>`);
+  },
+  testAbort: () => { T = null; MODE = null; document.body.classList.remove('lock'); go('assess'); },
+  openTest: el => { viewTest = el.dataset.v; go('testRes'); },
+  cbs: el => { CB = {who:el.dataset.v, ans:Array(10).fill(null)}; go('cbs'); },
+  cbsAns: el => { const i = +el.dataset.i, v = +el.dataset.v; CB.ans[i] = CB.ans[i] === v ? null : v; const y = window.scrollY; renderCBS(); window.scrollTo(0, y); },
+  cbsSave: () => { const total = cbsTotal(CB.ans); DB.cbs.push({id:uid(), ts:Date.now(), who:CB.who, ans:[...CB.ans], total}); save(); toast(`Сохранено: ${String(total).replace('.', ',')} из 30`); go('assess'); },
+  diary: el => { const k = isoDay(Date.now()), e = DB.diary[k] || {a:[null,null,null,null,null,null]}; const i = +el.dataset.i, v = +el.dataset.v; e.a[i] = e.a[i] === v ? null : v; e.ts = Date.now(); DB.diary[k] = e; save(); const y = window.scrollY; renderDiary(); window.scrollTo(0, y); },
+  blockGo: () => blockGo(),
+  nextBlock: () => blockIntro(),
+  runPause: () => runPause(),
+  runResume: () => runResume(),
+  runClosePause: () => { const ov = document.getElementById('pauseOv'); if(ov) ov.remove(); },
+  runSkip: () => { const ov = document.getElementById('pauseOv'); if(ov) ov.remove(); if(RUN.ctrl){ endBlock(true); } else { RUN.i++; if(RUN.i >= RUN.blocks.length) finishSession(); else blockIntro(); } },
+  runEnd: () => finishSession(),
+  side: el => { DB.cfg.side = el.dataset.v; DB.head = null; save(); render(); },
+  sessMin: el => { DB.cfg.sessionMin = +el.dataset.v; save(); render(); },
+  toggle: el => { const k = el.dataset.v; DB.cfg[k] = !DB.cfg[k]; if(k === 'camOn' && DB.cfg.camOn && !DB.head) toast('Сначала проведите калибровку'); save(); const y = window.scrollY; render(); window.scrollTo(0, y); },
+  step: el => {
+    const id = el.dataset.v, d = +el.dataset.d, c = DB.cfg;
+    if(id === 'gapHigh') c.gapHigh = clamp(c.gapHigh + d, c.gapLow + 1, 20);
+    else if(id === 'gapLow') c.gapLow = clamp(c.gapLow + d, 0, c.gapHigh - 1);
+    else if(id.startsWith('mp_')){ const k = id.slice(3); c.manualPlan[k] = clamp((c.manualPlan[k] || 0) + d, 0, 30); }
+    save(); const y = window.scrollY; render(); window.scrollTo(0, y);
+  },
+  sync: () => syncNow(),
+  gas: () => { gasOpen = !gasOpen; const y = window.scrollY; render(); window.scrollTo(0, y); },
+  copyGas: async () => { try{ await navigator.clipboard.writeText(GAS_CODE); toast('Код скопирован'); }catch(e){ toast('Не удалось скопировать. Выделите код вручную.'); } },
+  copyJson: async () => { const txt = JSON.stringify({app:'tura-neglect', v:APP_VER, exported:new Date().toISOString(), ...DB, pinHash:undefined}, null, 1); try{ await navigator.clipboard.writeText(txt); toast('Данные скопированы'); }catch(e){ toast('Не удалось скопировать'); } },
+  setPin: async () => { const v = (document.getElementById('f_pin') || {}).value || ''; if(!/^\d{4}$/.test(v)){ toast('PIN: ровно 4 цифры'); return; } DB.pinHash = await hashPin(v); pinUnlocked = true; save(); toast('PIN установлен'); render(); },
+  clearPin: () => { DB.pinHash = null; save(); toast('PIN убран'); render(); },
+  pin: async el => {
+    const k = el.dataset.v;
+    if(k === 'del') pinBuf = pinBuf.slice(0, -1); else if(pinBuf.length < 4) pinBuf += k;
+    if(pinBuf.length === 4){ const h = await hashPin(pinBuf); pinBuf = ''; if(h === DB.pinHash){ pinUnlocked = true; view = 'spec'; } else pinErr = true; }
+    render();
+  },
+  calStart: () => runCalib()
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-a]'); if(!el || el.disabled) return;
+  const fn = ACT[el.dataset.a]; if(fn){ e.preventDefault(); fn(el); }
+});
+document.addEventListener('change', e => {
+  const el = e.target; if(!el.dataset || !el.dataset.f) return;
+  DB.cfg[el.dataset.f] = el.value.trim(); save();
+});
+document.addEventListener('visibilitychange', () => { if(document.hidden && RUN && RUN.ctrl && !RUN.paused) runPause(); });
+
+/* ---------- старт ---------- */
+if(ENV.framed && !DB.tests.length && !DB.cbs.length && !DB.sessions.length){ DB = makeDemo(); save(); }
+try{ if('serviceWorker' in navigator && !ENV.framed && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {}); }catch(e){}
+render();
+</script>
+</body>
+</html>
