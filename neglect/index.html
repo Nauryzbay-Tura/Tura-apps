@@ -211,6 +211,8 @@ pre.code{background:#0F1C22;color:#D9E6E6;border-radius:14px;padding:14px;font-s
 .namechips button{min-height:42px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);padding:0 14px;font-weight:700;font-size:14px}
 .namechips button.on{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
 input[type=range]{width:100%;accent-color:var(--brand);height:36px}
+.roompick{width:100%;max-width:440px;text-align:center;display:flex;flex-direction:column;gap:8px}
+.roompick .row2 .btn + .btn{margin-top:0}
 .rotate-hint{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:24px}
 @media (orientation:portrait) and (max-width:700px){.rotate-hint{display:flex}}
 @media (prefers-reduced-motion:reduce){.mark,.stim.shake{animation:none}.tbar i{transition:none}}
@@ -222,7 +224,7 @@ input[type=range]{width:100%;accent-color:var(--brand);height:36px}
 <script>
 'use strict';
 /* ===================== TURA · Неглект — прототип v0.1 ===================== */
-const APP_VER = '0.2.1';
+const APP_VER = '0.3';
 const KEY = 'tura_neglect_v0';
 const DEF_CFG = {
   patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
@@ -236,7 +238,7 @@ const KINDS = ['spt','scan','ar','alert'];
 let storageOK = true;
 function fresh(){
   return {cfg:{...DEF_CFG, manualPlan:{...DEF_CFG.manualPlan}}, levels:{...DEF_LV}, cbs:[], tests:[], sessions:[], diary:{},
-    head:null, pinHash:null, synced:{}, demo:false, room:null};
+    head:null, pinHash:null, synced:{}, demo:false, rooms:[], roomId:null};
 }
 function load(){
   try{
@@ -253,7 +255,9 @@ function load(){
         head: d.head || null, pinHash: d.pinHash || null,
         synced: d.synced && typeof d.synced === 'object' ? d.synced : {},
         demo: !!d.demo,
-        room: d.room && Array.isArray(d.room.items) ? d.room : null
+        rooms: Array.isArray(d.rooms) ? d.rooms
+          : d.room && Array.isArray(d.room.items) ? [{...d.room, id:'r-' + (d.room.ts || 1), name:d.room.demo ? 'Демо-квартира' : 'Комната 1'}] : [],
+        roomId: d.roomId || (d.room && Array.isArray(d.room.items) ? 'r-' + (d.room.ts || 1) : null)
       };
     }
   }catch(e){ storageOK = false; }
@@ -283,8 +287,10 @@ const SW = {
 };
 const w = () => SW[DB.cfg.side] || SW.L;
 const sgn = () => DB.cfg.side === 'R' ? 1 : -1;   // направление игнорируемой стороны по оси x экрана
-const roomItems = () => DB.room && Array.isArray(DB.room.items) ? DB.room.items : [];
-const roomIsDemo = () => !!(DB.room && DB.room.demo);
+const curRoom = () => DB.rooms.find(r => r.id === DB.roomId) || DB.rooms[0] || null;
+const realRooms = () => DB.rooms.filter(r => !r.demo);
+const roomItems = () => { const r = curRoom(); return r && Array.isArray(r.items) ? r.items : []; };
+const roomIsDemo = () => !!(curRoom() && curRoom().demo);
 const isNegTh = th => sgn() * th > 5;            // угол от якоря (+ вправо) лежит на стороне неглекта
 function angLabel(raw){ raw = Math.round(raw); return raw < -3 ? `${-raw}° влево` : raw > 3 ? `${raw}° вправо` : 'прямо'; }
 
@@ -646,6 +652,7 @@ function cocText(coc){
 const lastTest = () => [...DB.tests].sort((a, b) => b.ts - a.ts)[0] || null;
 
 /* ===================== ЭКРАНЫ ===================== */
+let roomDelId = null;
 let view = 'home', MODE = null, CB = null, testForm = 1, exMin = {spt:5, scan:5, ar:5, alert:3}, viewTest = null, lastSession = null, gasOpen = false;
 function header(){
   return `<div class="top"><div class="logo">TURA</div><div><div class="ttl">Неглект</div><div class="sub">Тренажёр пространственного внимания</div></div></div>`;
@@ -678,7 +685,7 @@ function renderHome(){
   const p = planFor(), lt = lastTest(), c = latestCBS('cur'), pt = latestCBS('pt'), g = anosoGap();
   const doneToday = DB.sessions.filter(s => isoDay(s.ts) === isoDay(Date.now())).length;
   const nh = lt ? negHits(lt.r) : null;
-  const hasData = DB.tests.length || DB.cbs.length || DB.sessions.length || (roomItems().length && !roomIsDemo());
+  const hasData = DB.tests.length || DB.cbs.length || DB.sessions.length || realRooms().length;
   app.innerHTML = `<div class="wrap">${header()}${banners()}
     <div class="card">
       <div class="row-sb"><div><span class="eyebrow">Занятие на сегодня</span><div class="big">${p.total} мин</div></div><span class="tag ${p.mode}">${MODE_LABEL[p.mode]}</span></div>
@@ -765,7 +772,7 @@ function renderEx(){
     ${KINDS.map(k => `<div class="card">
       <div class="row-sb"><h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:4px;background:${EX[k].color};display:inline-block"></i>${EX[k].name}</h2><span class="tag mid">Уровень ${DB.levels[k]} из 10</span></div>
       <p>${esc(EX[k].what())}</p>
-      ${k === 'ar' ? `<div class="meta" style="margin-top:0">${roomItems().length ? (roomIsDemo() ? `Цели: примерная комната из демо-данных (${roomItems().length}).` : `Цели: предметы комнаты пациента (${roomItems().length}).`) : 'Цели: виртуальная звезда. Предметы комнаты настраивает специалист.'}</div>` + sensorsNote : ''}
+      ${k === 'ar' ? `<div class="meta" style="margin-top:0">${roomItems().length ? `Цели: «${esc(curRoom().name)}», ${roomItems().length} ${plural(roomItems().length, 'предмет', 'предмета', 'предметов')}${roomIsDemo() ? ' (пример из демо)' : ''}. Комнату можно сменить или снять перед упражнением.` : 'Цели: виртуальная звезда. Комнату можно снять прямо перед упражнением.'}</div>` + sensorsNote : ''}
       <div class="field" style="margin-top:12px"><div class="seg">${[3,5,10].map(m => `<button data-a="exMin" data-k="${k}" data-v="${m}" class="${exMin[k] === m ? 'on' : ''}">${m} мин</button>`).join('')}</div></div>
       <button class="btn btn-p btn-sm" data-a="startEx" data-v="${k}">Начать</button>
     </div>`).join('')}
@@ -982,8 +989,16 @@ function renderSpec(){
       ${sw('leftHand', c.leftHand, `Выполнять ${wd.ag} рукой`, 'Напоминание в начале каждого упражнения')}
     </div>
     <div class="card"><h2>Поиск в комнате</h2>
-      ${(() => { const n = roomItems().length; return `<p style="font-size:14px">${n ? `${roomIsDemo() ? `Сейчас примерная комната из демо-данных (${n} ${plural(n, 'предмет', 'предмета', 'предметов')} с подписью «Пример»). Снимите комнату пациента: примерная уберётся.` : `Комната настроена: ${n} ${plural(n, 'предмет', 'предмета', 'предметов')}. Упражнение ищет их, а не виртуальную звезду.`}` : 'Комната не настроена, поэтому упражнение ищет виртуальную звезду. Сфотографируйте предметы вокруг пациента.'}</p>
-      <button class="btn btn-p btn-sm" data-a="openRoom">${n && !roomIsDemo() ? 'Изменить комнату' : 'Настроить комнату'}</button>`; })()}
+      <p style="font-size:14px">Библиотека комнат пациента. Перед упражнением выбирается, где занимаемся; там же комнату можно снять или обновить.</p>
+      ${DB.rooms.length ? DB.rooms.map(r => {
+        const isCur = curRoom() && curRoom().id === r.id, neg = r.items.filter(it => isNegTh(it.th)).length;
+        if(roomDelId === r.id) return `<div class="note danger" style="margin:8px 0"><b>Удалить «${esc(r.name)}»?</b>Якорь и ${r.items.length} ${plural(r.items.length, 'предмет', 'предмета', 'предметов')} будут удалены с телефона.
+          <div class="row2" style="margin-top:10px"><button class="btn btn-s btn-sm" data-a="roomDelNo">Отмена</button><button class="btn btn-d btn-sm" data-a="roomDelYes" data-v="${r.id}">Удалить</button></div></div>`;
+        return `<div class="list-row"><div><b>${esc(r.name)}</b>${r.demo ? ' <span class="tag manual">пример</span>' : ''}${isCur ? ' <span class="tag bottom">выбрана</span>' : ''}<br>
+          <span>${r.items.length} ${plural(r.items.length, 'предмет', 'предмета', 'предметов')}, ${w().adv} ${neg}${r.lastUsed ? ' · занимались ' + fmtDay(r.lastUsed) : ''}${!r.anchor ? ' · нет якоря' : ''}</span></div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end">${!isCur ? `<button class="linkbtn" data-a="roomPick" data-v="${r.id}">Выбрать</button>` : ''}${!r.demo ? `<button class="linkbtn" data-a="roomEdit" data-v="${r.id}">Изменить</button>` : ''}<button class="linkbtn" data-a="roomDelAsk" data-v="${r.id}" style="color:var(--danger)">Удалить</button></div></div>`;
+      }).join('') : '<p style="font-size:14px">Комнат пока нет, поэтому упражнение ищет виртуальную звезду.</p>'}
+      <button class="btn btn-p btn-sm" data-a="roomNew" style="margin-top:8px">Новая комната</button>
       <div class="field" style="margin-top:16px"><span class="flabel">Как пациент держит телефон</span><div class="seg">
         ${[['hand','В руке'],['chest','Крепление на груди']].map(([v, l]) => `<button data-a="cfgSet" data-k="arMount" data-v="${v}" class="${c.arMount === v ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div class="fhint">На груди руки свободны, а поиск идёт по звуку: чем ближе к предмету, тем чаще сигнал.</div></div>
@@ -1156,6 +1171,11 @@ function startSession(blocks, kindLabel){
   try{ if(!ENV.framed && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); }catch(e){}
   RUN = {blocks, i:0, results:[], plan:kindLabel, t0:Date.now(), ctrl:null, timer:0, elapsed:0, last:0, paused:false};
   MODE = 'run'; document.body.classList.add('lock');
+  runShell();
+  if(DB.cfg.camOn && DB.head && Cam.available()) Cam.start();
+  blockIntro();
+}
+function runShell(){
   app.innerHTML = `<div class="ex" id="ex"><div class="exbar">
       <button class="ib" data-a="runPause" aria-label="Пауза или выход">✕</button>
       <div class="t"><b id="rTitle"></b><small id="rSub"></small><div class="tbar"><i id="rBar"></i></div></div>
@@ -1163,8 +1183,6 @@ function startSession(blocks, kindLabel){
       <div class="clock" id="rClock">0:00</div>
       <button class="ib" data-a="runPause" aria-label="Пауза">II</button>
     </div><div class="stage" id="stage"></div></div>`;
-  if(DB.cfg.camOn && DB.head && Cam.available()) Cam.start();
-  blockIntro();
 }
 const curBlock = () => RUN && RUN.blocks[RUN.i];
 function setBar(){
@@ -1190,6 +1208,7 @@ function blockIntro(){
   st.innerHTML = `<div class="overlay"><h2>${EX[b.kind].name}</h2><p>${esc(EX[b.kind].how())}</p>
     ${DB.cfg.leftHand && b.kind !== 'ar' ? `<div class="note warn" style="max-width:520px"><b>Касайтесь ${wd.ag} рукой</b>Помощник может поддержать руку.</div>` : ''}
     ${sensor}
+    ${b.kind === 'ar' ? roomPicker() : ''}
     <div class="ov-actions"><button class="btn btn-p" data-a="blockGo">Начать</button>${RUN.blocks.length > 1 ? '<button class="btn btn-s" data-a="runSkip">Пропустить это упражнение</button>' : ''}</div></div>`;
 }
 async function blockGo(){
@@ -1267,13 +1286,22 @@ function finishSession(){
   try{ speechSynthesis.cancel(); }catch(e){}
   go(lastSession ? 'sessDone' : 'home');
 }
+function roomPicker(){
+  const rooms = DB.rooms, cur = curRoom();
+  if(!rooms.length) return `<div class="roompick"><div class="note info" style="text-align:left;margin:0"><b>Комната не снята</b>Упражнение пойдёт с виртуальной звездой. Можно снять комнату прямо сейчас: якорь и 6–10 предметов, пара минут.
+    <button class="btn btn-s btn-sm" data-a="roomNew">Снять комнату сейчас</button></div></div>`;
+  return `<div class="roompick"><span class="flabel">Где занимаемся</span>
+    <div class="namechips" style="justify-content:center">${rooms.map(r => `<button data-a="roomPick" data-v="${r.id}" class="${cur && cur.id === r.id ? 'on' : ''}">${esc(r.name)} · ${r.items.length}</button>`).join('')}</div>
+    <div class="row2">${cur && !cur.demo ? `<button class="btn btn-s btn-sm" data-a="roomEdit" data-v="${cur.id}">Обновить</button>` : '<span></span>'}<button class="btn btn-s btn-sm" data-a="roomNew">Новая комната</button></div>
+    <div class="fhint">${cur && cur.demo ? 'Это примерная комната из демо-данных. Снимите комнату пациента.' : 'Переставили вещи? «Обновить»: наведите на якорь, удалите сдвинутые предметы и снимите их заново.'}</div></div>`;
+}
 function blockLine(r){
   const wd = w();
   switch(r.kind){
     case 'spt': return `замечено оранжевых фигур ${r.hits} из ${r.probes}${r.rt ? ', реакция ' + fmtSec(r.rt) : ''}; в ${wd.ag} трети экрана ${r.zones && r.zones[2][0] ? pct(r.zones[2][1] / r.zones[2][0]) : '—'}`;
     case 'scan': return `найдено ${wd.adv} ${pct(r.negRate)}, с другой стороны ${pct(r.intRate)}; подсказок ${r.cues}${r.oriented != null ? `; голова ${wd.dir} ${pct(r.oriented)} времени` : ''}`;
     case 'ar': return r.target === 'home'
-      ? `найдено ${r.found} из ${r.found + r.missed}, сам без подсказки ${pct(r.noCue)}, средняя подсказка ${r.cueMean == null ? '—' : String(r.cueMean).replace('.', ',')} из 4, поворот до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`
+      ? `${r.roomName ? '«' + r.roomName + '»: ' : ''}найдено ${r.found} из ${r.found + r.missed}, сам без подсказки ${pct(r.noCue)}, средняя подсказка ${r.cueMean == null ? '—' : String(r.cueMean).replace('.', ',')} из 4, поворот до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`
       : `найдено целей ${r.found} из ${r.found + r.missed}, поворот корпуса до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`;
     case 'alert': return `точность ${pct(r.acc)}, реакция ${fmtSec(r.rt)}, ложных касаний ${r.fa}`;
   }
@@ -1558,7 +1586,8 @@ function AR(st, o){
   const M = {level0:level, found:0, missed:0, times:[], maxA:0, cues:[], noCue:0, actDone:0, actFail:0, trials:[]};
   let trio = {n:0, f:0, cue:0};
   const imgs = {}; items.forEach(it => { const im = new Image(); im.src = it.photo; imgs[it.id] = im; });
-  const anchor = DB.room && DB.room.anchor; let anchorImg = null;
+  const room = curRoom(), anchor = room && room.anchor; let anchorImg = null;
+  if(home && room){ room.lastUsed = Date.now(); }
   if(anchor && anchor.photo){ anchorImg = new Image(); anchorImg.src = anchor.photo; }
   backCamera(video).then(sm => {
     if(done){ if(sm) sm.getTracks().forEach(t => t.stop()); return; }
@@ -1789,7 +1818,7 @@ function AR(st, o){
       if(stream) stream.getTracks().forEach(t => t.stop());
       if(pendingRec) M.trials.push(pendingRec), M.cues.push(pendingRec.cue);
       const n = M.found + M.missed;
-      return {level0:M.level0, level1:level, target:home ? 'home' : 'star', found:M.found, missed:M.missed, meanTime:mean(M.times),
+      return {level0:M.level0, level1:level, target:home ? 'home' : 'star', roomName:home && room ? room.name : null, found:M.found, missed:M.missed, meanTime:mean(M.times),
         maxTurn:Math.round(M.maxA), mode:ori.got ? 'gyro' : 'demo', cueMean:M.cues.length ? Math.round(mean(M.cues) * 10) / 10 : null,
         noCue:n ? M.noCue / n : null, actDone:M.actDone, actFail:M.actFail, trials:M.trials.slice(-40)};
     }
@@ -1797,43 +1826,53 @@ function AR(st, o){
 }
 
 /* ---------- комната пациента: съёмка предметов (делает специалист) ---------- */
-const ROOM_MAX = 12;
+const ROOM_MAX = 12, ROOMS_MAX = 8;
+const ROOM_CHIPS = ['Гостиная','Спальня','Кухня','Прихожая','Балкон'];
+const curRM = () => RM && DB.rooms.find(r => r.id === RM.roomId) || null;
 const NAME_CHIPS = ['Чашка','Пульт','Телефон','Очки','Часы','Дверь','Окно','Лампа','Картина','Книга'];
 let RM = null;
-async function openRoom(back){
+async function openRoom(back, roomId){
   Snd.unlock();
+  if(Cam.state !== 'off') Cam.stop();               // на iPhone работает только одна камера
   const motion = ENV.framed ? false : await requestMotion();
-  if(roomIsDemo()){ DB.room = null; save(); toast('Примерная комната из демо убрана. Снимите комнату пациента.'); }
-  RM = {back:back || 'spec', step:'anchor', ori:OriTracker(), stream:null, raf:0, video:null, photo:null, th:0, el:null, name:'', manual:false, manualTh:sgn() * 45, file:false, frame:null};
+  const room = roomId ? DB.rooms.find(r => r.id === roomId && !r.demo) : null;
+  RM = {back:back || 'spec', roomId:room ? room.id : null, step:room ? 'anchor' : 'rname', rname:'', ori:OriTracker(), stream:null, raf:0, video:null,
+    photo:null, th:0, el:null, name:'', manual:false, manualTh:sgn() * 45, file:false, frame:null};
   if(!ENV.framed) RM.ori.start();
   if(!motion && !ENV.framed) toast('Нет доступа к датчику движения: угол предмета придётся задавать вручную');
   MODE = 'room'; document.body.classList.add('lock');
   app.innerHTML = `<div class="ex"><div class="exbar"><button class="ib" data-a="roomClose" aria-label="Закрыть">✕</button>
-      <div class="t"><b>Комната пациента</b><small>Предметы для «Поиска в комнате»</small></div>
+      <div class="t"><b id="rmTitle"></b><small>${back === 'run' ? 'Потом вернёмся к упражнению' : 'Предметы для «Поиска в комнате»'}</small></div>
       <button class="pill-btn brand" data-a="roomClose" style="min-height:48px;padding:0 18px">Готово</button></div>
     <div class="stage" id="rmStage" style="background:#1B2A30"><video playsinline muted autoplay></video><canvas></canvas><div class="room-panel" id="rmPanel"></div></div></div>`;
   const st = document.getElementById('rmStage');
   RM.video = st.querySelector('video');
   roomPanel(); roomLoop();
   const sm = await backCamera(RM.video);
-  if(!RM) { if(sm) sm.getTracks().forEach(t => t.stop()); return; }
+  if(!RM){ if(sm) sm.getTracks().forEach(t => t.stop()); return; }
   if(sm) RM.stream = sm; else { RM.video.style.display = 'none'; RM.file = true; roomPanel(); }
 }
 function roomPanel(){
   const p = document.getElementById('rmPanel'); if(!p || !RM) return;
-  const wd = w(), items = roomItems(), an = DB.room && DB.room.anchor;
+  const wd = w(), room = curRM(), items = room ? room.items : [], an = room && room.anchor;
+  const tt = document.getElementById('rmTitle'); if(tt) tt.textContent = room ? 'Комната: ' + room.name : 'Новая комната';
   const snapBtn = (label, act) => RM.file
     ? `<label class="btn btn-p" style="cursor:pointer">${label}<input type="file" accept="image/*" capture="environment" data-room-file="${act}" hidden></label>`
     : `<button class="btn btn-p" data-a="${act}">${label}</button>`;
   let h = '';
-  if(RM.step === 'anchor'){
+  if(RM.step === 'rname'){
+    h = `<p><b>Какая это комната?</b> Снимите столько комнат, сколько нужно: кухню, гостиную, спальню. У каждой свой якорь и свои предметы.</p>
+      <input type="text" id="rmRoomName" value="${esc(RM.rname)}" placeholder="Например: гостиная" autocomplete="off">
+      <div class="namechips">${ROOM_CHIPS.map(n => `<button data-a="roomNameChip" data-v="${n}" class="${RM.rname === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+      <button class="btn btn-p" data-a="roomCreate">Дальше: якорь</button>`;
+  }else if(RM.step === 'anchor'){
     h = an
       ? `<p><b>Шаг 1. Якорь.</b> Сядьте на место пациента и наведите телефон на якорь, как на фото.</p>
          <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><img src="${an.photo}" alt="Якорь" style="width:84px;height:84px;border-radius:12px;object-fit:cover;flex:none"><div class="meta" style="margin:0">Углы предметов считаются от якоря. Если пациент будет сидеть в другом месте, начните комнату заново.</div></div>
-         <button class="btn btn-p" data-a="roomZero">Навёл на якорь</button><button class="linkbtn" data-a="roomResetAsk">Начать комнату заново</button>`
+         <button class="btn btn-p" data-a="roomZero">Навёл на якорь</button><button class="linkbtn" data-a="roomResetAsk">Переснять комнату с нуля</button>`
       : `<p><b>Шаг 1. Якорь.</b> Сядьте на место, где пациент будет заниматься. Наведите телефон на предмет прямо перед ним: телевизор, окно или картину. От него считаются углы.</p>${snapBtn('Снять якорь', 'roomAnchor')}`;
   }else if(RM.step === 'reset'){
-    h = `<p><b>Удалить якорь и все предметы комнаты?</b> Фото хранятся только на этом телефоне.</p><div class="row2"><button class="btn btn-s" data-a="roomResetNo">Отмена</button><button class="btn btn-d" data-a="roomReset">Удалить</button></div>`;
+    h = `<p><b>Удалить якорь и все предметы комнаты «${esc(room ? room.name : '')}»?</b> Сама комната в библиотеке останется. Фото хранятся только на этом телефоне.</p><div class="row2"><button class="btn btn-s" data-a="roomResetNo">Отмена</button><button class="btn btn-d" data-a="roomReset">Удалить</button></div>`;
   }else if(RM.step === 'items'){
     const neg = items.filter(it => isNegTh(it.th)).length, other = items.length - neg;
     h = `<p><b>Шаг 2. Предметы.</b> Наводите на предметы вокруг пациента и снимайте. Лучше 6–10 штук, большинство ${wd.adv}, на 30–90° от якоря.</p>
@@ -1869,8 +1908,9 @@ function roomLoop(){
       ctx.beginPath(); [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([x, y, dx, dy]) => { ctx.moveTo(x, y + dy * l); ctx.lineTo(x, y); ctx.lineTo(x + dx * l, y); }); ctx.stroke();
     }
     const rel = RM.ori.got ? RM.ori.rel : 0, fov = H > W ? 46 : 62, X = th => W / 2 + (th - rel) * W / fov;
-    const marks = [{th:0, name:'якорь'}].concat(DB.room && RM.step !== 'anchor' ? roomItems() : []);
-    if(DB.room && RM.step !== 'anchor') marks.forEach(m => {
+    const room = curRM(), show = room && room.anchor && RM.step !== 'anchor' && RM.step !== 'rname';
+    const marks = [{th:0, name:'якорь'}].concat(show ? room.items : []);
+    if(show) marks.forEach(m => {
       const x = X(m.th); if(x < -60 || x > W + 60) return;
       arLabel(ctx, m.name, clamp(x, 50, W - 50), 34);
     });
@@ -1897,9 +1937,10 @@ function fileToPhoto(file){
   });
 }
 function roomSetAnchor(photo){
-  DB.room = {anchor:{photo, el:RM.ori.el != null ? Math.round(RM.ori.el) : null, ts:Date.now()}, items:[], ts:Date.now()};
+  const room = curRM(); if(!room) return;
+  room.anchor = {photo, el:RM.ori.el != null ? Math.round(RM.ori.el) : null, ts:Date.now()}; room.items = []; room.ts = Date.now();
   save();
-  if(!storageOK){ DB.room = null; save(); toast('Не хватает памяти устройства'); return; }
+  if(!storageOK){ room.anchor = null; save(); toast('Не хватает памяти устройства. Удалите лишние комнаты.'); return; }
   RM.ori.zero(); RM.step = 'items'; Snd.ok(); roomPanel();
 }
 function roomTakeItem(photo){
@@ -1915,7 +1956,11 @@ function closeRoom(){
   if(!RM) return;
   cancelAnimationFrame(RM.raf); RM.ori.stop();
   if(RM.stream) RM.stream.getTracks().forEach(t => t.stop());
-  const back = RM.back; RM = null; MODE = null; document.body.classList.remove('lock');
+  const room = curRM();
+  if(room && !room.anchor && !room.items.length){ DB.rooms = DB.rooms.filter(r => r.id !== room.id); if(DB.roomId === room.id) DB.roomId = (realRooms()[0] || DB.rooms[0] || {}).id || null; save(); }
+  const back = RM.back; RM = null;
+  if(back === 'run' && RUN){ MODE = 'run'; runShell(); blockIntro(); return; }
+  MODE = null; document.body.classList.remove('lock');
   go(back);
 }
 
@@ -2004,7 +2049,7 @@ function demoPhoto(kind, label){
 }
 function demoRoom(){
   const it = (id, kind, name, th, el) => ({id:'demo-' + id, name, photo:demoPhoto(kind, name.toLowerCase()), th, el, ts:Date.now()});
-  return {demo:true, anchor:{photo:demoPhoto('tv', 'якорь'), el:0, ts:Date.now()}, ts:Date.now(), items:[
+  return {id:'demo-room', name:'Демо-квартира', demo:true, anchor:{photo:demoPhoto('tv', 'якорь'), el:0, ts:Date.now()}, ts:Date.now(), items:[
     it('door', 'door', 'Дверь', -80, 4), it('lamp', 'lamp', 'Лампа', -58, -4), it('window', 'window', 'Окно', -42, 12),
     it('clock', 'clock', 'Часы', -24, 18), it('pic', 'picture', 'Картина', 30, 10), it('cup', 'cup', 'Чашка', 16, -14)]};
 }
@@ -2030,7 +2075,7 @@ function makeDemo(){
     ]});
   }
   d.levels = lv;
-  d.room = demoRoom();
+  d.rooms = [demoRoom()]; d.roomId = 'demo-room';
   for(let i = 0; i < 10; i++){
     const ts = start + i * day + 3600e3 * 10, k = isoDay(ts), yesN = Math.max(0, Math.round(5 - i * .4 + (rnd() - .5) * 1.5));
     const a = [0,0,0,0,0,0]; const order = [0,1,2,3,4,5].sort(() => rnd() - .5); for(let j = 0; j < yesN && j < 6; j++) a[order[j]] = 1;
@@ -2043,17 +2088,18 @@ function makeDemo(){
 const ACT = {
   go: el => go(el.dataset.v),
   loadDemo: () => {
-    const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg, manualPlan:{...DB.cfg.manualPlan}}, head:DB.head, room:DB.room && !DB.room.demo ? DB.room : null};
+    const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg, manualPlan:{...DB.cfg.manualPlan}}, head:DB.head, rooms:realRooms(), roomId:DB.roomId};
     DB = makeDemo();
     DB.cfg = Object.assign(DB.cfg, keep.cfg, {patient:keep.cfg.patient || 'PAT_DEMO'});
     DB.pinHash = keep.pinHash; DB.head = keep.head;
-    if(keep.room) DB.room = keep.room;            // настоящая комната пациента остаётся
-    save(); toast(keep.room ? 'Загружены демо-данные. Ваша комната сохранена.' : 'Загружены демо-данные'); go('home');
+    if(keep.rooms.length){ DB.rooms = keep.rooms.concat(DB.rooms); DB.roomId = keep.rooms.some(r => r.id === keep.roomId) ? keep.roomId : keep.rooms[0].id; }   // комнаты пациента остаются
+    save(); toast(keep.rooms.length ? 'Загружены демо-данные. Комнаты пациента сохранены.' : 'Загружены демо-данные'); go('home');
   },
   clearDemo: () => {
-    const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg, manualPlan:{...DB.cfg.manualPlan}}, head:DB.head, room:DB.room && !DB.room.demo ? DB.room : null};
+    const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg, manualPlan:{...DB.cfg.manualPlan}}, head:DB.head, rooms:realRooms(), roomId:DB.roomId};
     if(keep.cfg.patient === 'PAT_DEMO') keep.cfg.patient = '';
-    DB = fresh(); Object.assign(DB.cfg, keep.cfg); DB.pinHash = keep.pinHash; DB.head = keep.head; DB.room = keep.room;
+    DB = fresh(); Object.assign(DB.cfg, keep.cfg); DB.pinHash = keep.pinHash; DB.head = keep.head;
+    DB.rooms = keep.rooms; DB.roomId = keep.rooms.some(r => r.id === keep.roomId) ? keep.roomId : (keep.rooms[0] || {}).id || null;
     save(); toast('Демо-данные убраны'); go('home');
   },
   askWipe: () => {
@@ -2102,7 +2148,7 @@ const ACT = {
   gas: () => { gasOpen = !gasOpen; const y = window.scrollY; render(); window.scrollTo(0, y); },
   copyGas: async () => { try{ await navigator.clipboard.writeText(GAS_CODE); toast('Код скопирован'); }catch(e){ toast('Не удалось скопировать. Выделите код вручную.'); } },
   copyJson: async () => { const txt = JSON.stringify({app:'tura-neglect', v:APP_VER, exported:new Date().toISOString(), ...DB, pinHash:undefined,
-    room:DB.room ? {items:roomItems().map(({photo, ...r}) => r)} : null}, null, 1); try{ await navigator.clipboard.writeText(txt); toast('Данные скопированы'); }catch(e){ toast('Не удалось скопировать'); } },
+    rooms:DB.rooms.filter(r => !r.demo).map(r => ({id:r.id, name:r.name, items:r.items.map(({photo, ...x}) => x)}))}, null, 1); try{ await navigator.clipboard.writeText(txt); toast('Данные скопированы'); }catch(e){ toast('Не удалось скопировать'); } },
   setPin: async () => { const v = (document.getElementById('f_pin') || {}).value || ''; if(!/^\d{4}$/.test(v)){ toast('PIN: ровно 4 цифры'); return; } DB.pinHash = await hashPin(v); pinUnlocked = true; save(); toast('PIN установлен'); render(); },
   clearPin: () => { DB.pinHash = null; save(); toast('PIN убран'); render(); },
   pin: async el => {
@@ -2113,14 +2159,40 @@ const ACT = {
   },
   calStart: () => runCalib(),
   cfgSet: el => { DB.cfg[el.dataset.k] = el.dataset.v; save(); const y = window.scrollY; render(); window.scrollTo(0, y); },
-  openRoom: () => openRoom(view),
+  openRoom: () => openRoom(MODE === 'run' ? 'run' : view, curRoom() && !curRoom().demo ? curRoom().id : null),
+  roomNew: () => {
+    if(realRooms().length >= ROOMS_MAX){ toast(`Максимум ${ROOMS_MAX} комнат. Удалите лишнюю.`); return; }
+    openRoom(MODE === 'run' ? 'run' : view, null);
+  },
+  roomEdit: el => {
+    const r = DB.rooms.find(x => x.id === el.dataset.v); if(!r) return;
+    if(r.demo){ toast('Примерную комнату нельзя изменить. Снимите свою.'); return; }
+    DB.roomId = r.id; save(); openRoom(MODE === 'run' ? 'run' : view, r.id);
+  },
+  roomPick: el => { DB.roomId = el.dataset.v; save(); if(MODE === 'run') blockIntro(); else { const y = window.scrollY; render(); window.scrollTo(0, y); } },
+  roomDelAsk: el => { roomDelId = el.dataset.v; const y = window.scrollY; render(); window.scrollTo(0, y); },
+  roomDelNo: () => { roomDelId = null; const y = window.scrollY; render(); window.scrollTo(0, y); },
+  roomDelYes: el => {
+    DB.rooms = DB.rooms.filter(r => r.id !== el.dataset.v);
+    if(DB.roomId === el.dataset.v) DB.roomId = (realRooms()[0] || DB.rooms[0] || {}).id || null;
+    roomDelId = null; save(); toast('Комната удалена'); const y = window.scrollY; render(); window.scrollTo(0, y);
+  },
+  roomNameChip: el => { RM.rname = el.dataset.v; const inp = document.getElementById('rmRoomName'); if(inp) inp.value = RM.rname; document.querySelectorAll('[data-a=roomNameChip]').forEach(b => b.classList.toggle('on', b.dataset.v === RM.rname)); },
+  roomCreate: () => {
+    const inp = document.getElementById('rmRoomName'); let name = ((inp && inp.value) || RM.rname || '').trim().slice(0, 30);
+    if(!name) name = 'Комната ' + (realRooms().length + 1);
+    if(DB.rooms.some(r => r.name.toLowerCase() === name.toLowerCase())) name += ' ' + (realRooms().length + 1);
+    const room = {id:uid(), name, anchor:null, items:[], ts:Date.now()};
+    DB.rooms.push(room); DB.roomId = room.id; save();
+    RM.roomId = room.id; RM.step = 'anchor'; roomPanel();
+  },
   roomClose: () => closeRoom(),
   roomAnchor: () => { const ph = grabPhoto(); if(!ph){ toast('Камера ещё не готова'); return; } roomSetAnchor(ph); },
   roomZero: () => { RM.ori.zero(); RM.step = 'items'; Snd.ok(); roomPanel(); },
   roomRezero: () => { RM.step = 'anchor'; roomPanel(); },
   roomResetAsk: () => { RM.step = 'reset'; roomPanel(); },
   roomResetNo: () => { RM.step = 'anchor'; roomPanel(); },
-  roomReset: () => { DB.room = null; save(); RM.step = 'anchor'; roomPanel(); toast('Комната очищена'); },
+  roomReset: () => { const r = curRM(); if(r){ r.anchor = null; r.items = []; save(); } RM.step = 'anchor'; roomPanel(); toast('Якорь и предметы удалены'); },
   roomSnap: () => roomTakeItem(grabPhoto()),
   roomChip: el => { RM.name = el.dataset.v; const inp = document.getElementById('rmName'); if(inp) inp.value = RM.name; document.querySelectorAll('[data-a=roomChip]').forEach(b => b.classList.toggle('on', b.dataset.v === RM.name)); },
   roomRetake: () => { RM.photo = null; RM.step = 'items'; roomPanel(); },
@@ -2128,11 +2200,12 @@ const ACT = {
     const inp = document.getElementById('rmName'), name = ((inp && inp.value) || RM.name || '').trim();
     if(!name){ toast('Введите название предмета'); return; }
     const item = {id:uid(), name:name.slice(0, 40), photo:RM.photo, th:RM.manual ? RM.manualTh : RM.th, el:RM.manual ? null : RM.el, ts:Date.now()};
-    DB.room.items.push(item); DB.room.ts = Date.now(); save();
-    if(!storageOK){ DB.room.items.pop(); save(); toast('Не хватает памяти. Удалите лишние предметы.'); return; }
+    const room = curRM(); if(!room) return;
+    room.items.push(item); room.ts = Date.now(); save();
+    if(!storageOK){ room.items.pop(); save(); toast('Не хватает памяти. Удалите лишние предметы или комнаты.'); return; }
     Snd.ok(); RM.photo = null; RM.step = 'items'; roomPanel();
   },
-  roomDel: el => { DB.room.items = roomItems().filter(it => it.id !== el.dataset.v); save(); roomPanel(); }
+  roomDel: el => { const r = curRM(); if(r){ r.items = r.items.filter(it => it.id !== el.dataset.v); save(); } roomPanel(); }
 };
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]'); if(!el || el.disabled) return;
@@ -2141,6 +2214,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const el = e.target; if(!RM) return;
   if(el.id === 'rmName') RM.name = el.value;
+  if(el.id === 'rmRoomName') RM.rname = el.value;
   if(el.id === 'rmTh'){ RM.manualTh = +el.value; const l = document.getElementById('rmThL'); if(l) l.textContent = angLabel(RM.manualTh); }
 });
 document.addEventListener('change', e => {
