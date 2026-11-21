@@ -222,13 +222,13 @@ input[type=range]{width:100%;accent-color:var(--brand);height:36px}
 <script>
 'use strict';
 /* ===================== TURA · Неглект — прототип v0.1 ===================== */
-const APP_VER = '0.2';
+const APP_VER = '0.2.1';
 const KEY = 'tura_neglect_v0';
 const DEF_CFG = {
   patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
   manual:false, manualPlan:{spt:8, scan:10, ar:5, alert:2},
   voice:true, oks:false, camOn:false, leftHand:false, sheetUrl:'',
-  arMount:'hand', arCue:'auto', arAction:'reach'
+  arMount:'hand', arCue:'auto', arAction:'reach', arDebug:false
 };
 const DEF_LV = {scan:1, spt:1, ar:1, alert:1};
 const KINDS = ['spt','scan','ar','alert'];
@@ -284,6 +284,7 @@ const SW = {
 const w = () => SW[DB.cfg.side] || SW.L;
 const sgn = () => DB.cfg.side === 'R' ? 1 : -1;   // направление игнорируемой стороны по оси x экрана
 const roomItems = () => DB.room && Array.isArray(DB.room.items) ? DB.room.items : [];
+const roomIsDemo = () => !!(DB.room && DB.room.demo);
 const isNegTh = th => sgn() * th > 5;            // угол от якоря (+ вправо) лежит на стороне неглекта
 function angLabel(raw){ raw = Math.round(raw); return raw < -3 ? `${-raw}° влево` : raw > 3 ? `${raw}° вправо` : 'прямо'; }
 
@@ -379,7 +380,7 @@ function camErrText(e){
   return 'Не удалось загрузить распознавание лица. Проверьте интернет.';
 }
 const Cam = {
-  state:'off', err:'', video:null, stream:null, lm:null, raf:0, lastVT:-1, yaw:NaN, face:false, hist:[],
+  state:'off', err:'', video:null, stream:null, lm:null, raf:0, lastVT:-1, yaw:NaN, face:false, hist:[], gen:0,
   available(){ return ENV.camera; },
   ensureVideo(){
     if(!this.video){
@@ -394,10 +395,12 @@ const Cam = {
     if(this.state === 'loading') return false;
     if(!this.available()){ this.state = 'error'; this.err = 'Камера в этой версии недоступна.'; return false; }
     this.state = 'loading'; this.err = '';
+    const my = ++this.gen;
     try{
       const v = this.ensureVideo();
-      this.stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:'user', width:{ideal:640}, height:{ideal:480}}});
-      v.srcObject = this.stream; try{ await v.play(); }catch(e){}
+      const sm = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:'user', width:{ideal:640}, height:{ideal:480}}});
+      if(my !== this.gen){ sm.getTracks().forEach(tr => tr.stop()); return false; }
+      this.stream = sm; v.srcObject = sm; try{ await v.play(); }catch(e){}
       if(!this.lm){
         const mod = await import(MP_BASE + '/vision_bundle.mjs');
         const files = await mod.FilesetResolver.forVisionTasks(MP_BASE + '/wasm');
@@ -406,8 +409,10 @@ const Cam = {
         try{ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('GPU')); }
         catch(e){ this.lm = await mod.FaceLandmarker.createFromOptions(files, opts('CPU')); }
       }
+      if(my !== this.gen) return false;
       this.state = 'ready'; this.loop(); return true;
     }catch(e){
+      if(my !== this.gen) return false;
       console.warn('camera', e); this.stop(); this.state = 'error'; this.err = camErrText(e); return false;
     }
   },
@@ -445,6 +450,7 @@ const Cam = {
     return this.hist.some(s => t - s.t <= sec && isFinite(s.yaw) && h.sign * (s.yaw - h.base) >= thr);
   },
   stop(){
+    this.gen++;
     cancelAnimationFrame(this.raf); this.raf = 0;
     if(this.stream){ this.stream.getTracks().forEach(tr => tr.stop()); this.stream = null; }
     if(this.video){ this.video.srcObject = null; this.video.className = 'camv parked'; if(this.video.parentNode !== document.body) document.body.appendChild(this.video); }
@@ -647,7 +653,7 @@ function header(){
 function backbar(to = 'home'){ return `<div class="backbar"><button class="back" data-a="go" data-v="${to}">← Назад</button></div>`; }
 function banners(){
   let s = '';
-  if(DB.demo) s += `<div class="demo-banner">Демо-данные курса из 10 дней. Перед работой с пациентом удалите их в разделе «Специалист».</div>`;
+  if(DB.demo) s += `<div class="demo-banner">Демо-данные курса из 10 дней${roomIsDemo() ? ', включая примерную комнату' : ''}. Перед работой с пациентом уберите их.<br><button class="linkbtn" data-a="clearDemo" style="color:#3B2F70;padding:6px 0 0">Убрать демо-данные</button></div>`;
   if(!storageOK) s += `<div class="note warn"><b>Данные не сохраняются</b>Браузер запрещает хранить данные. После закрытия страницы результаты пропадут.</div>`;
   return s;
 }
@@ -672,7 +678,7 @@ function renderHome(){
   const p = planFor(), lt = lastTest(), c = latestCBS('cur'), pt = latestCBS('pt'), g = anosoGap();
   const doneToday = DB.sessions.filter(s => isoDay(s.ts) === isoDay(Date.now())).length;
   const nh = lt ? negHits(lt.r) : null;
-  const hasData = DB.tests.length || DB.cbs.length || DB.sessions.length;
+  const hasData = DB.tests.length || DB.cbs.length || DB.sessions.length || (roomItems().length && !roomIsDemo());
   app.innerHTML = `<div class="wrap">${header()}${banners()}
     <div class="card">
       <div class="row-sb"><div><span class="eyebrow">Занятие на сегодня</span><div class="big">${p.total} мин</div></div><span class="tag ${p.mode}">${MODE_LABEL[p.mode]}</span></div>
@@ -759,7 +765,7 @@ function renderEx(){
     ${KINDS.map(k => `<div class="card">
       <div class="row-sb"><h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:4px;background:${EX[k].color};display:inline-block"></i>${EX[k].name}</h2><span class="tag mid">Уровень ${DB.levels[k]} из 10</span></div>
       <p>${esc(EX[k].what())}</p>
-      ${k === 'ar' ? `<div class="meta" style="margin-top:0">${roomItems().length ? `Цели: предметы комнаты пациента (${roomItems().length}).` : 'Цели: виртуальная звезда. Предметы комнаты настраивает специалист.'}</div>` + sensorsNote : ''}
+      ${k === 'ar' ? `<div class="meta" style="margin-top:0">${roomItems().length ? (roomIsDemo() ? `Цели: примерная комната из демо-данных (${roomItems().length}).` : `Цели: предметы комнаты пациента (${roomItems().length}).`) : 'Цели: виртуальная звезда. Предметы комнаты настраивает специалист.'}</div>` + sensorsNote : ''}
       <div class="field" style="margin-top:12px"><div class="seg">${[3,5,10].map(m => `<button data-a="exMin" data-k="${k}" data-v="${m}" class="${exMin[k] === m ? 'on' : ''}">${m} мин</button>`).join('')}</div></div>
       <button class="btn btn-p btn-sm" data-a="startEx" data-v="${k}">Начать</button>
     </div>`).join('')}
@@ -976,8 +982,8 @@ function renderSpec(){
       ${sw('leftHand', c.leftHand, `Выполнять ${wd.ag} рукой`, 'Напоминание в начале каждого упражнения')}
     </div>
     <div class="card"><h2>Поиск в комнате</h2>
-      ${(() => { const n = roomItems().length; return `<p style="font-size:14px">${n ? `Комната настроена: ${n} ${plural(n, 'предмет', 'предмета', 'предметов')}. Упражнение ищет их, а не виртуальную звезду.` : 'Комната не настроена, поэтому упражнение ищет виртуальную звезду. Сфотографируйте предметы вокруг пациента.'}</p>
-      <button class="btn btn-p btn-sm" data-a="openRoom">${n ? 'Изменить комнату' : 'Настроить комнату'}</button>`; })()}
+      ${(() => { const n = roomItems().length; return `<p style="font-size:14px">${n ? `${roomIsDemo() ? `Сейчас примерная комната из демо-данных (${n} ${plural(n, 'предмет', 'предмета', 'предметов')} с подписью «Пример»). Снимите комнату пациента: примерная уберётся.` : `Комната настроена: ${n} ${plural(n, 'предмет', 'предмета', 'предметов')}. Упражнение ищет их, а не виртуальную звезду.`}` : 'Комната не настроена, поэтому упражнение ищет виртуальную звезду. Сфотографируйте предметы вокруг пациента.'}</p>
+      <button class="btn btn-p btn-sm" data-a="openRoom">${n && !roomIsDemo() ? 'Изменить комнату' : 'Настроить комнату'}</button>`; })()}
       <div class="field" style="margin-top:16px"><span class="flabel">Как пациент держит телефон</span><div class="seg">
         ${[['hand','В руке'],['chest','Крепление на груди']].map(([v, l]) => `<button data-a="cfgSet" data-k="arMount" data-v="${v}" class="${c.arMount === v ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div class="fhint">На груди руки свободны, а поиск идёт по звуку: чем ближе к предмету, тем чаще сигнал.</div></div>
@@ -986,6 +992,7 @@ function renderSpec(){
         <div class="fhint">По нарастающей: звук со стороны цели, вспышка края экрана, стрелка, стрелка с голосом. Чем выше уровень, тем позже приходит помощь. Приложение записывает, какая подсказка понадобилась.</div></div>
       <div class="field" style="margin-bottom:0"><span class="flabel">После того как предмет найден</span><div class="seg">
         ${[['reach','Показать рукой'],['name','Назвать'],['alternate','Чередовать'],['none','Ничего']].map(([v, l]) => `<button data-a="cfgSet" data-k="arAction" data-v="${v}" class="${c.arAction === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+      <div style="margin-top:14px">${sw('arDebug', c.arDebug, 'Показывать данные датчиков', 'Для проверки: углы гироскопа, частота, состояние камеры')}</div>
     </div>
     <div class="card"><h2>Контроль поворота головы <span class="beta">β</span></h2>
       <p style="font-size:14px">Фронтальная камера видит, поворачивает ли пациент голову ${wd.dir}. Если нет, звучит подсказка. Видео обрабатывается на устройстве и никуда не отправляется.</p>
@@ -1478,19 +1485,29 @@ function SPT(st, o){
 /* --- 3. Поиск в комнате: предметы пациента или звезда; камера + гироскоп, поворот корпуса --- */
 function OriTracker(){
   const t = {
-    got:false, raw:null, el:null, b0:null, smooth:null, rel:0,
+    got:false, raw:null, el:null, b0:null, smooth:null, rel:0, lastT:0, n:0, rate:0, rateT:0, pendingZero:false, a:null, b:null, g:null,
     handler: e => {
+      t.a = e.alpha; t.b = e.beta; t.g = e.gamma;
       const br = bearingFrom(e); if(br == null) return;
-      t.got = true; t.raw = br;
+      const now = performance.now();
+      t.got = true; t.raw = br; t.lastT = now; t.n++;
+      if(now - t.rateT > 1000){ t.rate = t.n; t.n = 0; t.rateT = now; }
       const el = elevFrom(e); if(el != null) t.el = el;
+      // ноль, заказанный до первых данных датчика, ставится по первому событию
+      if(t.pendingZero){ t.b0 = br; t.smooth = 0; t.rel = 0; t.pendingZero = false; return; }
       if(t.b0 === null) return;
       const r = wrap180(br - t.b0);
       t.smooth = t.smooth === null ? r : t.smooth + wrap180(r - t.smooth) * .25;
       t.rel = t.smooth;
     },
-    start(){ window.addEventListener('deviceorientation', t.handler); },
+    start(){ window.removeEventListener('deviceorientation', t.handler); window.addEventListener('deviceorientation', t.handler); },
     stop(){ window.removeEventListener('deviceorientation', t.handler); },
-    zero(){ if(t.raw != null) t.b0 = t.raw; t.smooth = 0; t.rel = 0; }
+    zero(){
+      if(t.raw != null && performance.now() - t.lastT < 500){ t.b0 = t.raw; t.pendingZero = false; }
+      else t.pendingZero = true;
+      t.smooth = 0; t.rel = 0;
+    },
+    alive(){ return t.got && performance.now() - t.lastT < 1500; }
   };
   return t;
 }
@@ -1619,7 +1636,10 @@ function AR(st, o){
     e.stopPropagation();
     const a = b.dataset.ar;
     if(a === 'reanchor'){ toAnchor(); return; }
-    if(a === 'anchor'){ ori.zero(); demoRel = 0; Snd.ok(); toCenter(); return; }
+    if(a === 'anchor'){
+      if(!ENV.framed){ requestMotion().catch(() => {}); ori.start(); }
+      ori.zero(); demoRel = 0; Snd.ok(); toCenter(); return;
+    }
     if(a === 'found' && phase === 'seek'){ found('manual'); return; }
     if((a === 'actOk' || a === 'actFail') && phase === 'action' && pendingRec){
       pendingRec.actOk = a === 'actOk'; if(pendingRec.actOk) M.actDone++; else M.actFail++;
@@ -1633,14 +1653,35 @@ function AR(st, o){
   cv.addEventListener('pointerdown', pd); cv.addEventListener('pointermove', pm); cv.addEventListener('pointerup', pu); cv.addEventListener('pointercancel', pu);
   const kd = e => { if(ori.got) return; if(e.key === 'ArrowLeft') demoRel -= 4; if(e.key === 'ArrowRight') demoRel += 4; };
   window.addEventListener('keydown', kd);
-  setTimeout(() => { if(!ori.got && hint && !done){ hint.textContent = ENV.framed ? 'Демо-режим: проведите пальцем по экрану, чтобы «повернуться».' : 'Нет данных датчика движения. Разрешите его в настройках браузера. Пока можно «поворачиваться» пальцем.'; hint.classList.remove('gone'); } }, 1600);
+  let noSensorWarn = false;
+  setTimeout(() => { if(!ori.got && hint && !done){ noSensorWarn = true; hint.textContent = ENV.framed ? 'Демо-режим: проведите пальцем по экрану, чтобы «повернуться».' : 'Нет данных датчика движения. Закройте вкладку, откройте ссылку заново и разрешите доступ к движению. Пока можно «поворачиваться» пальцем.'; hint.classList.remove('gone'); } }, 1600);
 
+  // сторожа: замершее видео и замолчавший датчик
+  let vidT = -1, vidSince = performance.now(), vidState = 'идёт', restarting = false, lastReattach = 0, sensorWarn = false;
+  async function restartCam(){
+    if(restarting || done) return; restarting = true;
+    try{ if(stream) stream.getTracks().forEach(t => t.stop()); stream = null; const sm = await backCamera(video); if(done){ if(sm) sm.getTracks().forEach(t => t.stop()); } else if(sm){ stream = sm; camOK = true; video.style.display = ''; } }
+    finally{ restarting = false; vidSince = performance.now(); }
+  }
+  function watchdogs(now){
+    if(camOK && !paused){
+      if(video.currentTime !== vidT){ vidT = video.currentTime; vidSince = now; vidState = 'идёт'; }
+      else if(now - vidSince > 4000){ vidState = 'перезапуск'; restartCam(); }
+      else if(now - vidSince > 1500){ vidState = 'стоит'; video.play().catch(() => {}); }
+    }
+    if(!ENV.framed && ori.got && !ori.alive() && !paused){
+      if(now - lastReattach > 3000){ lastReattach = now; ori.start(); }
+      if(!sensorWarn){ sensorWarn = true; hint.textContent = 'Датчик движения не отвечает. Нажмите «Якорь», чтобы перезапустить его.'; hint.classList.remove('gone'); }
+    }else if(sensorWarn && ori.alive()){ sensorWarn = false; hint.classList.add('gone'); }
+    if(noSensorWarn && ori.got){ noSensorWarn = false; hint.classList.add('gone'); }
+  }
   const cueDelay = () => 3 + .6 * level;
   function cueFor(el){ const m = cfg.arCue; if(m === 'off') return 0; if(m === 'always') return el < cueDelay() ? 3 : 4; return clamp(Math.floor(el / cueDelay()), 0, 4); }
 
   function step(now){
     const dt = Math.min(.05, (now - last) / 1000); last = now;
-    if(!home && ori.got && ori.b0 === null) ori.zero();
+    if(!home && ori.got && ori.b0 === null && !ori.pendingZero) ori.zero();
+    watchdogs(now);
     if(!paused && !done){
       if(phase === 'center'){
         if(Math.abs(rel()) < 10){ centerT += dt; if(centerT > .7) newTrial(); } else centerT = 0;
@@ -1726,7 +1767,15 @@ function AR(st, o){
       else arLabel(ctx, 'Держите прямо…', W / 2, H - 104);
     }
     const ic = st.querySelector('#arInfo');
-    if(ic) ic.textContent = `Найдено ${M.found} · поворот ${Math.round(Math.max(0, s * rel()))}°${ori.got ? '' : ' · демо'}`;
+    if(ic) ic.textContent = `Найдено ${M.found} · ${ori.got ? 'сейчас ' + angLabel(rel()) : 'демо'}`;
+    if(cfg.arDebug){
+      const f = v => v == null ? '—' : Math.round(v);
+      const lines = [`α ${f(ori.a)}  β ${f(ori.b)}  γ ${f(ori.g)}  ·  ${ori.rate} событий/с`, `угол ${f(rel())}°  ·  наклон ${f(elv())}°  ·  ноль ${ori.b0 == null ? (ori.pendingZero ? 'ждёт' : 'нет') : 'есть'}`, `камера ${camOK ? vidState : 'нет'}  ·  ${tgt ? 'цель ' + f(tgt.th) + '°' : phase}`];
+      ctx.font = '700 12px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left';
+      const bw = Math.min(W - 24, 330), by = 150;
+      ctx.fillStyle = 'rgba(20,34,43,.8)'; ctx.fillRect(12, by, bw, 58);
+      ctx.fillStyle = '#9FF5D0'; lines.forEach((l, k) => ctx.fillText(l, 20, by + 17 + k * 17));
+    }
   }
   if(home) toAnchor(); else toCenter();
   hintFade(st, 5000);
@@ -1754,6 +1803,7 @@ let RM = null;
 async function openRoom(back){
   Snd.unlock();
   const motion = ENV.framed ? false : await requestMotion();
+  if(roomIsDemo()){ DB.room = null; save(); toast('Примерная комната из демо убрана. Снимите комнату пациента.'); }
   RM = {back:back || 'spec', step:'anchor', ori:OriTracker(), stream:null, raf:0, video:null, photo:null, th:0, el:null, name:'', manual:false, manualTh:sgn() * 45, file:false, frame:null};
   if(!ENV.framed) RM.ori.start();
   if(!motion && !ENV.framed) toast('Нет доступа к датчику движения: угол предмета придётся задавать вручную');
@@ -1954,7 +2004,7 @@ function demoPhoto(kind, label){
 }
 function demoRoom(){
   const it = (id, kind, name, th, el) => ({id:'demo-' + id, name, photo:demoPhoto(kind, name.toLowerCase()), th, el, ts:Date.now()});
-  return {anchor:{photo:demoPhoto('tv', 'якорь'), el:0, ts:Date.now()}, ts:Date.now(), items:[
+  return {demo:true, anchor:{photo:demoPhoto('tv', 'якорь'), el:0, ts:Date.now()}, ts:Date.now(), items:[
     it('door', 'door', 'Дверь', -80, 4), it('lamp', 'lamp', 'Лампа', -58, -4), it('window', 'window', 'Окно', -42, 12),
     it('clock', 'clock', 'Часы', -24, 18), it('pic', 'picture', 'Картина', 30, 10), it('cup', 'cup', 'Чашка', 16, -14)]};
 }
@@ -1992,7 +2042,20 @@ function makeDemo(){
 /* ===================== СОБЫТИЯ ===================== */
 const ACT = {
   go: el => go(el.dataset.v),
-  loadDemo: () => { const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg}}; DB = makeDemo(); if(keep.cfg.sheetUrl) DB.cfg.sheetUrl = keep.cfg.sheetUrl; DB.pinHash = keep.pinHash; save(); toast('Загружены демо-данные'); go('home'); },
+  loadDemo: () => {
+    const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg, manualPlan:{...DB.cfg.manualPlan}}, head:DB.head, room:DB.room && !DB.room.demo ? DB.room : null};
+    DB = makeDemo();
+    DB.cfg = Object.assign(DB.cfg, keep.cfg, {patient:keep.cfg.patient || 'PAT_DEMO'});
+    DB.pinHash = keep.pinHash; DB.head = keep.head;
+    if(keep.room) DB.room = keep.room;            // настоящая комната пациента остаётся
+    save(); toast(keep.room ? 'Загружены демо-данные. Ваша комната сохранена.' : 'Загружены демо-данные'); go('home');
+  },
+  clearDemo: () => {
+    const keep = {pinHash:DB.pinHash, cfg:{...DB.cfg, manualPlan:{...DB.cfg.manualPlan}}, head:DB.head, room:DB.room && !DB.room.demo ? DB.room : null};
+    if(keep.cfg.patient === 'PAT_DEMO') keep.cfg.patient = '';
+    DB = fresh(); Object.assign(DB.cfg, keep.cfg); DB.pinHash = keep.pinHash; DB.head = keep.head; DB.room = keep.room;
+    save(); toast('Демо-данные убраны'); go('home');
+  },
   askWipe: () => {
     app.insertAdjacentHTML('beforeend', `<div class="overlay" id="wipeOv" style="position:fixed;z-index:30"><h2>Удалить все данные на этом устройстве?</h2><p>Тесты, оценки, занятия и дневник будут удалены без возможности восстановления. Отправленные в CRM записи останутся в таблице.</p>
       <div class="ov-actions"><button class="btn btn-d" data-a="wipe">Удалить</button><button class="btn btn-s" data-a="closeOv" data-v="wipeOv">Отмена</button></div></div>`);
