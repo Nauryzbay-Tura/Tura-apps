@@ -224,13 +224,13 @@ input[type=range]{width:100%;accent-color:var(--brand);height:36px}
 <script>
 'use strict';
 /* ===================== TURA · Неглект — прототип v0.1 ===================== */
-const APP_VER = '0.3';
+const APP_VER = '0.3.1';
 const KEY = 'tura_neglect_v0';
 const DEF_CFG = {
   patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
   manual:false, manualPlan:{spt:8, scan:10, ar:5, alert:2},
   voice:true, oks:false, camOn:false, leftHand:false, sheetUrl:'',
-  arMount:'hand', arCue:'auto', arAction:'reach', arDebug:false
+  arMount:'hand', arCue:'auto', arAction:'none', arDebug:false, cfgVer:2
 };
 const DEF_LV = {scan:1, spt:1, ar:1, alert:1};
 const KINDS = ['spt','scan','ar','alert'];
@@ -245,6 +245,7 @@ function load(){
     const raw = localStorage.getItem(KEY);
     if(raw){
       const d = JSON.parse(raw), c = d.cfg || {};
+      if((c.cfgVer || 0) < 2){ c.arAction = 'none'; c.cfgVer = 2; }
       return {
         cfg: Object.assign({}, DEF_CFG, c, {manualPlan: Object.assign({}, DEF_CFG.manualPlan, c.manualPlan || {})}),
         levels: Object.assign({}, DEF_LV, d.levels || {}),
@@ -1006,7 +1007,8 @@ function renderSpec(){
         ${[['auto','По нарастающей'],['always','Стрелка сразу'],['off','Без подсказок']].map(([v, l]) => `<button data-a="cfgSet" data-k="arCue" data-v="${v}" class="${c.arCue === v ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div class="fhint">По нарастающей: звук со стороны цели, вспышка края экрана, стрелка, стрелка с голосом. Чем выше уровень, тем позже приходит помощь. Приложение записывает, какая подсказка понадобилась.</div></div>
       <div class="field" style="margin-bottom:0"><span class="flabel">После того как предмет найден</span><div class="seg">
-        ${[['reach','Показать рукой'],['name','Назвать'],['alternate','Чередовать'],['none','Ничего']].map(([v, l]) => `<button data-a="cfgSet" data-k="arAction" data-v="${v}" class="${c.arAction === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+        ${[['none','Сразу дальше'],['name','Назвать'],['reach','Показать рукой'],['alternate','Чередовать']].map(([v, l]) => `<button data-a="cfgSet" data-k="arAction" data-v="${v}" class="${c.arAction === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="fhint">«Показать рукой» подходит, если рука на стороне неглекта двигается. При выраженном гемипарезе оставьте «Сразу дальше» или «Назвать».</div></div>
       <div style="margin-top:14px">${sw('arDebug', c.arDebug, 'Показывать данные датчиков', 'Для проверки: углы гироскопа, частота, состояние камеры')}</div>
     </div>
     <div class="card"><h2>Контроль поворота головы <span class="beta">β</span></h2>
@@ -1535,7 +1537,9 @@ function OriTracker(){
       else t.pendingZero = true;
       t.smooth = 0; t.rel = 0;
     },
-    alive(){ return t.got && performance.now() - t.lastT < 1500; }
+    alive(){ return t.got && performance.now() - t.lastT < 1500; },
+    // подстройка дрейфа: считаем, что телефон сейчас смотрит ровно на угол th
+    shiftTo(th){ if(t.raw == null) return; t.b0 = t.raw - th; t.smooth = th; t.rel = th; t.pendingZero = false; }
   };
   return t;
 }
@@ -1582,6 +1586,7 @@ function AR(st, o){
   let demoRel = 0, drag = null;
   const rel = () => ori.got ? ori.rel : demoRel;
   const elv = () => ori.got && ori.el != null ? ori.el : 0;
+  let lastDrift = null;
   let phase = 'center', centerT = 0, hold = 0, tStart = 0, tgt = null, cue = 0, maxCue = 0, lastBeep = 0, lastCueSnd = 0, recent = [], pendingRec = null;
   const M = {level0:level, found:0, missed:0, times:[], maxA:0, cues:[], noCue:0, actDone:0, actFail:0, trials:[]};
   let trio = {n:0, f:0, cue:0};
@@ -1647,11 +1652,12 @@ function AR(st, o){
     M.found++; M.times.push(t); if(maxCue === 0) M.noCue++;
     Snd.ok();
     const rec = {name:tgt.name, th:Math.round(tgt.th), neg:isNegTh(tgt.th), found:true, t:Math.round(t * 10) / 10, cue:maxCue, how};
+    if(how === 'manual' && lastDrift != null) rec.drift = lastDrift;
     if(home && cfg.arAction !== 'none'){
       const act = cfg.arAction === 'alternate' ? (M.found % 2 ? 'reach' : 'name') : cfg.arAction;
       rec.act = act; pendingRec = rec; phase = 'action';
-      showCard(act === 'reach' ? 'Покажите рукой' : 'Назовите предмет', act === 'reach' ? `Покажите на предмет ${wd.ag} рукой. Если он рядом, дотянитесь.` : 'Скажите вслух, что это.', tgt.photo, false);
-      say(act === 'reach' ? `Покажите ${wd.ag} рукой` : 'Назовите, что это', true);
+      showCard(act === 'reach' ? 'Покажите рукой' : 'Назовите предмет', act === 'reach' ? 'Покажите на предмет рукой. Помощник может поддержать руку.' : 'Скажите вслух, что это.', tgt.photo, false);
+      say(act === 'reach' ? 'Покажите на предмет рукой' : 'Назовите, что это', true);
       setBottom(`<button class="pill-btn light" data-ar="actFail">Не получилось</button><button class="pill-btn brand" data-ar="actOk">Сделано</button>`);
     }else afterTrial(rec);
   }
@@ -1669,7 +1675,11 @@ function AR(st, o){
       if(!ENV.framed){ requestMotion().catch(() => {}); ori.start(); }
       ori.zero(); demoRel = 0; Snd.ok(); toCenter(); return;
     }
-    if(a === 'found' && phase === 'seek'){ found('manual'); return; }
+    if(a === 'found' && phase === 'seek'){
+      const off = tgt.th - rel();
+      if(home && ori.got && Math.abs(off) <= 35){ ori.shiftTo(tgt.th); lastDrift = Math.round(off); }
+      found('manual'); return;
+    }
     if((a === 'actOk' || a === 'actFail') && phase === 'action' && pendingRec){
       pendingRec.actOk = a === 'actOk'; if(pendingRec.actOk) M.actDone++; else M.actFail++;
       const r = pendingRec; pendingRec = null; afterTrial(r);
@@ -1730,8 +1740,9 @@ function AR(st, o){
           const a = Math.min(1, Math.abs(off) / 90), iv = 220 + a * 1100;
           if(now - lastBeep > iv){ lastBeep = now; Snd.tone(1100 - a * 600, .07, .11, 'sine', clamp(off / 30, -1, 1)); }
         }
-        const tol = home ? 9 : 6 * tgt.size + 3;
-        const vOK = !home || tgt.el == null || !ori.got || Math.abs(tgt.el - elv()) < 20;
+        // реальный предмет: допуск шире, чем у звезды, — у предмета есть ширина, а гироскоп немного уплывает
+        const tol = home ? 14 : 6 * tgt.size + 3;
+        const vOK = !home || tgt.el == null || !ori.got || Math.abs(tgt.el - elv()) < 30;
         if(Math.abs(off) < tol && vOK){ hold += dt; if(hold >= 1) found('auto'); }
         else hold = Math.max(0, hold - dt * 2);
         if(phase === 'seek' && el > (home ? 40 : 25)) miss();
@@ -1799,7 +1810,7 @@ function AR(st, o){
     if(ic) ic.textContent = `Найдено ${M.found} · ${ori.got ? 'сейчас ' + angLabel(rel()) : 'демо'}`;
     if(cfg.arDebug){
       const f = v => v == null ? '—' : Math.round(v);
-      const lines = [`α ${f(ori.a)}  β ${f(ori.b)}  γ ${f(ori.g)}  ·  ${ori.rate} событий/с`, `угол ${f(rel())}°  ·  наклон ${f(elv())}°  ·  ноль ${ori.b0 == null ? (ori.pendingZero ? 'ждёт' : 'нет') : 'есть'}`, `камера ${camOK ? vidState : 'нет'}  ·  ${tgt ? 'цель ' + f(tgt.th) + '°' : phase}`];
+      const lines = [`α ${f(ori.a)}  β ${f(ori.b)}  γ ${f(ori.g)}  ·  ${ori.rate} событий/с`, `угол ${f(rel())}°  ·  наклон ${f(elv())}°  ·  ноль ${ori.b0 == null ? (ori.pendingZero ? 'ждёт' : 'нет') : 'есть'}`, `камера ${camOK ? vidState : 'нет'}  ·  ${tgt ? 'цель ' + f(tgt.th) + '°' : phase}${lastDrift != null ? '  ·  поправка ' + lastDrift + '°' : ''}`];
       ctx.font = '700 12px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left';
       const bw = Math.min(W - 24, 330), by = 150;
       ctx.fillStyle = 'rgba(20,34,43,.8)'; ctx.fillRect(12, by, bw, 58);
