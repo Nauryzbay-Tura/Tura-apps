@@ -224,13 +224,13 @@ input[type=range]{width:100%;accent-color:var(--brand);height:36px}
 <script>
 'use strict';
 /* ===================== TURA · Неглект — прототип v0.1 ===================== */
-const APP_VER = '0.3.1';
+const APP_VER = '0.4';
 const KEY = 'tura_neglect_v0';
 const DEF_CFG = {
   patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
   manual:false, manualPlan:{spt:8, scan:10, ar:5, alert:2},
   voice:true, oks:false, camOn:false, leftHand:false, sheetUrl:'',
-  arMount:'hand', arCue:'auto', arAction:'none', arDebug:false, cfgVer:2
+  arMount:'hand', arCue:'auto', arAction:'name', nameVoice:true, arDebug:false, cfgVer:3
 };
 const DEF_LV = {scan:1, spt:1, ar:1, alert:1};
 const KINDS = ['spt','scan','ar','alert'];
@@ -246,6 +246,7 @@ function load(){
     if(raw){
       const d = JSON.parse(raw), c = d.cfg || {};
       if((c.cfgVer || 0) < 2){ c.arAction = 'none'; c.cfgVer = 2; }
+      if(c.cfgVer < 3){ if(c.arAction === 'none') c.arAction = 'name'; c.cfgVer = 3; }
       return {
         cfg: Object.assign({}, DEF_CFG, c, {manualPlan: Object.assign({}, DEF_CFG.manualPlan, c.manualPlan || {})}),
         levels: Object.assign({}, DEF_LV, d.levels || {}),
@@ -358,14 +359,43 @@ const Snd = {
   soft(){ this.tone(260, .12, .06); }
 };
 let lastSay = 0;
-function say(text, force){
-  if(!DB.cfg.voice) return;
+function say(text, force, onEnd){
+  let called = false; const end = () => { if(!called && onEnd){ called = true; onEnd(); } };
+  if(!DB.cfg.voice){ setTimeout(end, 0); return; }
   const now = Date.now(); if(!force && now - lastSay < 15000) return; lastSay = now;
   try{
-    if(!('speechSynthesis' in window)) return;
+    if(!('speechSynthesis' in window)){ setTimeout(end, 0); return; }
     const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; u.rate = .95;
+    u.onend = end; u.onerror = end;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
-  }catch(e){}
+    if(onEnd) setTimeout(end, 600 + text.length * 90);   // запасной таймер: на iOS onend иногда не приходит
+  }catch(e){ setTimeout(end, 0); }
+}
+/* распознавание ответа пациента (Web Speech API: Safari на iPhone, Chrome на Android) */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const canListen = () => !!SR && !ENV.framed && DB.cfg.nameVoice;
+const normRu = t => String(t || '').toLowerCase().replace(/ё/g, 'е').replace(/[^а-яa-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+function nameMatches(heard, name){
+  const hw = normRu(heard).split(' ').filter(x => x.length >= 3), nw = normRu(name).split(' ').filter(x => x.length >= 3);
+  const stem = x => x.slice(0, Math.max(3, x.length - 2));
+  return nw.some(t => hw.some(h => h.startsWith(stem(t)) || t.startsWith(stem(h))));
+}
+function listenOnce(onDone){
+  let done = false; const texts = [];
+  const fin = res => { if(done) return; done = true; try{ r && r.abort(); }catch(e){} onDone(Object.assign({texts}, res)); };
+  let r = null;
+  try{ r = new SR(); }catch(e){ setTimeout(() => fin({err:'unsupported'}), 0); return {stop(){}}; }
+  r.lang = 'ru-RU'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
+  const ctl = {onInterim:null, stop(){ fin({err:'stopped'}); }};
+  r.onresult = e => {
+    for(let i = e.resultIndex; i < e.results.length; i++) for(let j = 0; j < e.results[i].length; j++) texts.push(e.results[i][j].transcript);
+    if(ctl.onInterim) ctl.onInterim(texts);
+  };
+  r.onerror = e => fin({err:e.error || 'error'});
+  r.onend = () => fin({});
+  try{ r.start(); }catch(e){ setTimeout(() => fin({err:'start'}), 0); }
+  setTimeout(() => fin({err:texts.length ? null : 'timeout'}), 8000);
+  return ctl;
 }
 let wakeLock = null;
 async function keepAwake(on){
@@ -1007,8 +1037,9 @@ function renderSpec(){
         ${[['auto','По нарастающей'],['always','Стрелка сразу'],['off','Без подсказок']].map(([v, l]) => `<button data-a="cfgSet" data-k="arCue" data-v="${v}" class="${c.arCue === v ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div class="fhint">По нарастающей: звук со стороны цели, вспышка края экрана, стрелка, стрелка с голосом. Чем выше уровень, тем позже приходит помощь. Приложение записывает, какая подсказка понадобилась.</div></div>
       <div class="field" style="margin-bottom:0"><span class="flabel">После того как предмет найден</span><div class="seg">
-        ${[['none','Сразу дальше'],['name','Назвать'],['reach','Показать рукой'],['alternate','Чередовать']].map(([v, l]) => `<button data-a="cfgSet" data-k="arAction" data-v="${v}" class="${c.arAction === v ? 'on' : ''}">${l}</button>`).join('')}</div>
-        <div class="fhint">«Показать рукой» подходит, если рука на стороне неглекта двигается. При выраженном гемипарезе оставьте «Сразу дальше» или «Назвать».</div></div>
+        ${[['name','Назвать'],['none','Сразу дальше'],['reach','Показать рукой'],['alternate','Чередовать']].map(([v, l]) => `<button data-a="cfgSet" data-k="arAction" data-v="${v}" class="${c.arAction === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="fhint">«Назвать»: пока пациент ищет, на карточке только фото, без названия. После находки приложение спрашивает «Как называется этот предмет?». «Показать рукой» подходит, если рука на стороне неглекта двигается.</div>
+        <div style="margin-top:10px">${sw('nameVoice', c.nameVoice, 'Проверять ответ голосом', SR ? 'Распознавание речи браузера: голос уходит на сервер Apple или Google. При дизартрии ответ отмечает помощник кнопкой.' : 'Этот браузер не распознаёт речь: ответ отмечает помощник кнопкой.')}</div></div>
       <div style="margin-top:14px">${sw('arDebug', c.arDebug, 'Показывать данные датчиков', 'Для проверки: углы гироскопа, частота, состояние камеры')}</div>
     </div>
     <div class="card"><h2>Контроль поворота головы <span class="beta">β</span></h2>
@@ -1303,7 +1334,7 @@ function blockLine(r){
     case 'spt': return `замечено оранжевых фигур ${r.hits} из ${r.probes}${r.rt ? ', реакция ' + fmtSec(r.rt) : ''}; в ${wd.ag} трети экрана ${r.zones && r.zones[2][0] ? pct(r.zones[2][1] / r.zones[2][0]) : '—'}`;
     case 'scan': return `найдено ${wd.adv} ${pct(r.negRate)}, с другой стороны ${pct(r.intRate)}; подсказок ${r.cues}${r.oriented != null ? `; голова ${wd.dir} ${pct(r.oriented)} времени` : ''}`;
     case 'ar': return r.target === 'home'
-      ? `${r.roomName ? '«' + r.roomName + '»: ' : ''}найдено ${r.found} из ${r.found + r.missed}, сам без подсказки ${pct(r.noCue)}, средняя подсказка ${r.cueMean == null ? '—' : String(r.cueMean).replace('.', ',')} из 4, поворот до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`
+      ? `${r.roomName ? '«' + r.roomName + '»: ' : ''}${r.nameN ? `назвал верно ${r.nameOk} из ${r.nameN}, ` : ''}найдено ${r.found} из ${r.found + r.missed}, сам без подсказки ${pct(r.noCue)}, средняя подсказка ${r.cueMean == null ? '—' : String(r.cueMean).replace('.', ',')} из 4, поворот до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`
       : `найдено целей ${r.found} из ${r.found + r.missed}, поворот корпуса до ${r.maxTurn}°${r.mode === 'demo' ? ' (демо)' : ''}`;
     case 'alert': return `точность ${pct(r.acc)}, реакция ${fmtSec(r.rt)}, ложных касаний ${r.fa}`;
   }
@@ -1586,7 +1617,8 @@ function AR(st, o){
   let demoRel = 0, drag = null;
   const rel = () => ori.got ? ori.rel : demoRel;
   const elv = () => ori.got && ori.el != null ? ori.el : 0;
-  let lastDrift = null;
+  let lastDrift = null, trialAct = 'none', listening = null, nTrials = 0;
+  const shown = () => trialAct === 'name' ? 'Предмет' : tgt.name;
   let phase = 'center', centerT = 0, hold = 0, tStart = 0, tgt = null, cue = 0, maxCue = 0, lastBeep = 0, lastCueSnd = 0, recent = [], pendingRec = null;
   const M = {level0:level, found:0, missed:0, times:[], maxA:0, cues:[], noCue:0, actDone:0, actFail:0, trials:[]};
   let trio = {n:0, f:0, cue:0};
@@ -1627,8 +1659,15 @@ function AR(st, o){
       for(let i = 0; i < src.length; i++){ r -= wts[i]; if(r <= 0){ it = src[i]; break; } }
       recent.push(it.id); while(recent.length > Math.min(2, items.length - 1)) recent.shift();
       tgt = {id:it.id, name:it.name, th:it.th, el:it.el == null ? null : it.el, photo:it.photo};
-      showCard('Найдите: ' + it.name, chest ? '' : 'Наведите кольцо на предмет', it.photo, false);
-      say('Найдите: ' + it.name, true);
+      nTrials++;
+      trialAct = cfg.arAction === 'alternate' ? (nTrials % 2 ? 'name' : 'reach') : cfg.arAction;
+      if(trialAct === 'name'){
+        showCard('Найдите этот предмет', chest ? 'Потом назовите его' : 'Наведите кольцо. Потом назовите его.', it.photo, false);
+        say('Найдите предмет с картинки', true);
+      }else{
+        showCard('Найдите: ' + it.name, chest ? '' : 'Наведите кольцо на предмет', it.photo, false);
+        say('Найдите: ' + it.name, true);
+      }
       setBottom(infoChip() + `<button class="pill-btn brand" data-ar="found">Нашёл</button>`);
     }else{
       const maxT = Math.min(90, 25 + 9 * (level - 1)), minT = Math.min(12 + 3 * level, maxT - 6);
@@ -1653,17 +1692,50 @@ function AR(st, o){
     Snd.ok();
     const rec = {name:tgt.name, th:Math.round(tgt.th), neg:isNegTh(tgt.th), found:true, t:Math.round(t * 10) / 10, cue:maxCue, how};
     if(how === 'manual' && lastDrift != null) rec.drift = lastDrift;
-    if(home && cfg.arAction !== 'none'){
-      const act = cfg.arAction === 'alternate' ? (M.found % 2 ? 'reach' : 'name') : cfg.arAction;
-      rec.act = act; pendingRec = rec; phase = 'action';
-      showCard(act === 'reach' ? 'Покажите рукой' : 'Назовите предмет', act === 'reach' ? 'Покажите на предмет рукой. Помощник может поддержать руку.' : 'Скажите вслух, что это.', tgt.photo, false);
-      say(act === 'reach' ? 'Покажите на предмет рукой' : 'Назовите, что это', true);
+    if(home && trialAct === 'name'){
+      rec.act = 'name'; pendingRec = rec; phase = 'action';
+      showCard('Как называется этот предмет?', canListen() ? 'Скажите вслух.' : 'Скажите вслух. Помощник отметит ответ.', tgt.photo, false);
+      setBottom(`<button class="pill-btn light" data-ar="actFail">Не смог назвать</button><button class="pill-btn brand" data-ar="actOk">Назвал верно</button>`);
+      say('Как называется этот предмет?', true, () => startListen());
+    }else if(home && trialAct === 'reach'){
+      rec.act = 'reach'; pendingRec = rec; phase = 'action';
+      showCard('Покажите рукой', 'Покажите на предмет рукой. Помощник может поддержать руку.', tgt.photo, false);
+      say('Покажите на предмет рукой', true);
       setBottom(`<button class="pill-btn light" data-ar="actFail">Не получилось</button><button class="pill-btn brand" data-ar="actOk">Сделано</button>`);
     }else afterTrial(rec);
   }
+  function stopListen(){ if(listening){ const l = listening; listening = null; l.stop(); } }
+  function nameDone(ok, how, heard){
+    if(phase !== 'action' || !pendingRec) return;
+    stopListen();
+    const r = pendingRec; pendingRec = null; phase = 'reveal';
+    r.actOk = ok; r.ans = how; if(heard) r.heard = heard.slice(0, 60);
+    if(ok) M.actDone++; else M.actFail++;
+    const nm = tgt.name.toLowerCase();
+    if(ok){ Snd.ok(); showCard('Верно!', tgt.name, tgt.photo, false); say('Верно, ' + nm, true); }
+    else{ showCard('Это: ' + nm, 'Повторите вслух вместе с помощником.', tgt.photo, false); say('Это ' + nm, true); }
+    setBottom(''); setTimeout(() => { if(!done) afterTrial(r); }, ok ? 1500 : 2600);
+  }
+  function startListen(){
+    if(phase !== 'action' || !pendingRec || pendingRec.act !== 'name' || !canListen() || listening || paused) return;
+    const sub = card.querySelector('small'); if(sub) sub.textContent = 'Слушаю…';
+    const l = listenOnce(res => {
+      if(listening === l) listening = null;
+      if(phase !== 'action' || !pendingRec) return;
+      const hit = res.texts.find(t => nameMatches(t, tgt.name));
+      if(hit){ nameDone(true, 'voice', hit); return; }
+      const heard = res.texts.length ? res.texts[res.texts.length - 1] : '';
+      const s2 = card.querySelector('small');
+      if(res.err === 'not-allowed' || res.err === 'service-not-allowed'){ if(s2) s2.textContent = 'Нажмите «Слушать», чтобы ответить голосом.'; }
+      else if(s2) s2.textContent = heard ? `Услышал: «${heard.slice(0, 40)}». Помощник, отметьте ответ.` : 'Не расслышал. Помощник, отметьте ответ.';
+      if(!bottom.querySelector('[data-ar=listen]')) bottom.insertAdjacentHTML('afterbegin', `<button class="pill-btn light" data-ar="listen">Слушать</button>`);
+    });
+    listening = l;
+    l.onInterim = texts => { if(texts.some(t => nameMatches(t, tgt.name))) l.stop(); };
+  }
   function miss(){
     M.missed++; Snd.soft();
-    stageMsg(st, home ? `${tgt.name}: не найдено` : 'Не найдено', 1500);
+    stageMsg(st, home ? (trialAct === 'name' ? `Не найдено. Это был предмет: ${tgt.name.toLowerCase()}` : `${tgt.name}: не найдено`) : 'Не найдено', 2000);
     afterTrial({name:tgt.name, th:Math.round(tgt.th), neg:isNegTh(tgt.th), found:false, t:null, cue:maxCue});
   }
   bottom.addEventListener('click', e => {
@@ -1680,6 +1752,8 @@ function AR(st, o){
       if(home && ori.got && Math.abs(off) <= 35){ ori.shiftTo(tgt.th); lastDrift = Math.round(off); }
       found('manual'); return;
     }
+    if(a === 'listen' && phase === 'action'){ b.remove(); startListen(); return; }
+    if((a === 'actOk' || a === 'actFail') && phase === 'action' && pendingRec && pendingRec.act === 'name'){ nameDone(a === 'actOk', 'helper'); return; }
     if((a === 'actOk' || a === 'actFail') && phase === 'action' && pendingRec){
       pendingRec.actOk = a === 'actOk'; if(pendingRec.actOk) M.actDone++; else M.actFail++;
       const r = pendingRec; pendingRec = null; afterTrial(r);
@@ -1732,7 +1806,7 @@ function AR(st, o){
           cue = c; maxCue = Math.max(maxCue, c);
           if(c === 1){ Snd.cue(Math.sign(off) || sgn()); lastCueSnd = now; }
           if(c === 3) say(`Поворачивайтесь ${dirW}`, true);
-          if(c === 4) say(home ? `${tgt.name} ${off < 0 ? 'слева' : 'справа'}. Поворачивайтесь ${dirW}` : `Поворачивайтесь ${dirW}`, true);
+          if(c === 4) say(home ? `${shown()} ${off < 0 ? 'слева' : 'справа'}. Поворачивайтесь ${dirW}` : `Поворачивайтесь ${dirW}`, true);
         }
         const hot = chest ? 2 : 4;
         if(cue >= 1 && cue < hot && now - lastCueSnd > 4000){ lastCueSnd = now; Snd.cue(Math.sign(off) || sgn()); }
@@ -1795,7 +1869,7 @@ function AR(st, o){
       if(cue >= 3 && (!onScr || Math.abs(off) > 14)){
         const left = off < 0;
         arArrow(ctx, left ? 56 : W - 56, cy, left ? 1 : -1, '#E8892A');
-        arLabel(ctx, `${home ? tgt.name + ': ' : ''}${left ? 'влево' : 'вправо'} ещё ${Math.round(Math.abs(off))}°`, W / 2, H - 104);
+        arLabel(ctx, `${home ? shown() + ': ' : ''}${left ? 'влево' : 'вправо'} ещё ${Math.round(Math.abs(off))}°`, W / 2, H - 104);
       }
     }
     // кольцо-прицел
@@ -1821,17 +1895,19 @@ function AR(st, o){
   hintFade(st, 5000);
   raf = requestAnimationFrame(step);
   return {
-    pause(){ paused = true; pauseAt = performance.now(); },
-    resume(){ paused = false; const now = performance.now(); last = now; if(phase === 'seek') tStart += now - pauseAt; },
+    pause(){ paused = true; pauseAt = performance.now(); stopListen(); },
+    resume(){ paused = false; const now = performance.now(); last = now; if(phase === 'seek') tStart += now - pauseAt; if(phase === 'action') startListen(); },
     finish(){
-      done = true; cancelAnimationFrame(raf); ori.stop();
+      done = true; cancelAnimationFrame(raf); ori.stop(); stopListen();
       window.removeEventListener('keydown', kd); window.removeEventListener('resize', size);
       if(stream) stream.getTracks().forEach(t => t.stop());
       if(pendingRec) M.trials.push(pendingRec), M.cues.push(pendingRec.cue);
       const n = M.found + M.missed;
       return {level0:M.level0, level1:level, target:home ? 'home' : 'star', roomName:home && room ? room.name : null, found:M.found, missed:M.missed, meanTime:mean(M.times),
         maxTurn:Math.round(M.maxA), mode:ori.got ? 'gyro' : 'demo', cueMean:M.cues.length ? Math.round(mean(M.cues) * 10) / 10 : null,
-        noCue:n ? M.noCue / n : null, actDone:M.actDone, actFail:M.actFail, trials:M.trials.slice(-40)};
+        noCue:n ? M.noCue / n : null, actDone:M.actDone, actFail:M.actFail,
+        nameN:M.trials.filter(t => t.act === 'name' && t.actOk != null).length, nameOk:M.trials.filter(t => t.act === 'name' && t.actOk).length,
+        trials:M.trials.slice(-40)};
     }
   };
 }

@@ -1,5 +1,5 @@
 /* TURA Неглект — service worker: офлайн-работа и кэш распознавания лица */
-const VERSION = 'neglect-0.3.1';
+const VERSION = 'neglect-0.4.0';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 const CDN_HOSTS = ['cdn.jsdelivr.net', 'storage.googleapis.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
