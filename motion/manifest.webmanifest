@@ -1,0 +1,17 @@
+{
+  "name": "TURA Motion — оценка и тренировка движений",
+  "short_name": "TURA Motion",
+  "description": "Тесты курса и домашние упражнения с камерой телефона: счётчик повторов, подсказки по технике, отчёт «до/после». TURA, Астана.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1F4F3",
+  "theme_color": "#F1F4F3",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
