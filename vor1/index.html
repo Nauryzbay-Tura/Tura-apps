@@ -138,7 +138,14 @@ textarea.rep{width:100%;min-height:220px;border-radius:14px;border:1.5px solid v
 .edge{position:absolute;background:rgba(20,34,43,.10);transition:background .07s,box-shadow .07s;z-index:1}
 .edge.l{left:0;top:0;bottom:0;width:30px}.edge.r{right:0;top:0;bottom:0;width:30px}
 .edge.t{top:0;left:0;right:0;height:30px}.edge.b{bottom:0;left:0;right:0;height:30px}
-.edge.on{background:var(--beat);box-shadow:0 0 26px 4px rgba(242,162,58,.55)}
+.edge.on{background:#2a78d6;box-shadow:0 0 26px 4px rgba(42,120,214,.5)}
+.sym-card{transition:border-color .15s,box-shadow .15s}
+.sym-card.fb-ok{border-width:5px;border-color:#1C7C3A;box-shadow:0 0 0 10px rgba(28,124,58,.28)}
+.sym-card.fb-warn{border-width:5px;border-color:#E0A100;box-shadow:0 0 0 10px rgba(245,196,0,.45)}
+.sym-card.fb-off{border-width:5px;border-color:#9AA4AA;box-shadow:0 0 0 10px rgba(154,164,170,.25)}
+.fb-label{background:rgba(255,255,255,.96);border-radius:999px;padding:8px 16px;font-size:16px;font-weight:800;color:var(--ink);display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 14px -8px rgba(0,0,0,.35)}
+.fb-label i{width:14px;height:14px;border-radius:50%;display:inline-block}
+.fb-label.ok i{background:#1C7C3A}.fb-label.warn i{background:#E0A100}.fb-label.off i{background:#9AA4AA}
 .ex-top{position:relative;z-index:2;margin:calc(12px + var(--st)) 42px 0;background:rgba(255,255,255,.95);border-radius:18px;padding:8px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 14px -8px rgba(0,0,0,.3)}
 .ex.v .ex-top{margin-top:calc(40px + var(--st));margin-left:14px;margin-right:14px}
 .ex-top .m{font-size:14px;font-weight:700;color:var(--ink2);line-height:1.25}
@@ -192,7 +199,7 @@ const KEY = 'tura_vor1_v0';
 const DEFAULT_RX = {
   patient:'', specialist:'', dir:'h', bpm:60, maxBpm:160, setSec:30, maxSetSec:90,
   sets:2, restSec:30, perDay:3, bg:'plain', pos:'sit', dist:'near', sym:'digits', size:'l',
-  auto:true, lastStep:null, setAt:null
+  auto:true, fb:true, lastStep:null, setAt:null
 };
 const L = {
   dir:{h:'Горизонтально', v:'Вертикально'},
@@ -313,7 +320,7 @@ function renderHome(){
       <button class="navbtn" data-a="go" data-v="rxPaste"><b>Получить назначение</b><span>Ссылка от специалиста TURA</span></button>
     </div>
     ${installCard()}
-    <div class="foot">TURA · VOR×1 · версия 1.2 (камера β)<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
+    <div class="foot">TURA · VOR×1 · версия 1.3 (камера β)<br>Выполняется по назначению специалиста и не заменяет консультацию врача.</div>
   </div>`;
 }
 
@@ -573,6 +580,9 @@ function renderRx(){
       ${seg('sym', 'Цель', L.sym, 'Для пациентов с афазией удобнее стрелки — направление можно показать рукой.')}
       ${seg('size', 'Размер цели', L.size, 'Чем мельче цель, тем точнее нужна фиксация взгляда.')}
     </div>
+    <div class="card"><h2>Камера</h2>
+      <button class="switch ${D.fb !== false ? 'on' : ''}" data-a="toggleFb"><span><b>Подсказка цветом во время подхода</b><span class="beta">β</span><br><span class="sub">Рамка вокруг цели: зелёная — взгляд держится и поворот достаточный, жёлтая — взгляд сорвался или поворот слишком маленький. Работает, если включена камера.</span></span><span class="knob"></span></button>
+    </div>
     <div class="card"><h2>Автопрогрессия</h2>
       <button class="switch ${D.auto ? 'on' : ''}" data-a="toggleAuto"><span><b>Повышать нагрузку автоматически</b><br><span class="sub">После 2 хороших тренировок подряд: +5 уд/мин (ниже 60) или +10 уд/мин, по очереди с +15 с, не чаще раза в день. При плохой переносимости — шаг назад.</span></span><span class="knob"></span></button>
       <div style="height:16px"></div>
@@ -737,12 +747,28 @@ const Cam = {
     }
     this.last = s;
     this.recent.push(s);
-    while(this.recent.length && t - this.recent[0].t > 1.5) this.recent.shift();
+    while(this.recent.length && t - this.recent[0].t > 5) this.recent.shift();
     this._fc++; if(t - this._ft >= 1){ this.fps = this._fc / (t - this._ft || 1); this._fc = 0; this._ft = t; }
     if(this.rec && !this.recPaused){
       const R = this.rec;
       R.t.push(t); R.yaw.push(s.yaw); R.pitch.push(s.pitch); R.eh.push(s.eh); R.ev.push(s.ev); R.ok.push(s.ok);
     }
+  },
+  // данные для цветной подсказки: лицо, ошибка взгляда (°) и размах поворотов (°) за последнее окно
+  liveFeedback(dir, k, win){
+    const now = performance.now() / 1000, last = this.last;
+    if(!last || !last.face || now - last.t > .6) return {face:false};
+    const w = this.recent.filter(s => s.ok && now - s.t <= win);
+    if(w.length < 8) return {face:true, wait:true};
+    const H = w.map(s => dir === 'v' ? s.pitch : s.yaw);
+    let err = null;
+    if(k){
+      const G = w.map((s, i) => H[i] + k * (dir === 'v' ? s.ev : s.eh));
+      const ref = median(G), tEnd = w[w.length - 1].t;
+      let tail = G.filter((g, i) => tEnd - w[i].t <= .12); if(!tail.length) tail = G.slice(-1);
+      err = Math.abs(tail.reduce((a, b) => a + b, 0) / tail.length - ref);
+    }
+    return {face:true, err, range:pct(H, 95) - pct(H, 5)};
   },
   liveVel(dir){
     const a = this.recent.filter(s => s.face && isFinite(dir === 'v' ? s.pitch : s.yaw));
@@ -994,7 +1020,7 @@ function renderSession(){
           <li><b>Смотрите на ${acc}.</b> Когда ${one} меняется — ${r.sym === 'arrows' ? 'назовите или покажите направление' : 'назовите её вслух'}.</li>
           <li><b>Включите звук</b> (на iPhone — и боковой переключатель): темп задаёт сигнал.</li>
         </ol></div>
-        ${Cam.available() ? `<div class="card"><button class="switch ${S.cam ? 'on' : ''}" data-a="toggleCam"><span><b>Контроль камерой</b><span class="beta">β</span><br><span class="sub">Фронтальная камера следит за поворотами головы и удержанием взгляда. Видео обрабатывается прямо в телефоне и никуда не отправляется.</span></span><span class="knob"></span></button></div>` : ''}
+        ${Cam.available() ? `<div class="card"><button class="switch ${S.cam ? 'on' : ''}" data-a="toggleCam"><span><b>Контроль камерой</b><span class="beta">β</span><br><span class="sub">Фронтальная камера следит за поворотами головы и удержанием взгляда. Видео обрабатывается прямо в телефоне и никуда не отправляется.${DB.rx.fb !== false ? ' Рамка вокруг цифры: <b style="color:#1C7C3A">зелёная</b> — всё хорошо, <b style="color:#9A6E00">жёлтая</b> — взгляд сорвался или поворот слишком маленький.' : ''}</span></span><span class="knob"></span></button></div>` : ''}
         <div class="card"><h2>Кто занимается</h2>
           <div class="seg"><button class="${DB.mode === 'self' ? 'on' : ''}" data-a="setMode" data-v="self">Сам</button><button class="${DB.mode === 'helper' ? 'on' : ''}" data-a="setMode" data-v="helper">С помощником</button></div>
           <div class="fhint">${DB.mode === 'helper' ? `Помощник слушает, как пациент называет ${r.sym === 'digits' ? 'цифры' : r.sym === 'letters' ? 'буквы' : 'направления'}, и нажимает большую кнопку при каждой ошибке или если пациент говорит «расплывается».` : `После каждого подхода вы сами отметите, оставалась ли ${one} чёткой.`}</div>
@@ -1103,7 +1129,8 @@ function renderExercise(){
     </div>
     <div class="ex-bar"><i id="exBar"></i></div>
     <div class="ex-center">
-      <div class="sym-card" style="font-size:min(${fs}vmin,${fs * 4.2}px,26vh)"><span id="sym">${S.run ? S.run.sym : pickSym()}</span></div>
+      <div class="sym-card${fbOn() ? ' fb-off' : ''}" id="symCard" style="font-size:min(${fs}vmin,${fs * 4.2}px,26vh)"><span id="sym">${S.run ? S.run.sym : pickSym()}</span></div>
+      ${fbOn() ? '<div class="fb-label off" id="fbL"><i></i><span>Ждём камеру…</span></div>' : ''}
       <div class="ex-hint" id="exHint">${hint}</div>
     </div>
     <div class="ex-bottom">
@@ -1238,6 +1265,7 @@ function loopRun(){
     R.sym = pickSym(R.sym); R.nextSym = R.elapsed + 2.5 + Math.random() * 2;
     const el = document.getElementById('sym'); if(el) el.textContent = R.sym;
   }
+  if(fbOn() && now - (R.fbT || 0) > 150){ R.fbT = now; updateFeedback(R, now); }
   if(S.cam && now - R.camT > 250){
     R.camT = now;
     const dot = document.getElementById('camDot'), tx = document.getElementById('camTxt');
@@ -1250,6 +1278,36 @@ function loopRun(){
   }
   if(left <= 0){ endPhase(); return; }
   R.raf = requestAnimationFrame(loopRun);
+}
+function fbOn(){
+  return !!(S && S.cur && S.cur.kind === 'set' && S.cam && S.camReady && Cam.state === 'ready' && DB.rx.fb !== false);
+}
+const FB_TEXT = {ok:'Взгляд держится', gaze:'Взгляд сорвался', small:'Поворачивайте шире', noface:'Лицо не видно'};
+function updateFeedback(R, now){
+  const card = document.getElementById('symCard'), lab = document.getElementById('fbL');
+  if(!card || !lab) return;
+  const win = Math.max(1.5, 1.6 * 60 / S.cur.bpm);
+  const m = Cam.liveFeedback(S.rx.dir, S.calib && S.calib.ok ? S.calib.k : null, win);
+  if(m.wait) return;
+  const F = R.fb || (R.fb = {shown:'', since:0, cand:'', candSince:0});
+  let raw;
+  if(!m.face) raw = 'noface';
+  else {
+    // гистерезис: срыв — больше 4° (как в итоговой метрике), возврат — меньше 3°; поворот мал — меньше 12°, исправлен — от 15°
+    const gazeBad = m.err != null && (F.shown === 'gaze' ? m.err > 3 : m.err > 4);
+    const smallBad = F.shown === 'small' ? m.range < 15 : m.range < 12;
+    raw = gazeBad ? 'gaze' : smallBad ? 'small' : 'ok';
+  }
+  if(raw !== F.cand){ F.cand = raw; F.candSince = now; }
+  // смена цвета только если состояние держится: ошибка 0,2 с, «хорошо» 0,3 с, «лицо не видно» 0,5 с; показанный цвет держится не меньше 0,6 с
+  const need = raw === 'ok' ? 300 : raw === 'noface' ? 500 : 200;
+  if(raw === F.shown || now - F.candSince < need) return;
+  if(F.shown && now - F.since < 600) return;
+  F.shown = raw; F.since = now;
+  const cls = raw === 'ok' ? 'ok' : raw === 'noface' ? 'off' : 'warn';
+  card.classList.remove('fb-ok', 'fb-warn', 'fb-off'); card.classList.add('fb-' + cls);
+  lab.className = 'fb-label ' + cls; lab.querySelector('span').textContent = FB_TEXT[raw];
+  const st = R.fbStat || (R.fbStat = {ok:0, warn:0}); st[cls === 'ok' ? 'ok' : 'warn']++;
 }
 function pauseRun(){
   if(!S || S.step !== 'run') return;
@@ -1537,13 +1595,13 @@ function renderPin(){
 }
 
 /* ---------- назначение по ссылке / QR ---------- */
-const RX_KEYS = {dir:'d', bpm:'b', maxBpm:'B', setSec:'s', maxSetSec:'S', sets:'n', restSec:'r', perDay:'p', bg:'g', pos:'o', dist:'i', sym:'y', size:'z', auto:'a', patient:'P', specialist:'N'};
+const RX_KEYS = {dir:'d', bpm:'b', maxBpm:'B', setSec:'s', maxSetSec:'S', sets:'n', restSec:'r', perDay:'p', bg:'g', pos:'o', dist:'i', sym:'y', size:'z', auto:'a', fb:'f', patient:'P', specialist:'N'};
 let pendingRx = null, incomingUrl = null;
 const b64u = str => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = str => decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))));
 function rxLink(rx){
   const o = {};
-  for(const [k, short] of Object.entries(RX_KEYS)){ const v = rx[k]; if(v === '' || v == null) continue; o[short] = k === 'auto' ? (v ? 1 : 0) : v; }
+  for(const [k, short] of Object.entries(RX_KEYS)){ const v = rx[k]; if(v === '' || v == null) continue; o[short] = (k === 'auto' || k === 'fb') ? (v ? 1 : 0) : v; }
   if(DB.pinHash) o.h = DB.pinHash;
   o.t = Math.round(Date.now() / 1000);
   return location.origin + location.pathname + '#rx=' + b64u(JSON.stringify(o));
@@ -1557,7 +1615,7 @@ function parseRxLink(text){
       if(!(short in o)) continue;
       const v = o[short];
       if(STEP[k]){ const n = Math.round(+v); if(isFinite(n)) r[k] = Math.max(STEP[k].min, Math.min(STEP[k].max, n)); }
-      else if(k === 'auto') r.auto = !!v;
+      else if(k === 'auto' || k === 'fb') r[k] = !!v;
       else if(k === 'patient' || k === 'specialist'){ if(typeof v === 'string') r[k] = v.slice(0, 60); }
       else { const opts = {dir:L.dir, bg:L.bg, pos:L.pos, dist:L.dist, sym:L.sym, size:L.size}[k]; if(opts && v in opts) r[k] = v; }
     }
@@ -1803,6 +1861,7 @@ const A = {
     const o = document.getElementById('o_' + k); if(o) o.innerHTML = stepVal(k);
   },
   toggleAuto:el => { D.auto = !D.auto; el.classList.toggle('on', D.auto); },
+  toggleFb:el => { D.fb = D.fb === false; el.classList.toggle('on', D.fb); },
   saveRx:async () => { if(!(await commitRx())) return; D = null; toast('Назначение сохранено'); view = 'home'; render(); },
   resetRx:() => { D = {...DEFAULT_RX, patient:D.patient, specialist:D.specialist}; renderRx(); toast('Стартовые параметры — сохраните, чтобы применить'); },
   wipe:() => {
