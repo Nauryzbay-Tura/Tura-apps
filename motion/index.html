@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TURA Motion</title>
+<meta name="theme-color" content="#F1F4F3">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Одна колонка под телефон: шапка с пациентом, крупные карточки режимов, тёмная сцена камеры с крупным счётчиком */
+  --bg:#F1F4F3; --surface:#FFFFFF; --surface-2:#E7ECEA; --ink:#14201C; --muted:#56655F; --line:#D5DDD9;
+  --accent:#2747C7; --accent-ink:#FFFFFF; --accent-soft:#E3E8FB;
+  --good:#1B7650; --good-soft:#DDF1E6; --warn:#9A5B00; --warn-soft:#FBEBCF; --crit:#B3372B;
+  --stage:#0A0F13; --stage-ink:#EDF2F0;
+  --font-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:16px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1311; --surface:#161E1B; --surface-2:#1F2925; --ink:#E6EEEA; --muted:#9BAAA4; --line:#2A3632;
+    --accent:#8DA2FF; --accent-ink:#0B1124; --accent-soft:#1E2747;
+    --good:#53C793; --good-soft:#163326; --warn:#E6A848; --warn-soft:#3A2B12; --crit:#F2806F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1311; --surface:#161E1B; --surface-2:#1F2925; --ink:#E6EEEA; --muted:#9BAAA4; --line:#2A3632;
+  --accent:#8DA2FF; --accent-ink:#0B1124; --accent-soft:#1E2747;
+  --good:#53C793; --good-soft:#163326; --warn:#E6A848; --warn-soft:#3A2B12; --crit:#F2806F;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--font-display);font-weight:500;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-0.01em}
+h1{font-size:20px} h2{font-size:18px} h3{font-size:15px}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:10px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+
+.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;padding:12px 16px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-0.02em;white-space:nowrap;background:none;border:0;padding:0}
+.brand span{color:var(--accent)}
+.top .spacer{flex:1}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:44px;min-width:44px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:14px}
+.icon-btn[aria-pressed="false"]{color:var(--muted)}
+
+main{max-width:560px;margin:0 auto;padding:16px 16px 48px}
+.view{display:none;flex-direction:column;gap:16px}
+.view.on{display:flex}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.card.tight{gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:8px}
+
+.btn{border:0;border-radius:12px;min-height:48px;padding:0 18px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.secondary{background:var(--surface-2);color:var(--ink)}
+.btn.ghost{background:transparent;color:var(--accent);padding:0 8px}
+.btn.danger{background:transparent;color:var(--crit);padding:0 8px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.patient{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start}
+.patient .name{font-weight:600;font-size:18px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--muted)}
+.chip.example{background:var(--warn-soft);color:var(--warn)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.accent{background:var(--accent-soft);color:var(--accent)}
+
+.modes{display:grid;gap:12px}
+.mode{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;grid-template-columns:44px 1fr auto;gap:4px 14px;align-items:center}
+.mode:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mode .ic{grid-row:span 2;width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:15px}
+.mode .t{font-weight:600;font-size:17px}
+.mode .d{color:var(--muted);font-size:14px;grid-column:2}
+.mode .go{grid-row:span 2;grid-column:3;color:var(--muted);font-size:22px}
+
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface-2);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-family:var(--font-display);font-weight:500;font-size:20px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+.note{display:flex;gap:10px;font-size:14px;color:var(--muted);align-items:flex-start}
+.note a{color:var(--accent);font-weight:600;word-break:break-word}
+.note .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--good);margin-top:7px}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
+.item .t{font-weight:600}
+.item .d{font-size:14px;color:var(--muted);grid-column:1}
+.item .act{grid-row:1 / span 3;grid-column:2}
+.item .meta{grid-column:1;display:flex;gap:6px;flex-wrap:wrap}
+.progress{grid-column:1;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:3px}
+
+.back{align-self:flex-start}
+.head{display:flex;flex-direction:column;gap:6px}
+
+/* Сцена */
+.sources{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stage-wrap{position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden;color:var(--stage-ink);aspect-ratio:3/4;display:grid;place-items:center}
+.stage-wrap canvas{width:100%;height:100%;object-fit:contain;display:block}
+.stage-idle{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;font-size:15px;color:#B9C6C0;line-height:1.5}
+.hud-top{position:absolute;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;pointer-events:none}
+.pill{background:rgba(10,15,19,.72);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;color:#EDF2F0;backdrop-filter:blur(4px)}
+.pill.warn{background:rgba(160,96,0,.85);border-color:transparent}
+.pill.rec{background:rgba(179,55,43,.85);border-color:transparent}
+.hud-bottom{position:absolute;left:12px;right:60px;bottom:12px;display:flex;align-items:flex-end;gap:12px;pointer-events:none}
+.big{font-family:var(--font-display);font-weight:700;font-size:64px;line-height:.9;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.big small{font-size:22px;font-weight:500;color:#B9C6C0;margin-left:6px}
+.hud-sub{font-size:14px;color:#D4DDD9;padding-bottom:6px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.gauge{position:absolute;right:14px;top:56px;bottom:14px;width:14px;border-radius:7px;background:rgba(255,255,255,.12);pointer-events:none}
+.gauge i{position:absolute;left:0;right:0;bottom:0;border-radius:7px;background:#8DA2FF;transition:height .08s linear}
+.gauge b{position:absolute;left:-6px;right:-6px;height:3px;background:#F5C26B;border-radius:2px}
+.gauge.hidden{display:none}
+.live-cue{position:absolute;left:12px;right:60px;top:48px;pointer-events:none;display:flex}
+.live-cue:empty{display:none}
+
+.result{display:flex;flex-direction:column;gap:12px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:15px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.reps{display:flex;gap:6px;flex-wrap:wrap}
+.rep{min-width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:14px;background:var(--good-soft);color:var(--good)}
+.rep.f{background:var(--warn-soft);color:var(--warn)}
+.rep.p{background:var(--surface-2);color:var(--muted)}
+.hint{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:12px 14px;font-size:16px;font-weight:500}
+.hint.good{border-color:var(--good);background:var(--good-soft)}
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;min-height:40px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* Отчёт */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-weight:600;color:var(--muted);font-size:13px}
+.delta.up{color:var(--good)} .delta.down{color:var(--crit)}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--font-body)}
+.chart .bar{fill:var(--accent)} .chart .bar.today{fill:var(--good)} .chart .grid{stroke:var(--line)}
+.chart .val{fill:var(--ink);font-weight:600}
+
+/* Секундомер */
+.watch{font-family:var(--font-display);font-weight:700;font-size:56px;text-align:center;font-variant-numeric:tabular-nums;padding:8px 0}
+label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+input[type="text"],input[type="number"],input[type="date"],select{border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:46px;padding:0 12px;font-size:16px;width:100%}
+
+/* Диалог */
+.dialog{position:fixed;inset:0;z-index:20;background:rgba(5,10,8,.5);display:grid;place-items:end center;padding:16px}
+.dialog[hidden]{display:none}
+.dialog .card{width:100%;max-width:520px;margin-bottom:env(safe-area-inset-bottom)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+.toast[hidden]{display:none}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="brand" id="brand" type="button" aria-label="На главную">TURA <span>Motion</span></button>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="voice-btn" type="button" aria-pressed="true" title="Голосовые подсказки">Голос: вкл</button>
+</header>
+
+<main>
+<!-- Главная -->
+<section id="v-home" class="view on" aria-labelledby="h-home">
+  <h1 id="h-home" class="sr-title" style="position:absolute;left:-9999px">Главная</h1>
+  <div class="card" id="patient-card"></div>
+  <div class="stat-row" id="today-stats"></div>
+  <div class="modes">
+    <button class="mode" type="button" data-go="tests">
+      <span class="ic">1</span><span class="t">Тесты курса</span><span class="go">›</span>
+      <span class="d">Инструктор на визите: 5 вставаний, «Встань и иди», ходьба 10 м, эталон руки</span>
+    </button>
+    <button class="mode" type="button" data-go="exercises">
+      <span class="ic">2</span><span class="t">Упражнения дома</span><span class="go">›</span>
+      <span class="d">Пациент: счётчик повторов, подсказка по технике, доза для куратора</span>
+    </button>
+    <button class="mode" type="button" data-go="report">
+      <span class="ic">3</span><span class="t">Отчёт курса</span><span class="go">›</span>
+      <span class="d">День 1 и день 10, доза по дням, текст для CRM</span>
+    </button>
+  </div>
+  <p class="note live-note" hidden><span class="dot"></span><span>Это окно показывает демо. Версия с камерой для телефона: <a href="https://nauryzbay-tura.github.io/Tura-apps/motion/">nauryzbay-tura.github.io/Tura-apps/motion</a></span></p>
+  <p class="note"><span class="dot"></span><span>Видео не записывается и не отправляется: телефон считает только точки скелета. Прототип для обсуждения, не медицинское изделие.</span></p>
+</section>
+
+<!-- Тесты -->
+<section id="v-tests" class="view" aria-labelledby="h-tests">
+  <button class="btn ghost back" type="button" data-go="home">‹ Главная</button>
+  <div class="head"><h1 id="h-tests">Тесты курса</h1><p class="muted small">Снимайте в 1-й и 10-й день. Телефон на штативе или на полке, пациент виден целиком.</p></div>
+  <div class="list" id="tests-list"></div>
+</section>
+
+<!-- Упражнения -->
+<section id="v-exercises" class="view" aria-labelledby="h-ex">
+  <button class="btn ghost back" type="button" data-go="home">‹ Главная</button>
+  <div class="head"><h1 id="h-ex">Упражнения дома</h1><p class="muted small" id="ex-sub"></p></div>
+  <div class="list" id="ex-list"></div>
+</section>
+
+<!-- Отчёт -->
+<section id="v-report" class="view" aria-labelledby="h-rep">
+  <button class="btn ghost back" type="button" data-go="home">‹ Главная</button>
+  <div class="head"><h1 id="h-rep">Отчёт курса</h1><p class="muted small" id="rep-sub"></p></div>
+  <div class="card">
+    <h2>Тесты: день 1 и день 10</h2>
+    <div class="tbl-wrap"><table id="rep-tests"></table></div>
+  </div>
+  <div class="card">
+    <div class="row between"><h2>Доза дома</h2><span class="chip" id="rep-dose-sum"></span></div>
+    <div class="chart" id="rep-chart"></div>
+  </div>
+  <div class="card">
+    <h2>Последние подходы</h2>
+    <div class="stack" id="rep-sessions"></div>
+  </div>
+  <button class="btn primary block" type="button" id="copy-report">Скопировать отчёт для CRM</button>
+</section>
+
+<!-- Сессия -->
+<section id="v-session" class="view" aria-labelledby="h-ses">
+  <button class="btn ghost back" type="button" id="ses-back">‹ Назад</button>
+  <div class="head"><h1 id="h-ses"></h1><p class="muted small" id="ses-how"></p></div>
+  <div class="sources" id="ses-sources">
+    <button class="btn primary" type="button" data-src="camera">Камера</button>
+    <button class="btn secondary" type="button" data-src="record">Снять видео</button>
+    <button class="btn secondary" type="button" data-src="pick">Видео из галереи</button>
+    <button class="btn secondary" type="button" data-src="demo">Демо</button>
+  </div>
+  <p class="note live-note" hidden><span class="dot"></span><span>Здесь работает демо. Камера и разбор видео: <a href="https://nauryzbay-tura.github.io/Tura-apps/motion/">nauryzbay-tura.github.io/Tura-apps/motion</a></span></p>
+  <div class="stage-wrap" id="stage-wrap">
+    <canvas id="stage" width="360" height="480" aria-label="Скелет пациента"></canvas>
+    <div class="stage-idle" id="stage-idle"></div>
+    <div class="hud-top"><span class="pill" id="hud-src" hidden></span><span class="pill" id="hud-state" hidden></span></div>
+    <div class="live-cue" id="hud-cue"></div>
+    <div class="hud-bottom"><div class="big num" id="hud-big"></div><div class="hud-sub" id="hud-sub"></div></div>
+    <div class="gauge hidden" id="gauge"><i id="gauge-fill"></i><b id="gauge-target"></b></div>
+  </div>
+  <div class="row" id="ses-controls" hidden>
+    <button class="btn secondary block" type="button" id="ses-stop">Завершить</button>
+  </div>
+  <div class="card result" id="ses-result" hidden></div>
+</section>
+
+<!-- Ходьба 10 м -->
+<section id="v-walk" class="view" aria-labelledby="h-walk">
+  <button class="btn ghost back" type="button" data-go="tests">‹ Тесты</button>
+  <div class="head"><h1 id="h-walk">Ходьба 10 м</h1><p class="muted small">Секундомер. Пациент проходит отрезок в удобном темпе, время засекается от первого шага до пересечения финишной линии. Автоматический анализ шага будет в следующей версии.</p></div>
+  <div class="card">
+    <label for="walk-dist">Дистанция, м<input type="number" id="walk-dist" min="2" max="30" step="1" value="10" inputmode="numeric"></label>
+    <div class="watch num" id="walk-watch">0,0 с</div>
+    <div class="row"><button class="btn primary" style="flex:1" type="button" id="walk-start">Старт</button><button class="btn secondary" style="flex:1" type="button" id="walk-reset">Сброс</button></div>
+    <div class="stack small" id="walk-laps"></div>
+  </div>
+  <div class="card" id="walk-save" hidden></div>
+</section>
+</main>
+
+<div class="dialog" id="dialog" hidden><div class="card" role="dialog" aria-modal="true" aria-labelledby="dlg-title" id="dlg-card"></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<input type="file" id="file-rec" accept="video/*" capture="environment" hidden>
+<input type="file" id="file-pick" accept="video/*" hidden>
+
+<script type="module">
+// ================== Утилиты ==================
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const deg = r => r * 180 / Math.PI, rad = d => d * Math.PI / 180;
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const todayIso = () => iso(new Date());
+const fromIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const dec = (v, n = 1) => v == null || !isFinite(v) ? '—' : v.toFixed(n).replace('.', ',');
+const sec = v => v == null ? '—' : dec(v) + ' с';
+const median = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c); };
+const reps = n => `${n} ${plural(n, 'повтор', 'повтора', 'повторов')}`;
+const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: (a.z || 0) - (b.z || 0) });
+const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: ((a.z || 0) + (b.z || 0)) / 2 });
+const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+const nrm = a => Math.hypot(a.x, a.y, a.z);
+const angBetween = (u, v) => { const n = nrm(u) * nrm(v); return n ? deg(Math.acos(clamp(dot(u, v) / n, -1, 1))) : 0; };
+const ang3 = (a, b, c) => angBetween(sub(a, b), sub(c, b));
+
+let toastTimer = 0;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+
+// ================== Данные ==================
+const KEY = 'tura-motion-v1';
+let memoryStore = null;
+function seed() {
+  const now = new Date(); const d = n => iso(addDays(now, n));
+  const dose = {};
+  const plan = [[-9, 18, 14, 0, 6, 10], [-8, 24, 20, 12, 8, 12], [-7, 26, 22, 14, 10, 12], [-6, 0, 0, 0, 0, 0], [-5, 30, 24, 16, 10, 14], [-4, 30, 26, 18, 12, 16], [-3, 32, 28, 20, 12, 16], [-2, 34, 30, 20, 14, 18], [-1, 36, 30, 22, 15, 18], [0, 20, 16, 10, 8, 10]];
+  for (const [o, flex, abd, elbow, sts, knee] of plan) if (flex + abd) dose[d(o)] = { flex, abd, elbow, sts, knee };
+  return {
+    current: 'ex',
+    patients: {
+      ex: {
+        id: 'ex', name: 'Пример: пациент А.', side: 'L', start: d(-9), example: true,
+        baseline: { armMax: { L: 82 } },
+        tests: [
+          { type: 'sts5', day: 1, date: d(-9), v: { t5: 18.4, t5sit: 20.1, lean: 11 } },
+          { type: 'tug', day: 1, date: d(-9), v: { total: 21.5, rise: 2.6, walk: 16.2, sit: 2.7 } },
+          { type: 'walk10', day: 1, date: d(-9), v: { time: 17.9, speed: 0.56, dist: 10 } },
+          { type: 'arm', day: 1, date: d(-9), v: { max: 82, lean: 12, hike: 31 } },
+          { type: 'sts5', day: 10, date: d(0), v: { t5: 14.2, t5sit: 15.6, lean: 6 } },
+          { type: 'tug', day: 10, date: d(0), v: { total: 16.8, rise: 1.9, walk: 12.9, sit: 2.0 } },
+          { type: 'walk10', day: 10, date: d(0), v: { time: 13.7, speed: 0.73, dist: 10 } },
+          { type: 'arm', day: 10, date: d(0), v: { max: 104, lean: 7, hike: 14 } }
+        ],
+        dose,
+        sessions: [
+          { date: d(0), ex: 'flex', reps: 10, partial: 1, hint: 'lean' },
+          { date: d(0), ex: 'sts', reps: 8, partial: 0, hint: 'good' },
+          { date: d(-1), ex: 'abd', reps: 10, partial: 2, hint: 'hike' },
+          { date: d(-1), ex: 'knee', reps: 9, partial: 0, hint: 'good' }
+        ]
+      }
+    }
+  };
+}
+function loadStore() {
+  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) { /* хранилище недоступно */ }
+  return seed();
+}
+let store = loadStore();
+function saveStore() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { memoryStore = store; } }
+const cur = () => store.patients[store.current] || Object.values(store.patients)[0];
+function courseDay(p) { const s = fromIso(p.start || todayIso()); const t = fromIso(todayIso()); return Math.floor((t - s) / 864e5) + 1; }
+const sideName = s => s === 'L' ? 'левая' : 'правая';
+
+// ================== Каталог ==================
+const EX = {
+  flex: { name: 'Подъём руки вперёд', kind: 'arm', plane: 'flex', target: 10, unit: '°', how: 'Сидя, камера спереди на уровне груди. Поднимайте прямую руку вперёд и вверх до отметки, опускайте медленно.' },
+  abd: { name: 'Отведение руки в сторону', kind: 'arm', plane: 'abd', target: 10, unit: '°', how: 'Сидя, камера спереди. Отводите прямую руку в сторону и вверх до отметки, корпус не наклоняйте.' },
+  elbow: { name: 'Сгибание локтя', kind: 'elbow', target: 12, unit: '°', how: 'Сидя, рука вдоль тела. Сгибайте локоть, поднося кисть к плечу; плечо остаётся на месте.' },
+  sts: { name: 'Вставание со стула', kind: 'sts', target: 8, unit: '', how: 'Стул без колёс, камера спереди или под 45°, в кадре видны колени и стопы. Встаньте полностью и сядьте.' },
+  knee: { name: 'Подъём колена сидя', kind: 'knee', target: 10, unit: '', how: 'Сидя на стуле, камера спереди, видны колени и стопы. Поднимайте колено и ставьте стопу обратно.' }
+};
+const TESTS = {
+  sts5: { name: '5 вставаний со стула (5xSTS)', short: '5 вставаний', how: 'Камера под 45° на уровне таза, в кадре стул и пациент целиком. Руки скрещены на груди, по команде пациент 5 раз встаёт и садится как можно быстрее. Старт считается с начала первого подъёма.', metric: v => sec(v.t5), better: 'low', key: 't5', unit: 'с' },
+  tug: { name: '«Встань и иди» (TUG)', short: 'TUG', how: 'Камера сбоку, видны стул и отметка 3 м. Пациент встаёт, идёт до отметки, разворачивается, возвращается и садится. Время от начала подъёма до посадки.', metric: v => sec(v.total), better: 'low', key: 'total', unit: 'с' },
+  walk10: { name: 'Ходьба 10 м', short: 'Ходьба 10 м', how: 'Секундомер: время прохождения отрезка в удобном темпе.', metric: v => dec(v.speed, 2) + ' м/с', better: 'high', key: 'speed', unit: 'м/с' },
+  arm: { name: 'Эталон руки', short: 'Подъём руки', how: 'Сидя, камера спереди. Пациент 3 раза поднимает поражённую руку вперёд как можно выше. Результат станет целью для домашних упражнений.', metric: v => Math.round(v.max) + '°', better: 'high', key: 'max', unit: '°' }
+};
+const HINTS = {
+  lean: 'Держите корпус ровно: не наклоняйтесь в сторону.',
+  forward: 'Сидите прямо: не наклоняйтесь вперёд вслед за рукой.',
+  hike: 'Опустите плечо: не тяните его к уху.',
+  elbow: 'Держите локоть прямым в верхней точке.',
+  partial: 'Поднимайте до отметки цели на экране.',
+  shoulder: 'Прижмите плечо к корпусу: двигается только предплечье.',
+  back: 'Держите спину прямо, не отклоняйтесь назад.',
+  good: 'Хорошая техника. Продолжайте в том же темпе.'
+};
+const FLAG_NAMES = { lean: 'наклон в сторону', forward: 'наклон вперёд', hike: 'подъём плеча', elbow: 'согнутый локоть', partial: 'неполная амплитуда', shoulder: 'движение плеча', back: 'отклонение назад' };
+const FLAG_ORDER = ['lean', 'forward', 'hike', 'shoulder', 'back', 'elbow', 'partial'];
+
+// ================== Навигация ==================
+const HASH_VIEWS = ['home', 'tests', 'exercises', 'report'];
+function show(view, { push = true } = {}) {
+  if (view !== 'session' && S.running) stopSession(false);
+  $$('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
+  if (view === 'home') renderHome();
+  if (view === 'tests') renderTests();
+  if (view === 'exercises') renderExercises();
+  if (view === 'report') renderReport();
+  if (push && HASH_VIEWS.includes(view)) { try { if (location.hash !== '#' + view) location.hash = view; } catch (e) { } }
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (HASH_VIEWS.includes(h)) show(h, { push: false }); });
+document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) show(g.dataset.go); });
+$('#brand').addEventListener('click', () => show('home'));
+
+// ================== Голос и звук ==================
+let voiceOn = true, audioCtx = null;
+$('#voice-btn').addEventListener('click', e => { voiceOn = !voiceOn; e.currentTarget.setAttribute('aria-pressed', voiceOn); e.currentTarget.textContent = voiceOn ? 'Голос: вкл' : 'Голос: выкл'; if (!voiceOn) try { speechSynthesis.cancel(); } catch (x) { } });
+function say(text) { if (!voiceOn) return; try { const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; u.rate = 1.05; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
+function tick(good = true) {
+  if (!voiceOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = good ? 880 : 330; g.gain.value = 0.06; o.connect(g); g.connect(audioCtx.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15); o.stop(audioCtx.currentTime + 0.16);
+  } catch (e) { }
+}
+
+// ================== Признаки позы ==================
+const I = { nose: 0, lear: 7, rear: 8, lsh: 11, rsh: 12, lel: 13, rel: 14, lwr: 15, rwr: 16, lhip: 23, rhip: 24, lkn: 25, rkn: 26, lan: 27, ran: 28 };
+const SIDES = {
+  L: { sh: I.lsh, el: I.lel, wr: I.lwr, hip: I.lhip, kn: I.lkn, an: I.lan, ear: I.lear },
+  R: { sh: I.rsh, el: I.rel, wr: I.rwr, hip: I.rhip, kn: I.rkn, an: I.ran, ear: I.rear }
+};
+const vis = (lm, i) => lm[i].visibility == null ? 1 : lm[i].visibility;
+function features(fr) {
+  const { lm, w, aspect } = fr;
+  const P = i => ({ x: lm[i].x * aspect, y: lm[i].y, z: 0 });
+  const W = i => w[i];
+  const shM = mid(P(I.lsh), P(I.rsh)), hipM = mid(P(I.lhip), P(I.rhip));
+  const tv = sub(shM, hipM);
+  const lat = deg(Math.atan2(tv.x, -tv.y));
+  const wt = sub(mid(W(I.lsh), W(I.rsh)), mid(W(I.lhip), W(I.rhip)));
+  const sag = deg(Math.atan2(-wt.z, -wt.y));
+  const shW = Math.hypot(P(I.lsh).x - P(I.rsh).x, P(I.lsh).y - P(I.rsh).y) || 1e-3;
+  const torsoVis = Math.min(vis(lm, I.lsh), vis(lm, I.rsh), vis(lm, I.lhip), vis(lm, I.rhip));
+  const f = { lat, sag, shW, torsoVis, side: {} };
+  for (const s of ['L', 'R']) {
+    const k = SIDES[s];
+    const sh = angBetween(sub(W(k.el), W(k.sh)), sub(W(k.hip), W(k.sh)));
+    const el = ang3(W(k.sh), W(k.el), W(k.wr));
+    f.side[s] = {
+      sh, el,
+      hike: (P(k.sh).y - P(k.ear).y) / shW,
+      shank: Math.abs(P(k.an).y - P(k.kn).y),
+      knY: P(k.kn).y, hipY: P(k.hip).y,
+      armVis: Math.min(vis(lm, k.sh), vis(lm, k.el), vis(lm, k.wr)),
+      legVis: Math.min(vis(lm, k.hip), vis(lm, k.kn), vis(lm, k.an))
+    };
+  }
+  return f;
+}
+
+// Повтор: покой → движение → (цель достигнута?) → покой
+class Rep {
+  constructor(hi, lo, move) { this.hi = hi; this.lo = lo; this.move = move; this.state = 'rest'; this.reps = []; this.partials = []; this.cur = null; this.value = 0; this.max = 0; }
+  update(v, t, flags) {
+    this.value = v; if (v > this.max) this.max = v;
+    if (this.state === 'rest' && v > this.move) { this.state = 'move'; this.cur = { t0: t, peak: v, fl: {} }; }
+    if (this.state === 'move') {
+      const c = this.cur; if (v > c.peak) c.peak = v;
+      for (const k of flags) c.fl[k] = (c.fl[k] || 0) + 1;
+      if (v < this.lo) {
+        this.state = 'rest';
+        const rep = { t0: c.t0, t1: t, dur: t - c.t0, peak: c.peak, flags: Object.keys(c.fl).filter(k => c.fl[k] >= 3) };
+        if (rep.dur < 0.4) return null;
+        if (c.peak >= this.hi) { this.reps.push(rep); return { type: 'rep', rep }; }
+        if (c.peak >= this.move + (this.hi - this.move) * 0.35) { rep.partial = true; this.partials.push(rep); return { type: 'partial', rep }; }
+      }
+    }
+    return null;
+  }
+}
+
+// Базовая поза: медианы первых кадров
+function makeBase(buf) {
+  const m = fn => median(buf.map(fn).filter(v => v != null && isFinite(v)));
+  const b = { lat: m(f => f.lat), sag: m(f => f.sag), side: {} };
+  for (const s of ['L', 'R']) b.side[s] = { hike: m(f => f.side[s].hike), sh: m(f => f.side[s].sh), knY: m(f => f.side[s].knY) };
+  return b;
+}
+
+// Опорная длина голени (стабильна сидя и стоя)
+class ShankRef {
+  constructor() { this.buf = []; }
+  push(f) { for (const s of ['L', 'R']) { const q = f.side[s]; if (q.legVis > 0.4 && q.shank > 0.02) this.buf.push(q.shank); } if (this.buf.length > 90) this.buf.splice(0, this.buf.length - 90); }
+  get v() { return median(this.buf); }
+}
+function sitRatio(f, sref) {
+  const sh = sref.v; if (!sh) return null;
+  const rs = []; for (const s of ['L', 'R']) { const q = f.side[s]; if (q.legVis > 0.4) rs.push((q.knY - q.hipY) / sh); }
+  return rs.length ? rs.reduce((a, b) => a + b) / rs.length : null;
+}
+
+// ================== Анализаторы ==================
+class ExerciseAnalyzer {
+  constructor(exId, side, patient) {
+    this.id = exId; this.ex = EX[exId]; this.side = side; this.kind = this.ex.kind; this.done = false;
+    this.buf = []; this.base = null; this.sref = new ShankRef(); this.flagsNow = []; this.t = 0; this.tStart = null;
+    const armBase = patient?.baseline?.armMax?.[side];
+    if (this.kind === 'arm') { this.hi = armBase ? clamp(Math.round(armBase * 0.85), 45, 120) : 80; this.lo = 30; this.mv = 35; }
+    if (this.kind === 'elbow') { this.hi = 80; this.lo = 35; this.mv = 40; }
+    if (this.kind === 'sts') { this.hi = 0.7; this.lo = 0.35; this.mv = 0.42; }
+    if (this.kind === 'knee') { this.hi = 0.22; this.lo = 0.08; this.mv = 0.12; }
+    this.cnt = { L: new Rep(this.hi, this.lo, this.mv), R: new Rep(this.hi, this.lo, this.mv) };
+    this.target = this.ex.target;
+  }
+  value(f, s) {
+    const q = f.side[s];
+    if (this.kind === 'arm') return q.armVis > 0.3 ? q.sh : null;
+    if (this.kind === 'elbow') return q.armVis > 0.3 ? 180 - q.el : null;
+    if (this.kind === 'sts') return sitRatio(f, this.sref);
+    if (this.kind === 'knee') { const sh = this.sref.v; return sh && q.legVis > 0.4 ? (this.base.side[s].knY - q.knY) / sh : null; }
+  }
+  flags(f, s) {
+    const b = this.base, q = f.side[s], fl = [];
+    if (this.kind === 'arm') {
+      if (Math.abs(f.lat - b.lat) > 8) fl.push('lean');
+      if (f.sag - b.sag > 12) fl.push('forward');
+      if (q.sh > 30 && q.sh < 100 && b.side[s].hike && q.hike < b.side[s].hike * 0.7) fl.push('hike');
+      if (q.sh > this.hi * 0.9 && q.el < 140) fl.push('elbow');
+    } else if (this.kind === 'elbow') {
+      if (Math.abs(q.sh - b.side[s].sh) > 25) fl.push('shoulder');
+      if (Math.abs(f.lat - b.lat) > 8) fl.push('lean');
+    } else if (this.kind === 'sts') {
+      if (Math.abs(f.lat - b.lat) > 10) fl.push('lean');
+    } else if (this.kind === 'knee') {
+      if (Math.abs(f.lat - b.lat) > 10) fl.push('lean');
+      if (b.sag - f.sag > 12) fl.push('back');
+    }
+    return fl;
+  }
+  update(f, t) {
+    this.t = t; if (this.tStart == null) this.tStart = t;
+    this.sref.push(f);
+    if (!this.base) { this.buf.push(f); if (this.buf.length >= 10 && t - this.tStart > 0.5) this.base = makeBase(this.buf); return; }
+    const evs = [];
+    for (const s of ['L', 'R']) {
+      const v = this.value(f, s); if (v == null) continue;
+      const fl = this.flags(f, s); if (s === this.side) this.flagsNow = fl;
+      const ev = this.cnt[s].update(v, t, fl); if (ev && s === this.side) evs.push(ev);
+    }
+    for (const ev of evs) {
+      if (ev.type === 'rep') { const n = this.cnt[this.side].reps.length; tick(true); say(String(n)); if (n >= this.target) this.done = true; }
+      else { tick(false); }
+    }
+  }
+  usedSide() {
+    const a = this.cnt[this.side], o = this.cnt[this.side === 'L' ? 'R' : 'L'];
+    if (a.reps.length === 0 && o.reps.length >= 3 && (this.kind === 'arm' || this.kind === 'elbow' || this.kind === 'knee')) return this.side === 'L' ? 'R' : 'L';
+    return this.side;
+  }
+  hud() {
+    const c = this.cnt[this.side];
+    if (!this.base) return { big: '', sub: 'Замрите на секунду: запоминаю исходную позу', gauge: null };
+    const g = this.kind === 'sts' || this.kind === 'knee'
+      ? { v: c.value, hi: this.hi, max: this.kind === 'sts' ? 1.1 : 0.6 }
+      : { v: c.value, hi: this.hi, max: Math.max(150, this.hi * 1.3) };
+    const cue = this.flagsNow.filter(k => k !== 'partial').map(k => FLAG_NAMES[k])[0] || '';
+    return { big: String(c.reps.length), small: '/ ' + this.target, sub: this.kind === 'arm' ? `цель ${this.hi}°` : (this.kind === 'sts' ? (c.value > this.hi ? 'стоя' : 'сидя') : ''), gauge: g, cue };
+  }
+  result() {
+    const side = this.usedSide(), c = this.cnt[side];
+    const attempts = [...c.reps, ...c.partials].sort((a, b) => a.t0 - b.t0);
+    const counts = {}; for (const r of attempts) { for (const k of r.flags) counts[k] = (counts[k] || 0) + 1; if (r.partial) counts.partial = (counts.partial || 0) + 1; }
+    let hint = 'good', best = 0; for (const k of FLAG_ORDER) if ((counts[k] || 0) > best) { best = counts[k]; hint = k; }
+    const others = FLAG_ORDER.filter(k => k !== hint && counts[k]).map(k => `${FLAG_NAMES[k]} (${counts[k]})`);
+    const peaks = c.reps.map(r => r.peak);
+    return {
+      kind: 'exercise', exId: this.id, side, sideSwitched: side !== this.side, reps: c.reps.length, partial: c.partials.length,
+      attempts, hint, others, time: this.t - (this.tStart || 0),
+      maxPeak: peaks.length ? Math.max(...peaks) : (c.max || 0)
+    };
+  }
+}
+
+class Sts5Analyzer {
+  constructor() { this.state = 'init'; this.t0 = null; this.lastSitT = null; this.stands = []; this.sits = []; this.leanMax = 0; this.done = false; this.sref = new ShankRef(); this.buf = []; this.base = null; this.r = null; this.t = 0; this.sitBuf = []; }
+  update(f, t) {
+    this.t = t; this.sref.push(f);
+    if (!this.base) { this.buf.push(f); if (this.buf.length >= 8) this.base = makeBase(this.buf); }
+    const r = sitRatio(f, this.sref); this.r = r; if (r == null) return;
+    const sitting = r < 0.35, standing = r > 0.7;
+    if (sitting && this.t0 == null) { this.sitBuf.push(r); if (this.sitBuf.length > 30) this.sitBuf.shift(); }
+    const onsetTh = Math.min(0.4, (median(this.sitBuf) ?? 0.2) + 0.06);
+    if (this.state === 'init') { if (sitting) { this.state = 'sit'; this.lastSitT = t; } return; }
+    if (this.state === 'sit') { if (r < onsetTh) this.lastSitT = t; if (r > 0.45) { if (this.t0 == null) { this.t0 = this.lastSitT; say('Старт'); } this.state = 'rising'; } }
+    else if (this.state === 'rising') { if (standing) { this.stands.push(t); this.state = 'stand'; tick(true); say(String(this.stands.length)); } else if (sitting) { this.state = 'sit'; this.lastSitT = t; } }
+    else if (this.state === 'stand') { if (sitting) { this.sits.push(t); this.state = 'sit'; this.lastSitT = t; if (this.sits.length >= 5) { this.done = true; say('Готово'); } } }
+    if (this.t0 != null && this.base && !this.done) this.leanMax = Math.max(this.leanMax, Math.abs(f.lat - this.base.lat));
+  }
+  hud() {
+    const el = this.t0 == null ? 0 : (this.done ? this.sits[4] - this.t0 : this.t - this.t0);
+    const st = this.state === 'init' ? 'Ждём: пациент сидит' : this.t0 == null ? 'Готов: начинайте по команде' : (this.r > 0.7 ? 'Стоит' : 'Сидит / движение');
+    return { big: dec(el), small: 'с', sub: `Вставаний: ${this.stands.length} из 5 · ${st}`, gauge: this.r == null ? null : { v: this.r, hi: 0.7, max: 1.1 } };
+  }
+  result() {
+    const t5 = this.stands.length >= 5 ? this.stands[4] - this.t0 : null;
+    const t5sit = this.sits.length >= 5 ? this.sits[4] - this.t0 : null;
+    const repT = this.sits.map((s, i) => (i === 0 ? s - this.t0 : s - this.sits[i - 1]));
+    return { kind: 'test', type: 'sts5', complete: t5 != null, stands: this.stands.length, v: { t5, t5sit, lean: Math.round(this.leanMax) }, repT };
+  }
+}
+
+class TugAnalyzer {
+  constructor() { this.state = 'init'; this.sitSince = null; this.done = false; this.sref = new ShankRef(); this.r = null; this.t = 0; this.sitBuf = []; }
+  update(f, t) {
+    this.t = t; if (f) this.sref.push(f);
+    const r = f ? sitRatio(f, this.sref) : null; this.r = r;
+    if (this.state === 'init') { if (r != null && r < 0.35) { if (this.sitSince == null) this.sitSince = t; if (t - this.sitSince > 0.4) { this.state = 'sit'; this.lastSitT = t; } } else this.sitSince = null; return; }
+    if (this.state === 'sit') { if (r != null && r < 0.35) { this.sitBuf.push(r); if (this.sitBuf.length > 30) this.sitBuf.shift(); } const th = Math.min(0.4, (median(this.sitBuf) ?? 0.2) + 0.06); if (r != null && r < th) this.lastSitT = t; if (r != null && r > 0.45) { this.t0 = this.lastSitT; this.state = 'rising'; say('Старт'); } }
+    else if (this.state === 'rising') { if (r != null && r > 0.7) { this.tStand = t; this.lastUpT = t; this.state = 'up'; } else if (r != null && r < 0.35) { this.state = 'sit'; this.lastSitT = t; } }
+    else if (this.state === 'up') { if (r == null || r > 0.7) this.lastUpT = t; if (r != null && r < 0.35 && t - this.tStand > 1.5) { this.tEnd = t; this.state = 'end'; this.done = true; say('Готово'); } }
+  }
+  missing(t) { this.update(null, t); }
+  hud() {
+    const el = this.t0 == null ? 0 : (this.done ? this.tEnd - this.t0 : this.t - this.t0);
+    const ph = { init: 'Ждём: пациент сидит', sit: 'Готов: начинайте по команде', rising: 'Подъём', up: 'Ходьба и поворот', end: 'Готово' }[this.state];
+    return { big: dec(el), small: 'с', sub: ph, gauge: this.r == null ? null : { v: this.r, hi: 0.7, max: 1.1 } };
+  }
+  result() {
+    const ok = this.done;
+    return { kind: 'test', type: 'tug', complete: ok, v: ok ? { total: this.tEnd - this.t0, rise: this.tStand - this.t0, walk: this.lastUpT - this.tStand, sit: this.tEnd - this.lastUpT } : {} };
+  }
+}
+
+class ArmBaselineAnalyzer extends ExerciseAnalyzer {
+  constructor(side) { super('flex', side, null); this.hi = 45; this.cnt = { L: new Rep(45, 30, 35), R: new Rep(45, 30, 35) }; this.target = 3; this.leanMax = 0; this.hikeMax = 0; }
+  update(f, t) {
+    super.update(f, t);
+    if (!this.base) return;
+    const s = this.side, q = f.side[s];
+    if (q.sh > 35) { this.leanMax = Math.max(this.leanMax, Math.abs(f.lat - this.base.lat)); if (this.base.side[s].hike && q.sh < 100) this.hikeMax = Math.max(this.hikeMax, (1 - q.hike / this.base.side[s].hike) * 100); }
+  }
+  hud() { const h = super.hud(); h.sub = `макс. ${Math.round(this.cnt[this.side].max)}°`; h.gauge && (h.gauge.hi = null); return h; }
+  result() {
+    const side = this.usedSide(), c = this.cnt[side];
+    const peaks = [...c.reps, ...c.partials].map(r => r.peak);
+    const max = peaks.length ? Math.max(...peaks) : c.max;
+    return { kind: 'test', type: 'arm', side, complete: c.reps.length >= 1, v: { max: Math.round(max), lean: Math.round(this.leanMax), hike: Math.round(Math.max(0, this.hikeMax)) }, reps: c.reps.length };
+  }
+}
+
+// ================== Демо-скелет ==================
+const lerp = (a, b, u) => a + (b - a) * u;
+const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 0.5 - 0.5 * Math.cos(Math.PI * x);
+function prof(u) { if (u < 0) return 0; if (u < 0.4) return ease(u / 0.4); if (u < 0.55) return 1; if (u < 0.95) return 1 - ease((u - 0.55) / 0.4); return 0; }
+function addv(a, b, k = 1) { return { x: a.x + b.x * k, y: a.y + b.y * k, z: a.z + b.z * k }; }
+function buildPose(o) {
+  const s = o.s || 0, X0 = o.x || 0;
+  const hipY = lerp(0.47, 0.04, s), hipZ = lerp(0.13, -0.25, s);
+  const hipL = { x: X0 + 0.10, y: hipY, z: hipZ }, hipR = { x: X0 - 0.10, y: hipY, z: hipZ };
+  const P = mid(hipL, hipR);
+  const sw = o.swing || 0;
+  const leg = side => {
+    const sx = side === 'L' ? 1 : -1, lift = (side === 'L' ? o.liftL : o.liftR) || 0, ph = sw * sx;
+    const kn = { x: X0 + sx * 0.12, y: 0.47 - 0.25 * lift - Math.max(0, ph) * 0.06, z: lerp(-0.30, -0.25, s) + ph * 0.14 };
+    const an = { x: kn.x, y: Math.min(kn.y + 0.45, 0.92), z: lerp(-0.25, -0.25, s) + ph * 0.2 };
+    return { kn, an, heel: addv(an, { x: 0, y: 0.04, z: 0.05 }), toe: addv(an, { x: 0, y: 0.06, z: -0.13 }) };
+  };
+  const lL = leg('L'), lR = leg('R');
+  const f = rad(o.fwd || 0), l = rad(o.lean || 0);
+  const u = { x: Math.cos(f) * Math.sin(l), y: -Math.cos(f) * Math.cos(l), z: -Math.sin(f) };
+  const S = addv(P, u, 0.5);
+  const rt = { x: Math.cos(l), y: Math.sin(l), z: 0 };
+  const shL = { x: S.x + rt.x * 0.18, y: S.y + rt.y * 0.18 - (o.hikeL || 0), z: S.z };
+  const shR = { x: S.x - rt.x * 0.18, y: S.y - rt.y * 0.18 - (o.hikeR || 0), z: S.z };
+  const head = addv(S, u, 0.2);
+  const arm = (side, sh, c) => {
+    c = c || {}; const sx = side === 'L' ? 1 : -1; const a = rad(c.a || 6), e = c.e == null ? 175 : c.e;
+    const dirF = ang => c.plane === 'abd' ? { x: sx * Math.sin(ang), y: Math.cos(ang), z: 0 } : { x: sx * 0.08 * Math.cos(ang), y: Math.cos(ang), z: -Math.sin(ang) };
+    const el = addv(sh, dirF(a), 0.28); const b = a + rad(180 - e); const d2 = dirF(b);
+    const wr = addv(el, d2, 0.25);
+    return { el, wr, pinky: addv(wr, d2, 0.07), index: addv(addv(wr, d2, 0.08), { x: -sx * 0.02, y: 0, z: 0 }), thumb: addv(wr, { x: -sx * 0.03, y: 0.02, z: -0.02 }) };
+  };
+  const aL = arm('L', shL, o.armL), aR = arm('R', shR, o.armR);
+  const pts = new Array(33);
+  pts[0] = addv(head, { x: 0, y: 0.03, z: -0.10 });
+  pts[1] = addv(head, { x: 0.02, y: -0.01, z: -0.09 }); pts[2] = addv(head, { x: 0.035, y: -0.01, z: -0.09 }); pts[3] = addv(head, { x: 0.05, y: -0.01, z: -0.08 });
+  pts[4] = addv(head, { x: -0.02, y: -0.01, z: -0.09 }); pts[5] = addv(head, { x: -0.035, y: -0.01, z: -0.09 }); pts[6] = addv(head, { x: -0.05, y: -0.01, z: -0.08 });
+  pts[7] = addv(head, { x: rt.x * 0.075, y: rt.y * 0.075, z: 0.02 }); pts[8] = addv(head, { x: -rt.x * 0.075, y: -rt.y * 0.075, z: 0.02 });
+  pts[9] = addv(head, { x: 0.025, y: 0.06, z: -0.08 }); pts[10] = addv(head, { x: -0.025, y: 0.06, z: -0.08 });
+  pts[11] = shL; pts[12] = shR; pts[13] = aL.el; pts[14] = aR.el; pts[15] = aL.wr; pts[16] = aR.wr;
+  pts[17] = aL.pinky; pts[18] = aR.pinky; pts[19] = aL.index; pts[20] = aR.index; pts[21] = aL.thumb; pts[22] = aR.thumb;
+  pts[23] = hipL; pts[24] = hipR; pts[25] = lL.kn; pts[26] = lR.kn; pts[27] = lL.an; pts[28] = lR.an;
+  pts[29] = lL.heel; pts[30] = lR.heel; pts[31] = lL.toe; pts[32] = lR.toe;
+  const yaw = rad(o.yaw || 0);
+  if (yaw) for (let i = 0; i < 33; i++) { const p = pts[i], dx = p.x - P.x, dz = p.z - P.z; pts[i] = { x: P.x + dx * Math.cos(yaw) + dz * Math.sin(yaw), y: p.y, z: P.z - dx * Math.sin(yaw) + dz * Math.cos(yaw) }; }
+  const D = 3.2, k = 230;
+  const lm = pts.map(p => { const den = p.z + D; return { x: (180 + p.x * k * D / den) / 360, y: (240 + (p.y - 0.15) * k * D / den) / 480, z: p.z, visibility: 0.97 }; });
+  const w = pts.map(p => ({ x: p.x - P.x, y: p.y - P.y, z: p.z - P.z }));
+  return { lm, w, aspect: 0.75, chair: s < 0.5 && !o.noChair };
+}
+function demoFrame(cfg, t, side) {
+  const other = side === 'L' ? 'R' : 'L';
+  const arms = (cfgSide) => side === 'L' ? { armL: cfgSide, armR: {} } : { armL: {}, armR: cfgSide };
+  if (cfg.kind === 'exercise' && (cfg.id === 'flex' || cfg.id === 'abd')) {
+    const lead = 1.2, D = 3.0, peaks = [96, 104, 100, 94, 110, 58];
+    const k = Math.floor((t - lead) / D), u = ((t - lead) % D) / D;
+    if (t > lead + peaks.length * D + 0.8) return null;
+    const p = k >= 0 && k < peaks.length ? prof(u) : 0, pk = peaks[clamp(k, 0, 5)];
+    const o = { ...arms({ a: 6 + (pk - 6) * p, plane: cfg.id === 'abd' ? 'abd' : 'flex', e: k === 3 ? 180 - 60 * p : 176 }) };
+    if (k === 2) { o.lean = (side === 'L' ? -12 : 12) * p; o['hike' + side] = 0.08 * p; }
+    return buildPose(o);
+  }
+  if (cfg.kind === 'exercise' && cfg.id === 'elbow') {
+    const lead = 1.2, D = 2.6, n = 6; const k = Math.floor((t - lead) / D), u = ((t - lead) % D) / D;
+    if (t > lead + n * D + 0.8) return null;
+    const p = k >= 0 && k < n ? prof(u) : 0;
+    return buildPose({ ...arms({ a: 8 + (k === 2 ? 40 * p : 0), e: 172 - 117 * p, plane: 'flex' }) });
+  }
+  if (cfg.kind === 'exercise' && cfg.id === 'knee') {
+    const lead = 1.2, D = 2.4, n = 6; const k = Math.floor((t - lead) / D), u = ((t - lead) % D) / D;
+    if (t > lead + n * D + 0.8) return null;
+    const p = k >= 0 && k < n ? prof(u) : 0;
+    const o = { ['lift' + side]: p }; if (k === 3) o.lean = (side === 'L' ? -12 : 12) * p;
+    return buildPose(o);
+  }
+  if ((cfg.kind === 'exercise' && cfg.id === 'sts') || (cfg.kind === 'test' && cfg.id === 'sts5')) {
+    const test = cfg.kind === 'test'; const lead = test ? 1.6 : 1.2, D = test ? 2.7 : 3.4, n = 5;
+    const k = Math.floor((t - lead) / D), u = ((t - lead) % D) / D;
+    if (t > lead + n * D + 1.0) return null;
+    const p = k >= 0 && k < n ? prof(u) : 0;
+    const o = { s: p, fwd: 30 * Math.sin(Math.PI * clamp(k >= 0 && k < n ? u / 0.95 : 0, 0, 1)) * (1 - 0.6 * p), armL: { a: test ? 20 : 8, e: test ? 60 : 175 }, armR: { a: test ? 20 : 8, e: test ? 60 : 175 } };
+    if (k === 1) o.lean = (side === 'L' ? -14 : 14) * p;
+    return buildPose(o);
+  }
+  if (cfg.kind === 'test' && cfg.id === 'tug') {
+    const T = [1.6, 1.8, 3.0, 1.4, 3.0, 1.2, 1.8, 1.0]; const acc = []; T.reduce((a, b, i) => (acc[i] = a + b), 0);
+    if (t > acc[7]) return null;
+    const ph = acc.findIndex(v => t <= v), t0 = ph === 0 ? 0 : acc[ph - 1], u = (t - t0) / T[ph];
+    let s = 0, x = 0, yaw = 0, swing = 0, fwd = 0;
+    if (ph === 0) { s = 0; } else if (ph === 1) { s = ease(u); fwd = 28 * Math.sin(Math.PI * u); }
+    else if (ph === 2) { s = 1; x = 0.55 * u; yaw = -70; swing = Math.sin(u * Math.PI * 6); }
+    else if (ph === 3) { s = 1; x = 0.55; yaw = lerp(-70, -250, ease(u)); }
+    else if (ph === 4) { s = 1; x = 0.55 * (1 - u); yaw = -250; swing = Math.sin(u * Math.PI * 6); }
+    else if (ph === 5) { s = 1; x = 0; yaw = lerp(-250, -360, ease(u)); }
+    else if (ph === 6) { s = 1 - ease(u); fwd = 28 * Math.sin(Math.PI * u); }
+    else { s = 0; }
+    return buildPose({ s, x, yaw, swing, fwd, noChair: x > 0.2, armL: { a: 10 }, armR: { a: 10 } });
+  }
+  if (cfg.kind === 'test' && cfg.id === 'arm') {
+    const lead = 1.2, D = 3.2, peaks = [88, 96, 99]; const k = Math.floor((t - lead) / D), u = ((t - lead) % D) / D;
+    if (t > lead + peaks.length * D + 0.8) return null;
+    const p = k >= 0 && k < 3 ? prof(u) : 0, pk = peaks[clamp(k, 0, 2)];
+    const o = { ...arms({ a: 6 + (pk - 6) * p, plane: 'flex' }) }; if (k === 1) o.lean = (side === 'L' ? -9 : 9) * p;
+    return buildPose(o);
+  }
+  return null;
+}
+
+// ================== Модель MediaPipe ==================
+const LIVE_URL = 'https://nauryzbay-tura.github.io/Tura-apps/motion/';
+const FRAMED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+let landmarker = null, modelPromise = null, modelError = '';
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3';
+const MODEL_SOURCES = [
+  { bundle: MP + '/vision_bundle.mjs', wasm: MP + '/wasm', model: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task' }
+];
+async function tryModel(src) {
+  const vision = await import(src.bundle);
+  const fs = await vision.FilesetResolver.forVisionTasks(src.wasm);
+  const opts = d => ({ baseOptions: { modelAssetPath: src.model, delegate: d }, runningMode: 'VIDEO', numPoses: 2, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+  try { return await vision.PoseLandmarker.createFromOptions(fs, opts('GPU')); }
+  catch (e) { return await vision.PoseLandmarker.createFromOptions(fs, opts('CPU')); }
+}
+function ensureModel() {
+  if (landmarker) return Promise.resolve(landmarker);
+  if (modelPromise) return modelPromise;
+  modelPromise = (async () => {
+    for (const src of MODEL_SOURCES) {
+      try { landmarker = await tryModel(src); return landmarker; } catch (e) { modelError = String(e && e.message || e); }
+    }
+    throw new Error(modelError || 'model');
+  })();
+  modelPromise.catch(() => { modelPromise = null; });
+  return modelPromise;
+}
+window.__tura = { ensureModel, store: () => store };
+
+// ================== Сессия ==================
+const S = { running: false, cfg: null, an: null, src: null, raf: 0, startPerf: 0, speed: 1, lastTs: -1, sel: null, ema: null, stream: null, mirror: false, lastFrame: null, missingSince: null, others: 0 };
+const canvas = $('#stage'), ctx = canvas.getContext('2d');
+window.__tura.S = S;
+const video = document.createElement('video'); video.muted = true; video.playsInline = true; video.setAttribute('playsinline', '');
+
+function openSession(kind, id) {
+  const p = cur();
+  S.cfg = { kind, id };
+  if (kind === 'test' && id === 'walk10') { openWalk(); return; }
+  const def = kind === 'exercise' ? EX[id] : TESTS[id];
+  $('#h-ses').textContent = def.name;
+  $('#ses-how').textContent = def.how;
+  $('#ses-result').hidden = true; $('#ses-controls').hidden = true; $('#ses-sources').hidden = false;
+  $('#file-rec').setAttribute('capture', kind === 'exercise' ? 'user' : 'environment');
+  resetStage(kind === 'exercise' ? `Сторона поражения: ${sideName(p.side)}.\nВыберите источник: камера, видео или демо.` : 'Выберите источник: камера, видео или демо.');
+  show('session');
+}
+function resetStage(msg) {
+  canvas.width = 360; canvas.height = 480; ctx.fillStyle = '#0A0F13'; ctx.fillRect(0, 0, 360, 480);
+  $('#stage-wrap').style.aspectRatio = '3 / 4';
+  const idle = $('#stage-idle'); idle.textContent = msg || ''; idle.style.whiteSpace = 'pre-line'; idle.hidden = !msg;
+  ['#hud-src', '#hud-state'].forEach(s => $(s).hidden = true);
+  $('#hud-big').innerHTML = ''; $('#hud-sub').textContent = ''; $('#hud-cue').innerHTML = ''; $('#gauge').classList.add('hidden');
+}
+function makeAnalyzer() {
+  const { kind, id } = S.cfg, p = cur();
+  if (kind === 'exercise') return new ExerciseAnalyzer(id, p.side, p);
+  if (id === 'sts5') return new Sts5Analyzer();
+  if (id === 'tug') return new TugAnalyzer();
+  if (id === 'arm') return new ArmBaselineAnalyzer(p.side);
+}
+async function startSource(src, file) {
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume && audioCtx.resume(); } catch (e) { }
+  S.src = src; S.an = makeAnalyzer(); S.sel = null; S.ema = null; S.lastTs = -1; S.missingSince = null; S.lastFrame = null;
+  $('#ses-result').hidden = true; $('#ses-sources').hidden = true; $('#ses-controls').hidden = false;
+  const pillSrc = $('#hud-src'); pillSrc.hidden = false; pillSrc.className = 'pill';
+  if (src === 'demo') {
+    pillSrc.textContent = 'Демо · без камеры'; $('#stage-idle').hidden = true;
+    canvas.width = 360; canvas.height = 480; $('#stage-wrap').style.aspectRatio = '3 / 4';
+    S.mirror = false; S.startPerf = performance.now(); S.running = true; loop(); return;
+  }
+  $('#stage-idle').hidden = false; $('#stage-idle').textContent = 'Загружаю модель распознавания позы…\nПервый раз около 20 МБ, дальше быстрее.';
+  try { await ensureModel(); }
+  catch (e) { failSource(inFrame() ? 'В этом окне браузер не даёт загрузить модель распознавания и камеру.\nЗдесь работает демо. Камера и разбор видео — в версии на сайте TURA по ссылке под кнопками.' : 'Не удалось загрузить модель распознавания позы. Проверьте интернет и попробуйте ещё раз или запустите демо.'); return; }
+  if (src === 'camera') {
+    try {
+      const facing = S.cfg.kind === 'exercise' ? 'user' : 'environment';
+      S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      video.srcObject = S.stream; await video.play(); S.mirror = facing === 'user';
+      pillSrc.textContent = 'Камера · видео не сохраняется';
+    } catch (e) {
+      failSource(inFrame() ? 'Живая камера в этом окне недоступна. Откройте версию на сайте TURA по ссылке под кнопками.' : 'Нет доступа к камере. Разрешите камеру для этого сайта в настройках браузера или нажмите «Снять видео».');
+      return;
+    }
+  } else {
+    video.srcObject = null; video.src = URL.createObjectURL(file); S.mirror = false;
+    try { await new Promise((res, rej) => { video.onloadeddata = res; video.onerror = rej; }); video.playbackRate = 0.5; await video.play(); }
+    catch (e) { failSource('Это видео не открывается. Попробуйте снять заново в формате MP4 или MOV.'); return; }
+    pillSrc.textContent = 'Разбор записи';
+  }
+  const vw = video.videoWidth || 640, vh = video.videoHeight || 480, sc = Math.min(1, 720 / Math.max(vw, vh));
+  canvas.width = Math.round(vw * sc); canvas.height = Math.round(vh * sc);
+  $('#stage-wrap').style.aspectRatio = `${vw} / ${vh}`;
+  $('#stage-idle').hidden = true;
+  S.startPerf = performance.now(); S.running = true; loop();
+}
+function inFrame() { return FRAMED; }
+function failSource(msg) {
+  S.running = false; $('#ses-sources').hidden = false; $('#ses-controls').hidden = true;
+  resetStage(msg);
+}
+function pickPose(res) {
+  const L = res.landmarks || []; if (!L.length) return null;
+  let best = 0, bd = 1e9;
+  L.forEach((lm, i) => { const h = mid(lm[23], lm[24]); const d = S.sel ? Math.hypot(h.x - S.sel.x, h.y - S.sel.y) : Math.abs(h.x - 0.5) + Math.abs(h.y - 0.55) * 0.3; if (d < bd) { bd = d; best = i; } });
+  const lm = L[best], w = (res.worldLandmarks || [])[best]; if (!w) return null;
+  const h = mid(lm[23], lm[24]); S.sel = { x: h.x, y: h.y }; S.others = L.length - 1;
+  return { lm, w };
+}
+function smooth(fr) {
+  const a = 0.55;
+  if (!S.ema) S.ema = { lm: fr.lm.map(p => ({ ...p })), w: fr.w.map(p => ({ ...p })) };
+  else for (let i = 0; i < 33; i++) {
+    const L = S.ema.lm[i], l = fr.lm[i], W = S.ema.w[i], w = fr.w[i];
+    L.x += a * (l.x - L.x); L.y += a * (l.y - L.y); L.z += a * ((l.z || 0) - (L.z || 0)); L.visibility = l.visibility;
+    W.x += a * (w.x - W.x); W.y += a * (w.y - W.y); W.z += a * (w.z - W.z);
+  }
+  return { lm: S.ema.lm, w: S.ema.w, aspect: fr.aspect, chair: fr.chair };
+}
+function loop() {
+  if (!S.running) return;
+  S.raf = requestAnimationFrame(loop);
+  let fr = null, t;
+  if (S.src === 'demo') {
+    t = (performance.now() - S.startPerf) / 1000 * S.speed;
+    fr = demoFrame(S.cfg, t, cur().side);
+    if (!fr) { finishSession(); return; }
+    drawDemoBg(fr);
+  } else {
+    if (video.readyState < 2) return;
+    if (S.src !== 'camera' && video.ended) { finishSession(); return; }
+    t = S.src === 'camera' ? (performance.now() - S.startPerf) / 1000 : video.currentTime;
+    const ts = S.src === 'camera' ? performance.now() : video.currentTime * 1000 + 1;
+    if (ts <= S.lastTs) return;
+    S.lastTs = ts;
+    drawVideo();
+    let res = null; try { res = landmarker.detectForVideo(video, ts); } catch (e) { res = null; }
+    const p = res && pickPose(res);
+    if (p) fr = { lm: p.lm, w: p.w, aspect: canvas.width / canvas.height };
+    if (S.src !== 'camera' && video.duration) $('#hud-src').textContent = `Разбор записи · ${Math.round(video.currentTime / video.duration * 100)}%`;
+  }
+  S.tNow = t;
+  if (fr) {
+    const sf = smooth(fr); const f = features(sf);
+    if (f.torsoVis < 0.3) { noPerson(t); }
+    else { S.missingSince = null; S.an.update(f, t); drawSkeleton(sf.lm); }
+  } else noPerson(t);
+  renderHud();
+  if (S.an.done === true) { S.an.done = 'finishing'; setTimeout(finishSession, 600); }
+}
+function noPerson(t) {
+  if (S.missingSince == null) S.missingSince = t;
+  if (S.an.missing) S.an.missing(t);
+}
+function drawVideo() {
+  ctx.save();
+  if (S.mirror) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(8,12,15,.35)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+function drawDemoBg(fr) {
+  const W = canvas.width, H = canvas.height;
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#111A20'); g.addColorStop(1, '#0A0F13');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H * 0.86); ctx.lineTo(W, H * 0.86); ctx.stroke();
+  if (S.cfg.id === 'tug') { ctx.fillStyle = 'rgba(245,194,107,.5)'; ctx.fillRect(W * 0.86, H * 0.85, 4, H * 0.04); ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.font = '12px Golos Text, sans-serif'; ctx.fillText('3 м', W * 0.82, H * 0.93); }
+  if (fr.chair) { ctx.fillStyle = 'rgba(141,162,255,.10)'; ctx.strokeStyle = 'rgba(141,162,255,.25)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(W * 0.32, H * 0.44, W * 0.36, H * 0.05, 6); else ctx.rect(W * 0.32, H * 0.44, W * 0.36, H * 0.05); ctx.fill(); ctx.stroke(); }
+}
+const BONES = [[11, 12], [11, 23], [12, 24], [23, 24], [11, 13], [13, 15], [12, 14], [14, 16], [23, 25], [25, 27], [24, 26], [26, 28], [27, 31], [28, 32]];
+function drawSkeleton(lm) {
+  const W = canvas.width, H = canvas.height, side = cur().side;
+  const sideIdx = side === 'L' ? new Set([11, 13, 15, 23, 25, 27, 31]) : new Set([12, 14, 16, 24, 26, 28, 32]);
+  const flags = S.an.flagsNow || [];
+  const trunkWarn = flags.includes('lean') || flags.includes('forward') || flags.includes('back');
+  ctx.save();
+  if (S.mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
+  ctx.lineCap = 'round';
+  for (const [a, b] of BONES) {
+    if (vis(lm, a) < 0.3 || vis(lm, b) < 0.3) continue;
+    const trunk = (a === 11 && b === 12) || (a === 23 && b === 24) || ((a === 11 || a === 12) && (b === 23 || b === 24));
+    const aff = sideIdx.has(a) && sideIdx.has(b);
+    ctx.strokeStyle = trunk && trunkWarn ? '#F5A524' : aff ? '#8DA2FF' : 'rgba(237,242,240,.75)';
+    ctx.lineWidth = aff ? 6 : 4;
+    ctx.beginPath(); ctx.moveTo(lm[a].x * W, lm[a].y * H); ctx.lineTo(lm[b].x * W, lm[b].y * H); ctx.stroke();
+  }
+  for (const i of [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
+    if (vis(lm, i) < 0.3) continue;
+    ctx.fillStyle = sideIdx.has(i) ? '#C9D3FF' : '#EDF2F0';
+    ctx.beginPath(); ctx.arc(lm[i].x * W, lm[i].y * H, sideIdx.has(i) ? 5 : 4, 0, Math.PI * 2); ctx.fill();
+  }
+  if (vis(lm, 0) > 0.3) {
+    const r = Math.max(8, Math.hypot((lm[7].x - lm[8].x) * W, (lm[7].y - lm[8].y) * H) * 0.6);
+    ctx.strokeStyle = flags.includes('hike') ? '#F5A524' : 'rgba(237,242,240,.75)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(lm[0].x * W, (lm[0].y * H + (lm[7].y + lm[8].y) / 2 * H) / 2, r, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+function renderHud() {
+  const h = S.an.hud();
+  $('#hud-big').innerHTML = h.big === '' ? '' : `${esc(h.big)}${h.small ? `<small>${esc(h.small)}</small>` : ''}`;
+  const missing = S.missingSince != null && ((S.tNow || 0) - S.missingSince > 0.6);
+  $('#hud-sub').textContent = missing && S.cfg.id !== 'tug' ? 'Не вижу пациента целиком: в кадре должны быть плечи, таз и колени' : h.sub || '';
+  const st = $('#hud-state');
+  if (S.others > 0 && S.src !== 'demo') { st.hidden = false; st.className = 'pill'; st.textContent = 'Двое в кадре · слежу за пациентом'; } else st.hidden = true;
+  $('#hud-cue').innerHTML = h.cue ? `<span class="pill warn">${esc(h.cue)}</span>` : '';
+  const g = $('#gauge');
+  if (h.gauge && h.gauge.v != null) {
+    g.classList.remove('hidden');
+    $('#gauge-fill').style.height = clamp(h.gauge.v / h.gauge.max * 100, 0, 100) + '%';
+    const tg = $('#gauge-target'); if (h.gauge.hi != null) { tg.hidden = false; tg.style.bottom = clamp(h.gauge.hi / h.gauge.max * 100, 0, 100) + '%'; } else tg.hidden = true;
+  } else g.classList.add('hidden');
+}
+function stopSession(keep) {
+  S.running = false; cancelAnimationFrame(S.raf);
+  if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
+  try { video.pause(); if (video.src && video.src.startsWith('blob:')) URL.revokeObjectURL(video.src); } catch (e) { }
+  if (!keep) try { speechSynthesis.cancel(); } catch (e) { }
+}
+function finishSession() {
+  if (!S.running) return;
+  stopSession(true);
+  $('#ses-controls').hidden = true;
+  const res = S.an.result(); res.demo = S.src === 'demo';
+  renderResult(res);
+}
+$('#ses-stop').addEventListener('click', finishSession);
+$('#ses-back').addEventListener('click', () => { stopSession(false); show(S.cfg && S.cfg.kind === 'exercise' ? 'exercises' : 'tests'); });
+$$('#ses-sources [data-src]').forEach(b => b.addEventListener('click', () => {
+  const s = b.dataset.src;
+  if (s === 'record') $('#file-rec').click();
+  else if (s === 'pick') $('#file-pick').click();
+  else startSource(s);
+}));
+['#file-rec', '#file-pick'].forEach(sel => $(sel).addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) startSource('file', f); }));
+
+// ================== Результат ==================
+function renderResult(r) {
+  const box = $('#ses-result'), p = cur();
+  let html = '';
+  if (r.kind === 'exercise') {
+    const ex = EX[r.exId];
+    html += `<div class="row between"><h2>Итог подхода</h2>${r.demo ? '<span class="chip example">Демо, не сохраняется</span>' : (r.reps + r.partial > 0 ? '<span class="chip good">Сохранено в дозу</span>' : '<span class="chip">Повторов нет</span>')}</div>`;
+    html += `<dl class="kv"><dt>Засчитано</dt><dd>${reps(r.reps)} из ${ex.target}</dd><dt>Неполных попыток</dt><dd>${r.partial}</dd><dt>Время подхода</dt><dd>${sec(r.time)}</dd>${ex.kind === 'arm' ? `<dt>Лучший подъём</dt><dd>${Math.round(r.maxPeak)}°</dd>` : ''}</dl>`;
+    if (r.attempts.length) html += `<div><p class="small muted" style="margin-bottom:6px">Попытки по порядку</p><div class="reps">${r.attempts.map((a, i) => `<span class="rep ${a.partial ? 'p' : a.flags.length ? 'f' : ''}" title="${esc(a.partial ? 'неполная' : a.flags.map(k => FLAG_NAMES[k]).join(', ') || 'без замечаний')}">${i + 1}</span>`).join('')}</div></div>`;
+    html += `<div class="hint ${r.hint === 'good' ? 'good' : ''}">${esc(HINTS[r.hint])}</div>`;
+    if (r.others.length) html += `<p class="small muted">Ещё замечено: ${esc(r.others.join(', '))}.</p>`;
+    if (r.sideSwitched) html += `<p class="small muted">Счёт взят по ${r.side === 'L' ? 'левой' : 'правой'} стороне: выбранная сторона почти не двигалась. Проверьте сторону поражения в карточке пациента.</p>`;
+    say(HINTS[r.hint]);
+    if (!r.demo && r.reps + r.partial > 0) {
+      const d = todayIso(); p.dose = p.dose || {}; p.dose[d] = p.dose[d] || {}; p.dose[d][r.exId] = (p.dose[d][r.exId] || 0) + r.reps;
+      p.sessions = p.sessions || []; p.sessions.unshift({ date: d, ex: r.exId, reps: r.reps, partial: r.partial, hint: r.hint }); p.sessions = p.sessions.slice(0, 60);
+      saveStore();
+    }
+    html += `<div class="row"><button class="btn primary" style="flex:1" type="button" id="res-again">Ещё подход</button><button class="btn secondary" style="flex:1" type="button" data-go="exercises">К списку</button></div>`;
+  } else {
+    const t = TESTS[r.type];
+    html += `<div class="row between"><h2>Результат теста</h2>${r.demo ? '<span class="chip example">Демо</span>' : ''}</div>`;
+    if (r.type === 'sts5') {
+      html += r.complete
+        ? `<dl class="kv"><dt>До 5-го вставания</dt><dd>${sec(r.v.t5)}</dd><dt>До 5-й посадки</dt><dd>${sec(r.v.t5sit)}</dd><dt>Боковой наклон корпуса, макс.</dt><dd>${r.v.lean}°</dd></dl><p class="small muted">Время каждого цикла «встать–сесть»: ${r.repT.map(x => dec(x)).join(' · ')} с</p>`
+        : `<p>Засчитано вставаний: ${r.stands} из 5. Тест не завершён: снимите заново, чтобы в кадре были таз, колени и стопы.</p>`;
+    } else if (r.type === 'tug') {
+      html += r.complete
+        ? `<dl class="kv"><dt>Общее время</dt><dd>${sec(r.v.total)}</dd><dt>Подъём</dt><dd>${sec(r.v.rise)}</dd><dt>Ходьба и поворот</dt><dd>${sec(r.v.walk)}</dd><dt>Посадка</dt><dd>${sec(r.v.sit)}</dd></dl><p class="small muted">Старт отсчёта — начало подъёма со стула, а не команда.</p>`
+        : `<p>Тест не завершён: не удалось увидеть подъём и посадку. Снимите сбоку так, чтобы стул был в кадре.</p>`;
+    } else if (r.type === 'arm') {
+      html += r.complete
+        ? `<dl class="kv"><dt>Максимальный подъём руки</dt><dd>${r.v.max}°</dd><dt>Боковой наклон корпуса, макс.</dt><dd>${r.v.lean}°</dd><dt>Подъём плеча к уху, макс.</dt><dd>${r.v.hike}%</dd></dl><p class="small muted">После сохранения цель домашних упражнений для руки станет ${clamp(Math.round(r.v.max * 0.85), 45, 120)}°.</p>`
+        : `<p>Не удалось засчитать подъём руки. Проверьте, что выбрана сторона поражения и рука видна целиком.</p>`;
+    }
+    if (r.complete) {
+      const cd = clamp(courseDay(p), 1, 10);
+      html += `<div class="stack"><p class="small muted">Сохранить как</p><div class="seg" id="day-seg" role="group" aria-label="День курса">${[1, cd === 1 || cd === 10 ? null : cd, 10].filter(Boolean).map(d => `<button type="button" aria-pressed="${d === (cd >= 6 ? 10 : 1) ? 'true' : 'false'}" data-day="${d}">День ${d}</button>`).join('')}</div>`;
+      html += `<button class="btn primary block" type="button" id="res-save">${r.demo ? 'Демо не сохраняется' : 'Сохранить в отчёт'}</button></div>`;
+    }
+    html += `<div class="row"><button class="btn secondary" style="flex:1" type="button" id="res-again">Повторить</button><button class="btn ghost" style="flex:1" type="button" data-go="tests">К тестам</button></div>`;
+  }
+  box.innerHTML = html; box.hidden = false;
+  const again = $('#res-again'); if (again) again.addEventListener('click', () => openSession(S.cfg.kind, S.cfg.id));
+  $$('#day-seg button').forEach(b => b.addEventListener('click', () => $$('#day-seg button').forEach(x => x.setAttribute('aria-pressed', x === b))));
+  const sv = $('#res-save');
+  if (sv) { if (r.demo) sv.disabled = true; else sv.addEventListener('click', () => {
+    const day = Number(($('#day-seg [aria-pressed="true"]') || {}).dataset?.day || 1);
+    p.tests = p.tests || []; p.tests.push({ type: r.type, day, date: todayIso(), v: r.v });
+    if (r.type === 'arm') { p.baseline = p.baseline || {}; p.baseline.armMax = p.baseline.armMax || {}; if (day === 1 || !p.baseline.armMax[r.side]) p.baseline.armMax[r.side] = r.v.max; }
+    saveStore(); sv.disabled = true; sv.textContent = `Сохранено как день ${day}`; toast('Результат добавлен в отчёт');
+  }); }
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ================== Ходьба 10 м ==================
+const WK = { t0: null, raf: 0, laps: [] };
+function openWalk() { WK.t0 = null; WK.laps = []; $('#walk-watch').textContent = '0,0 с'; $('#walk-start').textContent = 'Старт'; $('#walk-laps').innerHTML = ''; $('#walk-save').hidden = true; show('walk'); }
+function walkTick() { if (WK.t0 == null) return; $('#walk-watch').textContent = dec((performance.now() - WK.t0) / 1000) + ' с'; WK.raf = requestAnimationFrame(walkTick); }
+$('#walk-start').addEventListener('click', () => {
+  if (WK.t0 == null) { WK.t0 = performance.now(); $('#walk-start').textContent = 'Финиш'; walkTick(); say('Старт'); return; }
+  const tm = (performance.now() - WK.t0) / 1000; WK.t0 = null; cancelAnimationFrame(WK.raf); $('#walk-start').textContent = 'Ещё попытка';
+  const dist = clamp(Number($('#walk-dist').value) || 10, 2, 30); WK.laps.push({ time: tm, dist });
+  $('#walk-watch').textContent = dec(tm) + ' с';
+  $('#walk-laps').innerHTML = WK.laps.map((l, i) => `<div class="row between"><span>Попытка ${i + 1}</span><b class="num">${dec(l.time)} с · ${dec(l.dist / l.time, 2)} м/с</b></div>`).join('');
+  const avg = WK.laps.reduce((a, l) => a + l.time, 0) / WK.laps.length, speed = dist / avg, p = cur(), cd = clamp(courseDay(p), 1, 10);
+  const box = $('#walk-save'); box.hidden = false;
+  box.innerHTML = `<dl class="kv"><dt>Среднее время</dt><dd>${sec(avg)}</dd><dt>Скорость</dt><dd>${dec(speed, 2)} м/с</dd></dl><div class="seg" id="wday" role="group" aria-label="День курса"><button type="button" data-day="1" aria-pressed="${cd < 6}">День 1</button><button type="button" data-day="10" aria-pressed="${cd >= 6}">День 10</button></div><button class="btn primary block" type="button" id="walk-do-save">Сохранить в отчёт</button>`;
+  $$('#wday button').forEach(b => b.addEventListener('click', () => $$('#wday button').forEach(x => x.setAttribute('aria-pressed', x === b))));
+  $('#walk-do-save').addEventListener('click', e => { const day = Number($('#wday [aria-pressed="true"]').dataset.day); p.tests.push({ type: 'walk10', day, date: todayIso(), v: { time: avg, speed, dist } }); saveStore(); e.currentTarget.disabled = true; e.currentTarget.textContent = `Сохранено как день ${day}`; toast('Результат добавлен в отчёт'); });
+});
+$('#walk-reset').addEventListener('click', openWalk);
+
+// ================== Экраны ==================
+function todayDose(p) { const d = (p.dose || {})[todayIso()] || {}; return Object.values(d).reduce((a, b) => a + b, 0); }
+function renderHome() {
+  const p = cur(), day = courseDay(p);
+  const opts = Object.values(store.patients).map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  $('#patient-card').innerHTML = `
+    <div class="patient"><div><div class="name">${esc(p.name)}</div><div class="muted small">Сторона поражения: ${sideName(p.side)} · день курса ${day > 0 ? day : '—'}${day > 10 ? ' (курс завершён)' : ' из 10'}</div></div>${p.example ? '<span class="chip example">пример</span>' : ''}</div>
+    <div class="row"><label for="pt-select" style="flex:1">Пациент<select id="pt-select">${opts}</select></label></div>
+    <div class="seg" role="group" aria-label="Сторона поражения"><button type="button" data-side="L" aria-pressed="${p.side === 'L'}">Левая сторона</button><button type="button" data-side="R" aria-pressed="${p.side === 'R'}">Правая сторона</button></div>
+    <div class="row"><button class="btn secondary" style="flex:1" type="button" id="pt-new">Новый пациент</button><button class="btn danger" type="button" id="pt-del">Удалить</button></div>`;
+  $('#pt-select').addEventListener('change', e => { store.current = e.target.value; saveStore(); renderHome(); });
+  $$('#patient-card [data-side]').forEach(b => b.addEventListener('click', () => { p.side = b.dataset.side; saveStore(); renderHome(); }));
+  $('#pt-new').addEventListener('click', newPatientDialog);
+  $('#pt-del').addEventListener('click', () => confirmDialog(`Удалить пациента «${p.name}» и все его результаты с этого телефона?`, 'Удалить', () => {
+    delete store.patients[p.id]; if (!Object.keys(store.patients).length) store = seed(); store.current = Object.keys(store.patients)[0]; saveStore(); renderHome();
+  }));
+  const sess = (p.sessions || []).filter(s => s.date === todayIso()).length;
+  const days7 = [...Array(7)].map((_, i) => iso(addDays(new Date(), -i))).filter(d => Object.values((p.dose || {})[d] || {}).some(v => v > 0)).length;
+  $('#today-stats').innerHTML = `<div class="stat"><b>${todayDose(p)}</b><span>повторов сегодня</span></div><div class="stat"><b>${sess}</b><span>${plural(sess, 'подход', 'подхода', 'подходов')} сегодня</span></div><div class="stat"><b>${days7}/7</b><span>дней с занятиями</span></div>`;
+}
+function lastTest(p, type, day) { const a = (p.tests || []).filter(t => t.type === type && (day == null || t.day === day)); return a[a.length - 1]; }
+function renderTests() {
+  const p = cur();
+  $('#tests-list').innerHTML = Object.entries(TESTS).map(([id, t]) => {
+    const a = lastTest(p, id, 1), b = lastTest(p, id, 10);
+    return `<div class="item"><div class="t">${esc(t.name)}</div><div class="act"><button class="btn primary" type="button" data-test="${id}">Начать</button></div>
+      <div class="meta"><span class="chip">День 1: ${a ? esc(t.metric(a.v)) : '—'}</span><span class="chip">День 10: ${b ? esc(t.metric(b.v)) : '—'}</span></div></div>`;
+  }).join('');
+  $$('#tests-list [data-test]').forEach(b => b.addEventListener('click', () => openSession('test', b.dataset.test)));
+}
+function renderExercises() {
+  const p = cur(), d = (p.dose || {})[todayIso()] || {}, armB = p.baseline?.armMax?.[p.side];
+  $('#ex-sub').textContent = `Сторона поражения: ${sideName(p.side)}. ${armB ? `Цель для руки ${clamp(Math.round(armB * 0.85), 45, 120)}° по эталону дня 1.` : 'Эталон руки не снят: цель для руки 80°.'}`;
+  $('#ex-list').innerHTML = Object.entries(EX).map(([id, e]) => {
+    const n = d[id] || 0, pct = clamp(n / (e.target * 3) * 100, 0, 100);
+    return `<div class="item"><div class="t">${esc(e.name)}</div><div class="act"><button class="btn primary" type="button" data-ex="${id}">Начать</button></div>
+      <div class="d">3 подхода по ${e.target} · сегодня ${n} из ${e.target * 3}</div><div class="progress" aria-hidden="true"><i style="width:${pct}%"></i></div></div>`;
+  }).join('');
+  $$('#ex-list [data-ex]').forEach(b => b.addEventListener('click', () => openSession('exercise', b.dataset.ex)));
+}
+function pctChange(a, b) { return a ? (b - a) / a * 100 : null; }
+function renderReport() {
+  const p = cur();
+  $('#rep-sub').textContent = `${p.name} · сторона поражения ${sideName(p.side)}${p.example ? ' · пример данных' : ''}`;
+  let rows = `<thead><tr><th>Тест</th><th>День 1</th><th>День 10</th><th>Изменение</th></tr></thead><tbody>`;
+  for (const [id, t] of Object.entries(TESTS)) {
+    const a = lastTest(p, id, 1), b = lastTest(p, id, 10);
+    const ch = a && b ? pctChange(a.v[t.key], b.v[t.key]) : null;
+    const good = ch == null ? null : (t.better === 'low' ? ch < 0 : ch > 0);
+    rows += `<tr><td>${esc(t.short)}</td><td>${a ? esc(t.metric(a.v)) : '—'}</td><td>${b ? esc(t.metric(b.v)) : '—'}</td><td class="delta ${good == null ? '' : good ? 'up' : 'down'}">${ch == null ? '—' : (ch > 0 ? '+' : '−') + dec(Math.abs(ch), 0) + '%'}</td></tr>`;
+  }
+  $('#rep-tests').innerHTML = rows + '</tbody>';
+  // Доза: 10 дней
+  const days = [...Array(10)].map((_, i) => iso(addDays(new Date(), i - 9)));
+  const vals = days.map(d => Object.values((p.dose || {})[d] || {}).reduce((a, b) => a + b, 0));
+  const max = Math.max(40, ...vals), top = Math.ceil(max / 20) * 20;
+  const W = 340, H = 170, x0 = 28, y0 = 14, ch = 120, bw = (W - x0 - 8) / 10;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Повторов в день за 10 дней">`;
+  for (let g = 0; g <= 2; g++) { const v = top * g / 2, y = y0 + ch - ch * g / 2; svg += `<line class="grid" x1="${x0}" x2="${W - 4}" y1="${y}" y2="${y}"/><text x="${x0 - 6}" y="${y + 4}" text-anchor="end">${v}</text>`; }
+  vals.forEach((v, i) => {
+    const h = ch * v / top, x = x0 + i * bw + 3, y = y0 + ch - h, today = i === 9;
+    if (v > 0) svg += `<rect class="bar ${today ? 'today' : ''}" x="${x}" y="${y}" width="${bw - 6}" height="${h}" rx="3"/>`;
+    if (v > 0) svg += `<text class="val" x="${x + (bw - 6) / 2}" y="${y - 4}" text-anchor="middle">${v}</text>`;
+    const dd = fromIso(days[i]); svg += `<text x="${x + (bw - 6) / 2}" y="${y0 + ch + 16}" text-anchor="middle">${dd.getDate()}.${pad(dd.getMonth() + 1)}</text>`;
+  });
+  svg += `<text x="${x0}" y="${H - 4}">повторов в день · зелёный — сегодня</text></svg>`;
+  $('#rep-chart').innerHTML = svg;
+  const sum7 = vals.slice(3).reduce((a, b) => a + b, 0), active7 = vals.slice(3).filter(v => v > 0).length;
+  $('#rep-dose-sum').textContent = `7 дней: ${sum7} · ${active7} из 7 дней`;
+  const ss = (p.sessions || []).slice(0, 8);
+  $('#rep-sessions').innerHTML = ss.length ? ss.map(s => `<div class="row between small"><span>${esc(fromIso(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))} · ${esc(EX[s.ex]?.name || s.ex)}</span><span class="chip ${s.hint === 'good' ? 'good' : 'warn'}">${reps(s.reps)}${s.hint !== 'good' ? ' · ' + esc(FLAG_NAMES[s.hint]) : ''}</span></div>`).join('') : '<p class="muted small">Подходов пока нет.</p>';
+}
+function reportText() {
+  const p = cur(); const lines = [`TURA Motion — отчёт курса`, `Пациент: ${p.name}`, `Сторона поражения: ${sideName(p.side)}`, ``, `Тесты (день 1 → день 10):`];
+  for (const [id, t] of Object.entries(TESTS)) {
+    const a = lastTest(p, id, 1), b = lastTest(p, id, 10); if (!a && !b) continue;
+    const ch = a && b ? pctChange(a.v[t.key], b.v[t.key]) : null;
+    lines.push(`• ${t.name}: ${a ? t.metric(a.v) : '—'} → ${b ? t.metric(b.v) : '—'}${ch == null ? '' : ` (${ch > 0 ? '+' : '−'}${Math.abs(ch).toFixed(0)}%)`}`);
+  }
+  const days = [...Array(7)].map((_, i) => iso(addDays(new Date(), -i)));
+  const vals = days.map(d => Object.values((p.dose || {})[d] || {}).reduce((a, b) => a + b, 0));
+  lines.push('', `Домашняя доза за 7 дней: ${vals.reduce((a, b) => a + b, 0)} повторов, занятия в ${vals.filter(v => v > 0).length} из 7 дней`);
+  const last = (p.sessions || [])[0]; if (last && last.hint !== 'good') lines.push(`Главная подсказка по технике: ${HINTS[last.hint]}`);
+  lines.push('', 'Данные прототипа TURA Motion. Не медицинское изделие: решения принимает врач.');
+  return lines.join('\n');
+}
+$('#copy-report').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(reportText()); toast('Отчёт скопирован'); }
+  catch (e) { dialog(`<h2 id="dlg-title">Текст отчёта</h2><p class="small muted">Копирование недоступно: выделите текст вручную.</p><textarea style="width:100%;min-height:220px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px" readonly>${esc(reportText())}</textarea><button class="btn primary block" type="button" data-close>Готово</button>`); }
+});
+
+// ================== Диалоги ==================
+function dialog(html, onMount) {
+  const d = $('#dialog'); $('#dlg-card').innerHTML = html; d.hidden = false;
+  $$('#dlg-card [data-close]').forEach(b => b.addEventListener('click', closeDialog));
+  onMount && onMount($('#dlg-card'));
+  const f = $('#dlg-card input, #dlg-card button'); f && f.focus();
+}
+function closeDialog() { $('#dialog').hidden = true; }
+$('#dialog').addEventListener('click', e => { if (e.target.id === 'dialog') closeDialog(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDialog(); });
+function confirmDialog(text, okLabel, onOk) {
+  dialog(`<h2 id="dlg-title">Подтвердите</h2><p>${esc(text)}</p><div class="row"><button class="btn secondary" style="flex:1" type="button" data-close>Отмена</button><button class="btn primary" style="flex:1;background:var(--crit)" type="button" id="dlg-ok">${esc(okLabel)}</button></div>`,
+    c => $('#dlg-ok', c).addEventListener('click', () => { closeDialog(); onOk(); }));
+}
+function newPatientDialog() {
+  dialog(`<h2 id="dlg-title">Новый пациент</h2>
+    <label for="np-name">Имя или код пациента<input type="text" id="np-name" autocomplete="off" placeholder="Например, А. К."></label>
+    <div class="seg" role="group" aria-label="Сторона поражения"><button type="button" data-s="L" aria-pressed="true">Левая сторона</button><button type="button" data-s="R" aria-pressed="false">Правая сторона</button></div>
+    <label for="np-start">Начало курса<input type="date" id="np-start" value="${todayIso()}"></label>
+    <div class="row"><button class="btn secondary" style="flex:1" type="button" data-close>Отмена</button><button class="btn primary" style="flex:1" type="button" id="np-ok">Создать</button></div>`, c => {
+    let side = 'L';
+    $$('[data-s]', c).forEach(b => b.addEventListener('click', () => { side = b.dataset.s; $$('[data-s]', c).forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+    $('#np-ok', c).addEventListener('click', () => {
+      const name = $('#np-name', c).value.trim(); if (!name) { $('#np-name', c).focus(); return; }
+      const id = 'p' + Date.now().toString(36);
+      store.patients[id] = { id, name, side, start: $('#np-start', c).value || todayIso(), tests: [], dose: {}, sessions: [], baseline: {} };
+      store.current = id; saveStore(); closeDialog(); renderHome(); toast('Пациент создан');
+    });
+  });
+}
+
+// ================== Старт ==================
+if (FRAMED) $$('.live-note').forEach(n => n.hidden = false);
+try { if ('serviceWorker' in navigator && !FRAMED && location.protocol === 'https:' && document.querySelector('link[rel="manifest"]')) navigator.serviceWorker.register('sw.js').catch(() => { }); } catch (e) { }
+const startView = HASH_VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+show(startView, { push: false });
+</script>
+</body>
+</html>
