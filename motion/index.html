@@ -809,7 +809,7 @@ async function startSource(src, file) {
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume && audioCtx.resume(); } catch (e) { }
   S.src = src; S.an = makeAnalyzer(); S.sel = null; S.ema = null; S.lastTs = -1; S.missingSince = null; S.lastFrame = null;
   $('#ses-result').hidden = true; $('#ses-sources').hidden = true; $('#ses-controls').hidden = false;
-  const pillSrc = $('#hud-src'); pillSrc.hidden = false; pillSrc.className = 'pill';
+  const pillSrc = $('#hud-src'); pillSrc.hidden = false; pillSrc.className = 'pill'; pillSrc.textContent = 'Подготовка…';
   if (src === 'demo') {
     pillSrc.textContent = 'Демо · без камеры'; $('#stage-idle').hidden = true;
     canvas.width = 360; canvas.height = 480; $('#stage-wrap').style.aspectRatio = '3 / 4';
