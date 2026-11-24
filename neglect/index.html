@@ -240,7 +240,7 @@ input[type=range]{width:100%;accent-color:var(--brand);height:36px}
 <script>
 'use strict';
 /* ===================== TURA · Неглект — прототип v0.1 ===================== */
-const APP_VER = '0.4.2';
+const APP_VER = '0.4.3';
 const KEY = 'tura_neglect_v0';
 const DEF_CFG = {
   patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
@@ -952,6 +952,7 @@ function testMapSVG(t){
   items.filter(i => i.t).forEach(i => {
     s += seen.has(i.i) ? `<circle cx="${i.x}" cy="${i.y}" r="${f(11)}" fill="var(--brand)"/>` : `<circle cx="${i.x}" cy="${i.y}" r="${f(11)}" fill="#fff" stroke="var(--danger)" stroke-width="${f(3.5)}"/>`;
   });
+  t.taps.filter(x => x.i < 0).forEach(x => { s += `<circle cx="${x.x}" cy="${x.y}" r="${f(5)}" fill="var(--muted)" opacity=".55"/>`; });
   t.taps.filter(x => x.i >= 0 && !x.tg).forEach(x => { const d = f(8); s += `<path d="M${x.x-d} ${x.y-d}L${x.x+d} ${x.y+d}M${x.x+d} ${x.y-d}L${x.x-d} ${x.y+d}" stroke="var(--cue)" stroke-width="${f(3)}"/>`; });
   if(seq[0]) s += `<circle cx="${seq[0].x}" cy="${seq[0].y}" r="${f(17)}" fill="none" stroke="var(--ink)" stroke-width="${f(3)}"/><text x="${seq[0].x}" y="${seq[0].y - f(24)}" text-anchor="middle" font-size="${f(22)}" font-weight="800" fill="var(--ink)" font-family="Manrope,sans-serif">старт</text>`;
   return s + '</svg>';
@@ -972,7 +973,7 @@ function renderTestRes(){
       <div class="meta">Ориентир ±0,08 взят из бумажных тестов (Rorden и Karnath, 2010). Для этого теста нормы ещё не собраны.</div>
     </div>
     <div class="card"><h2>Карта поиска</h2>
-      <div class="legend"><span><i style="background:var(--brand)"></i>Найдено</span><span><i style="background:var(--danger)"></i>Пропущено</span><span><i style="background:var(--cue)"></i>Ложное касание</span></div>
+      <div class="legend"><span><i style="background:var(--brand)"></i>Найдено</span><span><i style="background:var(--danger)"></i>Пропущено</span><span><i style="background:var(--cue)"></i>Ложное касание</span><span><i style="background:var(--muted)"></i>Мимо знаков</span></div>
       <div class="resmap">${testMapSVG(t)}</div>
     </div>
     <div class="card"><div class="kv">
@@ -982,6 +983,7 @@ function renderTestRes(){
       <div><small>Длина пути</small><b>${String(r.path).replace('.', ',')} ширины поля</b></div>
       <div><small>Ложные касания</small><b>${r.fp}</b></div>
       <div><small>Повторные</small><b>${r.rep}</b></div>
+      <div><small>Мимо знаков</small><b>${r.blank || 0}</b></div>
     </div>
     <div class="meta">Много пересечений и повторных касаний говорят о неорганизованном поиске. Начало справа типично для левостороннего неглекта.</div></div>
     <button class="btn btn-s" data-a="go" data-v="home">На главную</button>
@@ -1218,21 +1220,23 @@ function testGo(){
   document.getElementById('tx').classList.add('started');
   T.t0 = performance.now();
 }
-// Какой знак имел в виду пациент. Палец обычно касается экрана чуть ниже точки, куда человек целится,
-// поэтому знак выше точки касания считается ближе: расстояние вниз от знака учитываем с весом 0,6.
-function testHit(p, items, k){
+// Засчитываем только точное касание: палец попал на сам знак (контур знака + 6 px на толщину пальца).
+// Касание мимо знаков не привязывается к соседнему знаку, а записывается как касание мимо.
+const ITEM_R = {star:12, bigstar:22, letter:13, tri:13, dot:7};
+function testHit(p, items, k, pad){
   let best = null, bd = 1e9;
   for(const it of items){
-    const dy = p.y - it.y, d = Math.hypot(it.x - p.x, dy > 0 ? dy * .6 : dy);
-    if(d < bd){ bd = d; best = it; }
+    const d = Math.hypot(it.x - p.x, it.y - p.y);
+    if(d <= ITEM_R[it.kind] * k + pad && d < bd){ bd = d; best = it; }
   }
-  return bd <= 34 * k ? best : null;
+  return best;
 }
 function testTap(e){
   if(!T || !T.t0) return;
   e.preventDefault();
   const svg = e.currentTarget, p = svgPt(svg, e), t = (performance.now() - T.t0) / 1000, k = T.G.k;
-  const best = testHit(p, T.items, k), marks = document.getElementById('marks');
+  const pad = 6 * T.G.W / (svg.getBoundingClientRect().width || T.G.W);
+  const best = testHit(p, T.items, k, pad), marks = document.getElementById('marks');
   if(best){
     const rep = !!(best.t && T.found.has(best.i));
     T.taps.push({i:best.i, t:Math.round(t * 100) / 100, x:best.x, y:best.y, tg:best.t, rep, px:Math.round(p.x), py:Math.round(p.y)});
