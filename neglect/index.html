@@ -23,7 +23,7 @@
   --cue:#E8892A; --cue-soft:#FDEBD0; --blue:#2A78D6;
   --danger:#B42318; --danger-soft:#FDE7E4; --ok:#1C7C3A; --ok-soft:#E3F3E7; --warn-soft:#FFF1D6;
   --k-spt:#0B6E6E; --k-scan:#E8892A; --k-ar:#2A78D6; --k-alert:#6B5BA8;
-  --r:20px; --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  --r:20px; --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px); --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px);
   --font:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -141,6 +141,7 @@ pre.code{background:#0F1C22;color:#D9E6E6;border-radius:14px;padding:14px;font-s
 .pindots i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--brand)}
 .pindots i.on{background:var(--brand)}
 .resmap{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.resmap svg{display:block;width:100%;max-height:72vh;margin:0 auto}
 .toast{position:fixed;left:50%;bottom:calc(24px + var(--sb));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;z-index:100;max-width:90vw;text-align:center;font-size:15px}
 .camwrap{position:relative;width:min(72vw,300px);aspect-ratio:3/4;margin:4px auto 14px;border-radius:22px;overflow:hidden;background:#0D1A20}
 .camv.parked{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1}
@@ -168,7 +169,8 @@ pre.code{background:#0F1C22;color:#D9E6E6;border-radius:14px;padding:14px;font-s
 .stage-hint.gone{opacity:0}
 .stage-msg{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:4;background:var(--ink);color:#fff;border-radius:16px;padding:14px 22px;font-size:20px;font-weight:800;pointer-events:none;text-align:center;max-width:86%}
 .edgeflash{position:absolute;top:0;bottom:0;width:22px;background:var(--cue);z-index:2;pointer-events:none}
-.overlay{position:absolute;inset:0;z-index:6;background:rgba(244,243,239,.98);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px;text-align:center;overflow:auto}
+.overlay{position:absolute;inset:0;z-index:6;background:rgba(244,243,239,.98);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;gap:12px;text-align:center;overflow:auto}
+.overlay > :first-child{margin-top:auto}.overlay > :last-child{margin-bottom:auto}
 .overlay .btn{max-width:440px}
 .overlay h2{font-size:24px;margin:0}
 .overlay p{max-width:540px;margin:0}
@@ -213,8 +215,17 @@ pre.code{background:#0F1C22;color:#D9E6E6;border-radius:14px;padding:14px;font-s
 input[type=range]{width:100%;accent-color:var(--brand);height:36px}
 .roompick{width:100%;max-width:440px;text-align:center;display:flex;flex-direction:column;gap:8px}
 .roompick .row2 .btn + .btn{margin-top:0}
-.rotate-hint{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:24px}
-@media (orientation:portrait) and (max-width:700px){.rotate-hint{display:flex}}
+/* тест вычёркивания: поле на весь экран, тонкая верхняя панель */
+.tbar2{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:calc(4px + var(--st)) calc(10px + var(--sr)) 4px calc(10px + var(--sl));background:var(--card);border-bottom:1px solid var(--line)}
+.tbar2 .l{display:flex;align-items:center;gap:10px;min-width:0}
+.tbar2 .ttl{font-size:13px;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib.sm{width:40px;height:40px;border-radius:12px;font-size:16px}
+.pill-btn.sm{min-height:40px;padding:0 20px;font-size:15px;box-shadow:none}
+.pill-btn[hidden]{display:none}
+.tfield{position:absolute;top:0;bottom:var(--sb);left:max(var(--sl),var(--sr));right:max(var(--sl),var(--sr))}
+.tfield svg{display:block;width:100%;height:100%}
+.tsample{display:flex;gap:28px;justify-content:center;align-items:flex-end;flex-wrap:wrap}
+.tsample small{display:block;font-size:13px;font-weight:800;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.mark,.stim.shake{animation:none}.tbar i{transition:none}}
 </style>
 </head>
@@ -224,7 +235,7 @@ input[type=range]{width:100%;accent-color:var(--brand);height:36px}
 <script>
 'use strict';
 /* ===================== TURA · Неглект — прототип v0.1 ===================== */
-const APP_VER = '0.4';
+const APP_VER = '0.4.1';
 const KEY = 'tura_neglect_v0';
 const DEF_CFG = {
   patient:'', specialist:'', side:'L', sessionMin:25, gapHigh:5, gapLow:2,
@@ -617,15 +628,38 @@ function planFor(){
 
 /* ---------- тест вычёркивания ---------- */
 const TW = 1000, TH = 640, LETTERS = 'АБВГДЕЖКМНПРСТУ';
-function genTest(form){
-  const rnd = mulberry32(1000 + form * 7919), cols = 12, rows = 8, x0 = 40, x1 = 960, y0 = 30, y1 = 610;
+// Поле всегда из 96 знаков и 36 целей (по 18 с каждой стороны). Сетку выбираем под экран:
+// широкий телефон — 16×6, планшет — 12×8, вертикально — 8×12 (меньше 8 столбцов нельзя: CoC станет грубым).
+const TEST_GRIDS = [[16, 6], [12, 8], [8, 12]];
+function pickLayout(w, h){
+  let best = null;
+  for(const [cols, rows] of TEST_GRIDS){ const u = Math.min(w / cols, h / rows); if(!best || u > best.u) best = {cols, rows, u}; }
+  return {cols:best.cols, rows:best.rows, W:Math.round(w), H:Math.round(h)};
+}
+// lay не задан — прежнее поле 1000×640 (старые записи и демо-данные)
+function genTest(form, lay){
+  const rnd = mulberry32(1000 + form * 7919);
+  let cols = 12, rows = 8, W = TW, H = TH, x0 = 40, x1 = 960, y0 = 30, y1 = 610, jx = .45, jy = .4;
+  if(lay){
+    ({cols, rows, W, H} = lay);
+    const m = Math.max(8, Math.min(W / cols, H / rows) * .08);
+    x0 = m; x1 = W - m; y0 = m; y1 = H - m; jx = jy = .24;
+  }
   const cw = (x1 - x0) / cols, rh = (y1 - y0) / rows, items = [];
+  const k = lay ? Math.min(cw, rh) / 60 : 1;
+  // цели по столбцам: поровну, лишние — зеркально слева и справа
+  const nT = Array(cols).fill(Math.floor(36 / cols)), extra = 36 - nT[0] * cols;
+  if(extra){
+    const pool = [...Array(cols / 2).keys()];
+    for(let i = pool.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    pool.slice(0, extra / 2).forEach(c => { nT[c]++; nT[cols - 1 - c]++; });
+  }
   for(let c = 0; c < cols; c++){
     const idx = [...Array(rows).keys()];
     for(let i = idx.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
-    const tRows = new Set(idx.slice(0, 3));
+    const tRows = new Set(idx.slice(0, nT[c]));
     for(let r = 0; r < rows; r++){
-      const x = Math.round(x0 + cw * (c + .5) + (rnd() - .5) * cw * .45), y = Math.round(y0 + rh * (r + .5) + (rnd() - .5) * rh * .4);
+      const x = Math.round(x0 + cw * (c + .5) + (rnd() - .5) * cw * jx), y = Math.round(y0 + rh * (r + .5) + (rnd() - .5) * rh * jy);
       const rot = Math.round((rnd() - .5) * 30);
       if(tRows.has(r)) items.push({x, y, t:1, kind:'star', rot});
       else{
@@ -634,24 +668,26 @@ function genTest(form){
       }
     }
   }
-  return items.map((it, i) => ({...it, i}));
+  return {items:items.map((it, i) => ({...it, i})), W, H, k, cols, rows};
 }
-function testItemSVG(it){
-  const x = it.x, y = it.y, ink = '#14222B';
+function testItemSVG(it, k = 1){
+  const x = it.x, y = it.y, ink = '#14222B', f = v => +(v * k).toFixed(1);
   switch(it.kind){
-    case 'star': return `<path d="${starPath(x, y, 12)}" transform="rotate(${it.rot} ${x} ${y})" fill="${ink}"/>`;
-    case 'bigstar': return `<path d="${starPath(x, y, 22)}" transform="rotate(${it.rot} ${x} ${y})" fill="${ink}"/>`;
-    case 'letter': return `<text x="${x}" y="${y + 9}" text-anchor="middle" font-size="27" font-weight="700" font-family="Manrope,system-ui,sans-serif" fill="${ink}">${it.ch}</text>`;
-    case 'tri': return `<path d="M${x} ${y - 12}L${x + 11} ${y + 8}L${x - 11} ${y + 8}Z" fill="${ink}"/>`;
-    default: return `<circle cx="${x}" cy="${y}" r="7" fill="${ink}"/>`;
+    case 'star': return `<path d="${starPath(x, y, f(12))}" transform="rotate(${it.rot} ${x} ${y})" fill="${ink}"/>`;
+    case 'bigstar': return `<path d="${starPath(x, y, f(22))}" transform="rotate(${it.rot} ${x} ${y})" fill="${ink}"/>`;
+    case 'letter': return `<text x="${x}" y="${y + f(9)}" text-anchor="middle" font-size="${f(27)}" font-weight="700" font-family="Manrope,system-ui,sans-serif" fill="${ink}">${it.ch}</text>`;
+    case 'tri': return `<path d="M${x} ${y - f(12)}L${x + f(11)} ${y + f(8)}L${x - f(11)} ${y + f(8)}Z" fill="${ink}"/>`;
+    default: return `<circle cx="${x}" cy="${y}" r="${f(7)}" fill="${ink}"/>`;
   }
 }
+const oriWord = o => o === 'port' ? 'вертикально' : 'горизонтально';
+const layText = t => t.lay ? `${t.lay.dev === 'tab' ? 'планшет' : 'телефон'}, ${oriWord(t.lay.o)}` : '';
 function segX(p1, p2, p3, p4){
   const d = (a, b, c) => (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
   const d1 = d(p3, p4, p1), d2 = d(p3, p4, p2), d3 = d(p1, p2, p3), d4 = d(p1, p2, p4);
   return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
 }
-function scoreTest(items, taps, dur){
+function scoreTest(items, taps, dur, W = TW){
   const tg = items.filter(i => i.t), xs = tg.map(i => i.x), mn = Math.min(...xs), mx = Math.max(...xs);
   const nx = x => (x - mn) / (mx - mn) * 2 - 1;
   const seq = [], seen = new Set();
@@ -660,7 +696,7 @@ function scoreTest(items, taps, dur){
   const meanAll = mean(tg.map(i => nx(i.x)));
   // центр вычёркивания (CoC, Rorden & Karnath 2010): средняя горизонтальная позиция найденных целей, −1…+1
   const coc = hitItems.length ? mean(hitItems.map(i => nx(i.x))) - meanAll : null;
-  const L = tg.filter(i => i.x < TW / 2), R = tg.filter(i => i.x >= TW / 2);
+  const L = tg.filter(i => i.x < W / 2), R = tg.filter(i => i.x >= W / 2);
   let path = 0; for(let k = 1; k < seq.length; k++) path += Math.hypot(seq[k].x - seq[k-1].x, seq[k].y - seq[k-1].y);
   let cross = 0; for(let a = 1; a < seq.length; a++) for(let b = a + 2; b < seq.length; b++) if(segX(seq[a-1], seq[a], seq[b-1], seq[b])) cross++;
   return {
@@ -668,7 +704,7 @@ function scoreTest(items, taps, dur){
     hitsL:L.filter(i => seen.has(i.i)).length, nL:L.length, hitsR:R.filter(i => seen.has(i.i)).length, nR:R.length,
     coc: coc === null ? null : Math.round(coc * 1000) / 1000,
     fp:taps.filter(t => t.i >= 0 && !t.tg).length, rep:taps.filter(t => t.rep).length, blank:taps.filter(t => t.i < 0).length,
-    dur:Math.round(dur * 10) / 10, path:Math.round(path / 100) / 10, cross,
+    dur:Math.round(dur * 10) / 10, path:Math.round(path / W * 10) / 10, cross,
     firstX: seq.length ? Math.round(nx(seq[0].x) * 100) / 100 : null
   };
 }
@@ -889,7 +925,7 @@ function renderProgress(){
     <div class="card"><h2>Тест вычёркивания: центр поиска (CoC)</h2>
       ${tests.length ? `<p style="font-size:14px">0 — поиск по центру. ${DB.cfg.side === 'L' ? 'Плюс' : 'Минус'} — смещение в сторону, которую пациент замечает. Зелёная полоса: ±0,08.</p>
       <div class="chart">${lineChart({labels:tests.map(t => fmtDay(t.ts)), series:[{values:tests.map(t => t.r.coc), color:'var(--brand)'}], yMin:-Math.ceil(cocMax * 10) / 10, yMax:Math.ceil(cocMax * 10) / 10, band:[-.08, .08], zero:true, fmt:v => (Math.abs(v) < 1e-9 ? '0' : fmtNum(v, 2))})}</div>
-      ${[...tests].reverse().map(t => { const nh = negHits(t.r); return `<div class="list-row"><div><b>${fmtDT(t.ts)}</b> <span>· форма ${t.form}</span><br><span>CoC ${fmtCoc(t.r.coc)} · ${w().adv} ${nh[0]}/${nh[1]} · ${Math.round(t.r.dur)} с</span></div><button class="linkbtn" data-a="openTest" data-v="${t.id}">Карта</button></div>`; }).join('')}`
+      ${[...tests].reverse().map(t => { const nh = negHits(t.r); return `<div class="list-row"><div><b>${fmtDT(t.ts)}</b> <span>· форма ${t.form}${t.lay ? ` · ${layText(t)}` : ''}</span><br><span>CoC ${fmtCoc(t.r.coc)} · ${w().adv} ${nh[0]}/${nh[1]} · ${Math.round(t.r.dur)} с</span></div><button class="linkbtn" data-a="openTest" data-v="${t.id}">Карта</button></div>`; }).join('')}`
       : `<p>Тестов пока нет.</p>`}
     </div>
     <div class="card"><h2>Шкала CBS, баллы из 30</h2>
@@ -909,16 +945,17 @@ function renderProgress(){
 }
 
 function testMapSVG(t){
-  const items = genTest(t.form), seen = new Set(t.taps.filter(x => x.tg).map(x => x.i));
+  const G = genTest(t.form, t.lay), items = G.items, W = G.W, H = G.H, seen = new Set(t.taps.filter(x => x.tg).map(x => x.i));
+  const z = Math.min(Math.max(W, H) / 1000, G.k * 1.3), f = v => +(v * z).toFixed(1);
   const seq = []; const s2 = new Set(); for(const x of t.taps){ if(x.tg && !s2.has(x.i)){ s2.add(x.i); seq.push(x); } }
-  let s = `<svg viewBox="0 0 ${TW} ${TH}" role="img" aria-label="Карта поиска"><line x1="${TW/2}" x2="${TW/2}" y1="10" y2="${TH-10}" stroke="var(--line)" stroke-width="2" stroke-dasharray="8 8"/>`;
-  items.filter(i => !i.t).forEach(i => { s += `<circle cx="${i.x}" cy="${i.y}" r="4" fill="#D5D3CC"/>`; });
-  if(seq.length > 1) s += `<polyline points="${seq.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="rgba(20,34,43,.35)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Карта поиска"><line x1="${W/2}" x2="${W/2}" y1="${f(10)}" y2="${H - f(10)}" stroke="var(--line)" stroke-width="${f(2)}" stroke-dasharray="${f(8)} ${f(8)}"/>`;
+  items.filter(i => !i.t).forEach(i => { s += `<circle cx="${i.x}" cy="${i.y}" r="${f(4)}" fill="#D5D3CC"/>`; });
+  if(seq.length > 1) s += `<polyline points="${seq.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="rgba(20,34,43,.35)" stroke-width="${f(2.5)}" stroke-linejoin="round"/>`;
   items.filter(i => i.t).forEach(i => {
-    s += seen.has(i.i) ? `<circle cx="${i.x}" cy="${i.y}" r="11" fill="var(--brand)"/>` : `<circle cx="${i.x}" cy="${i.y}" r="11" fill="#fff" stroke="var(--danger)" stroke-width="3.5"/>`;
+    s += seen.has(i.i) ? `<circle cx="${i.x}" cy="${i.y}" r="${f(11)}" fill="var(--brand)"/>` : `<circle cx="${i.x}" cy="${i.y}" r="${f(11)}" fill="#fff" stroke="var(--danger)" stroke-width="${f(3.5)}"/>`;
   });
-  t.taps.filter(x => x.i >= 0 && !x.tg).forEach(x => { s += `<path d="M${x.x-8} ${x.y-8}L${x.x+8} ${x.y+8}M${x.x+8} ${x.y-8}L${x.x-8} ${x.y+8}" stroke="var(--cue)" stroke-width="3"/>`; });
-  if(seq[0]) s += `<circle cx="${seq[0].x}" cy="${seq[0].y}" r="17" fill="none" stroke="var(--ink)" stroke-width="3"/><text x="${seq[0].x}" y="${seq[0].y - 24}" text-anchor="middle" font-size="22" font-weight="800" fill="var(--ink)" font-family="Manrope,sans-serif">старт</text>`;
+  t.taps.filter(x => x.i >= 0 && !x.tg).forEach(x => { const d = f(8); s += `<path d="M${x.x-d} ${x.y-d}L${x.x+d} ${x.y+d}M${x.x+d} ${x.y-d}L${x.x-d} ${x.y+d}" stroke="var(--cue)" stroke-width="${f(3)}"/>`; });
+  if(seq[0]) s += `<circle cx="${seq[0].x}" cy="${seq[0].y}" r="${f(17)}" fill="none" stroke="var(--ink)" stroke-width="${f(3)}"/><text x="${seq[0].x}" y="${seq[0].y - f(24)}" text-anchor="middle" font-size="${f(22)}" font-weight="800" fill="var(--ink)" font-family="Manrope,sans-serif">старт</text>`;
   return s + '</svg>';
 }
 function renderTestRes(){
@@ -926,7 +963,7 @@ function renderTestRes(){
   const r = t.r;
   app.innerHTML = `<div class="wrap">${backbar('assess')}
     <h1>Тест вычёркивания</h1>
-    <p>${fmtDT(t.ts)} · форма ${t.form}</p>
+    <p>${fmtDT(t.ts)} · форма ${t.form}${t.lay ? ` · ${layText(t)}` : ''}</p>
     <div class="card">
       <div class="stat3">
         <div><small>CoC</small><b>${fmtCoc(r.coc)}</b><em>центр поиска</em></div>
@@ -944,7 +981,7 @@ function renderTestRes(){
       <div><small>Время</small><b>${fmtSec(r.dur)}</b></div>
       <div><small>Начало поиска</small><b>${r.firstX == null ? '—' : r.firstX < -.33 ? 'слева' : r.firstX > .33 ? 'справа' : 'в центре'}</b></div>
       <div><small>Пересечения пути</small><b>${r.cross}</b></div>
-      <div><small>Длина пути</small><b>${String(r.path).replace('.', ',')} ширины листа</b></div>
+      <div><small>Длина пути</small><b>${String(r.path).replace('.', ',')} ширины поля</b></div>
       <div><small>Ложные касания</small><b>${r.fp}</b></div>
       <div><small>Повторные</small><b>${r.rep}</b></div>
     </div>
@@ -1121,7 +1158,7 @@ function runCalib(){
 /* ---------- синхронизация с Google Sheets ---------- */
 function pendingRecords(){
   const out = [], S = DB.synced, side = DB.cfg.side;
-  DB.tests.forEach(t => { if(!S[t.id]) out.push({id:t.id, type:'Тест вычёркивания', date:isoDay(t.ts), summary:`CoC ${fmtCoc(t.r.coc)}; слева ${t.r.hitsL}/${t.r.nL}; справа ${t.r.hitsR}/${t.r.nR}; ${Math.round(t.r.dur)} с`, data:{...t.r, form:t.form, side}}); });
+  DB.tests.forEach(t => { if(!S[t.id]) out.push({id:t.id, type:'Тест вычёркивания', date:isoDay(t.ts), summary:`CoC ${fmtCoc(t.r.coc)}; слева ${t.r.hitsL}/${t.r.nL}; справа ${t.r.hitsR}/${t.r.nR}; ${Math.round(t.r.dur)} с`, data:{...t.r, form:t.form, side, field:t.lay ? `${layText(t)}, ${t.lay.cols}×${t.lay.rows}` : ''}}); });
   DB.cbs.forEach(c => { if(!S[c.id]) out.push({id:c.id, type:c.who === 'cur' ? 'CBS куратор' : 'CBS пациент', date:isoDay(c.ts), summary:`${c.total} из 30`, data:{ans:c.ans, total:c.total, side}}); });
   DB.sessions.forEach(s => { if(!S[s.id]) out.push({id:s.id, type:'Занятие', date:isoDay(s.ts), summary:`${Math.round(s.sec / 60)} мин; ` + s.blocks.map(b => EX[b.kind].short + ' ур.' + b.level1).join(', '), data:s}); });
   Object.keys(DB.diary).forEach(k => { const e = DB.diary[k]; const id = 'd' + k; if(diaryAnswered(e) && S[id] !== e.ts) out.push({id, type:'Дневник семьи', date:k, summary:`трудных ситуаций: ${diaryScore(e)} из ${diaryAnswered(e)}`, data:e, _v:e.ts}); });
@@ -1146,42 +1183,73 @@ async function syncNow(){
 
 /* ===================== ТЕСТ ВЫЧЁРКИВАНИЯ (полный экран) ===================== */
 let T = null;
+const isLand = () => innerWidth >= innerHeight;
 function startTest(){
   Snd.unlock();
-  T = {form:testForm, items:genTest(testForm), taps:[], t0:0, found:new Set()};
+  try{ if(!ENV.framed && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); }catch(e){}
+  T = {form:testForm, G:null, items:[], taps:[], t0:0, found:new Set(), lay:null};
   MODE = 'test'; document.body.classList.add('lock');
-  const yes = `<svg viewBox="0 0 60 60" width="60" height="60" aria-label="маленькая звёздочка"><path d="${starPath(30, 30, 12)}" fill="#14222B"/></svg>`;
-  const no = `<svg viewBox="0 0 200 60" width="200" height="60" aria-label="большая звезда, буква, треугольник"><path d="${starPath(32, 30, 22)}" fill="#14222B"/><text x="100" y="40" text-anchor="middle" font-size="28" font-weight="700" font-family="Manrope,sans-serif" fill="#14222B">К</text><path d="M168 18L179 38L157 38Z" fill="#14222B"/></svg>`;
-  app.innerHTML = `<div class="ex"><div class="exbar"><button class="ib" data-a="testQuit" aria-label="Выйти">✕</button><div class="t"><b>Тест вычёркивания · форма ${T.form}</b><small>Без подсказок помощника</small></div></div>
-    <div class="stage" id="stage" style="display:flex;flex-direction:column">
-      <svg id="tsvg" viewBox="0 0 ${TW} ${TH}" preserveAspectRatio="xMidYMid meet" style="position:relative;inset:auto;flex:1 1 0;min-height:0;height:auto;width:100%">${T.items.map(testItemSVG).join('')}<g id="marks"></g></svg>
-      <div style="display:flex;justify-content:center;padding:10px 0 calc(12px + var(--sb))"><button class="pill-btn" data-a="testDone">Готово</button></div>
-      <div class="rotate-hint"><h2>Поверните телефон горизонтально</h2><p>Тест рассчитан на широкий экран. На телефоне держите его горизонтально. На планшете звёздочки крупнее.</p></div>
+  const yes = `<svg viewBox="0 0 60 60" width="56" height="56" aria-label="маленькая звёздочка"><path d="${starPath(30, 30, 12)}" fill="#14222B"/></svg>`;
+  const no = `<svg viewBox="0 0 200 60" width="186" height="56" aria-label="большая звезда, буква, треугольник"><path d="${starPath(32, 30, 22)}" fill="#14222B"/><text x="100" y="40" text-anchor="middle" font-size="28" font-weight="700" font-family="Manrope,sans-serif" fill="#14222B">К</text><path d="M168 18L179 38L157 38Z" fill="#14222B"/></svg>`;
+  app.innerHTML = `<div class="ex"><div class="tbar2">
+      <div class="l"><button class="ib sm" data-a="testQuit" aria-label="Выйти">✕</button><span class="ttl">Тест · форма ${T.form}</span></div>
+      <button class="pill-btn sm" data-a="testDone" id="tDone" hidden>Готово</button><span></span></div>
+    <div class="stage" id="stage"><div class="tfield" id="tfield"></div>
       <div class="overlay" id="tintro" style="background:var(--bg)">
         <h2>Найдите все маленькие звёздочки</h2>
-        <div class="kv" style="max-width:420px"><div style="text-align:center"><small>Касайтесь</small>${yes}</div><div style="text-align:center"><small>Не трогайте</small>${no}</div></div>
-        <p>Коснитесь каждой <b>маленькой</b> звёздочки на странице. Большие звёзды, буквы и фигуры не трогайте. Когда закончите, нажмите «Готово».</p>
+        <div class="tsample"><div><small>Касайтесь</small>${yes}</div><div><small>Не трогайте</small>${no}</div></div>
+        <p>Коснитесь каждой <b>маленькой</b> звёздочки. Большие звёзды, буквы и фигуры не трогайте. Когда закончите, нажмите «Готово» вверху.</p>
+        <div class="note" id="tOri" hidden style="max-width:520px;text-align:left"></div>
         <div class="ov-actions"><button class="btn btn-p" data-a="testGo">Начать</button></div>
       </div>
     </div></div>`;
-  const svg = document.getElementById('tsvg');
-  svg.addEventListener('pointerdown', testTap);
+  testOriNote();
+  window.addEventListener('resize', testResize);
+}
+// подсказка про положение экрана: для сравнения тестов важно одинаковое положение
+function testOriNote(){
+  const el = document.getElementById('tOri'); if(!el) return;
+  const o = isLand() ? 'land' : 'port', prev = [...DB.tests].reverse().find(t => t.lay);
+  const phone = Math.min(screen.width, screen.height) < 600;
+  let txt = '', cls = 'note info';
+  if(prev && prev.lay.o !== o){ txt = `Прошлый тест проходили ${oriWord(prev.lay.o)}. Чтобы результаты можно было сравнить, поверните экран так же.`; cls = 'note warn'; }
+  else if(phone && o === 'port') txt = 'Можно и вертикально, но горизонтально поле шире, и тест точнее показывает неглект.';
+  el.className = cls; el.textContent = txt; el.hidden = !txt;
+}
+function testResize(){
+  if(!T){ window.removeEventListener('resize', testResize); return; }
+  if(!T.t0){ testOriNote(); return; }
+  const st = document.getElementById('stage'), ov = document.getElementById('trot');
+  if(isLand() !== (T.lay.o === 'land')){
+    if(!ov && st) st.insertAdjacentHTML('beforeend', `<div class="overlay" id="trot"><h2>Поверните экран обратно</h2><p>Тест начат ${oriWord(T.lay.o)}. Верните экран в это положение, чтобы продолжить.</p></div>`);
+  }else if(ov) ov.remove();
+}
+function testGo(){
+  const f = document.getElementById('tfield'); if(!f || !T) return;
+  const b = f.getBoundingClientRect();
+  T.lay = {...pickLayout(b.width, b.height), o:isLand() ? 'land' : 'port', dev:Math.min(screen.width, screen.height) >= 600 ? 'tab' : 'phone'};
+  T.G = genTest(T.form, T.lay); T.items = T.G.items;
+  f.innerHTML = `<svg id="tsvg" viewBox="0 0 ${T.G.W} ${T.G.H}" preserveAspectRatio="xMidYMid meet">${T.items.map(it => testItemSVG(it, T.G.k)).join('')}<g id="marks"></g></svg>`;
+  document.getElementById('tsvg').addEventListener('pointerdown', testTap);
+  const o = document.getElementById('tintro'); if(o) o.remove();
+  document.getElementById('tDone').hidden = false;
+  T.t0 = performance.now();
 }
 function testTap(e){
   if(!T || !T.t0) return;
   e.preventDefault();
-  const svg = e.currentTarget, p = svgPt(svg, e), t = (performance.now() - T.t0) / 1000;
+  const svg = e.currentTarget, p = svgPt(svg, e), t = (performance.now() - T.t0) / 1000, k = T.G.k;
   let best = null, bd = 1e9;
   for(const it of T.items){ const d = Math.hypot(it.x - p.x, it.y - p.y); if(d < bd){ bd = d; best = it; } }
   const marks = document.getElementById('marks');
-  if(best && bd <= 34){
+  if(best && bd <= 34 * k){
     const rep = !!(best.t && T.found.has(best.i));
     T.taps.push({i:best.i, t:Math.round(t * 100) / 100, x:best.x, y:best.y, tg:best.t, rep});
     if(best.t) T.found.add(best.i);
-    marks.insertAdjacentHTML('beforeend', `<circle class="mark" cx="${best.x}" cy="${best.y}" r="23" fill="none" stroke="#0B6E6E" stroke-width="3.5"/>`);
+    marks.insertAdjacentHTML('beforeend', `<circle class="mark" cx="${best.x}" cy="${best.y}" r="${(23 * k).toFixed(1)}" fill="none" stroke="#0B6E6E" stroke-width="${(3.5 * k).toFixed(1)}"/>`);
   }else{
     T.taps.push({i:-1, t:Math.round(t * 100) / 100, x:Math.round(p.x), y:Math.round(p.y), tg:0});
-    marks.insertAdjacentHTML('beforeend', `<circle class="mark" cx="${p.x}" cy="${p.y}" r="5" fill="#0B6E6E" opacity=".5"/>`);
+    marks.insertAdjacentHTML('beforeend', `<circle class="mark" cx="${p.x}" cy="${p.y}" r="${(5 * k).toFixed(1)}" fill="#0B6E6E" opacity=".5"/>`);
   }
 }
 function testAskDone(){
@@ -1189,11 +1257,16 @@ function testAskDone(){
   st.insertAdjacentHTML('beforeend', `<div class="overlay" id="tconfirm"><h2>Посмотрите ещё раз на всю страницу</h2><p>Нашли все маленькие звёздочки?</p>
     <div class="ov-actions"><button class="btn btn-s" data-a="testMore">Ещё поищу</button><button class="btn btn-p" data-a="testFinish">Завершить тест</button></div></div>`);
 }
+function testClose(){
+  T = null; MODE = null; document.body.classList.remove('lock');
+  window.removeEventListener('resize', testResize);
+  try{ if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }catch(e){}
+}
 function testFinish(){
   const dur = (performance.now() - T.t0) / 1000;
-  const rec = {id:uid(), ts:Date.now(), form:T.form, side:DB.cfg.side, taps:T.taps, r:scoreTest(T.items, T.taps, dur)};
+  const rec = {id:uid(), ts:Date.now(), form:T.form, side:DB.cfg.side, lay:T.lay, taps:T.taps, r:scoreTest(T.items, T.taps, dur, T.G.W)};
   DB.tests.push(rec); save();
-  T = null; MODE = null; document.body.classList.remove('lock');
+  testClose();
   viewTest = rec.id; testForm = testForm % 3 + 1; go('testRes');
 }
 
@@ -2111,7 +2184,7 @@ function ALERT(st, o){
 
 /* ===================== ДЕМО-ДАННЫЕ ===================== */
 function demoTest(form, ts, pNeg, pInt, seed){
-  const rnd = mulberry32(seed), items = genTest(form), tg = items.filter(i => i.t);
+  const rnd = mulberry32(seed), items = genTest(form).items, tg = items.filter(i => i.t);
   const found = tg.filter(i => rnd() < (i.x < TW / 2 ? pNeg * (.55 + i.x / TW) : pInt));
   found.sort((a, b) => (b.x - a.x) + (rnd() - .5) * 160);
   let t = 2; const taps = found.map(i => { t += 1.4 + rnd() * 2.2; return {i:i.i, t:Math.round(t * 100) / 100, x:i.x, y:i.y, tg:1, rep:false}; });
@@ -2200,15 +2273,15 @@ const ACT = {
   exMin: el => { exMin[el.dataset.k] = +el.dataset.v; const y = window.scrollY; render(); window.scrollTo(0, y); },
   form: el => { testForm = +el.dataset.v; render(); },
   startTest: () => startTest(),
-  testGo: () => { const o = document.getElementById('tintro'); if(o) o.remove(); T.t0 = performance.now(); },
+  testGo: () => testGo(),
   testDone: () => testAskDone(),
   testMore: () => { const o = document.getElementById('tconfirm'); if(o) o.remove(); },
   testFinish: () => testFinish(),
   testQuit: () => {
-    if(!T || !T.t0){ T = null; MODE = null; document.body.classList.remove('lock'); go('assess'); return; }
+    if(!T || !T.t0){ testClose(); go('assess'); return; }
     document.getElementById('stage').insertAdjacentHTML('beforeend', `<div class="overlay" id="tquit"><h2>Прервать тест?</h2><p>Результат не сохранится.</p><div class="ov-actions"><button class="btn btn-d" data-a="testAbort">Прервать</button><button class="btn btn-s" data-a="closeOv" data-v="tquit">Продолжить тест</button></div></div>`);
   },
-  testAbort: () => { T = null; MODE = null; document.body.classList.remove('lock'); go('assess'); },
+  testAbort: () => { testClose(); go('assess'); },
   openTest: el => { viewTest = el.dataset.v; go('testRes'); },
   cbs: el => { CB = {who:el.dataset.v, ans:Array(10).fill(null)}; go('cbs'); },
   cbsAns: el => { const i = +el.dataset.i, v = +el.dataset.v; CB.ans[i] = CB.ans[i] === v ? null : v; const y = window.scrollY; renderCBS(); window.scrollTo(0, y); },
