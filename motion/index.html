@@ -212,8 +212,12 @@ input[type="text"],input[type="number"],input[type="date"],select{border:1px sol
       <span class="ic">3</span><span class="t">Игры</span><span class="go">›</span>
       <span class="d">Фрукты, шары, ракета, лодка: очки только за движение без компенсаций</span>
     </button>
+    <a class="mode" href="https://nauryzbay-tura.github.io/Tura-apps/hand/">
+      <span class="ic">4</span><span class="t">Кисть</span><span class="go">›</span>
+      <span class="d">Отдельный модуль: «Яблоки» (кулак и ладонь), «Ягоды» (щипок), «Пианино» (отдельные пальцы)</span>
+    </a>
     <button class="mode" type="button" data-go="report">
-      <span class="ic">4</span><span class="t">Отчёт курса</span><span class="go">›</span>
+      <span class="ic">5</span><span class="t">Отчёт курса</span><span class="go">›</span>
       <span class="d">День 1 и день 10, доза по дням, текст для CRM</span>
     </button>
   </div>
@@ -365,7 +369,7 @@ function seed() {
   const dose = {};
   const plan = [[-9, 18, 14, 0, 6, 10], [-8, 24, 20, 12, 8, 12], [-7, 26, 22, 14, 10, 12], [-6, 0, 0, 0, 0, 0], [-5, 30, 24, 16, 10, 14], [-4, 30, 26, 18, 12, 16], [-3, 32, 28, 20, 12, 16], [-2, 34, 30, 20, 14, 18], [-1, 36, 30, 22, 15, 18], [0, 20, 16, 10, 8, 10]];
   for (const [o, flex, abd, elbow, sts, knee] of plan) if (flex + abd) dose[d(o)] = { flex, abd, elbow, sts, knee };
-  dose[d(0)].g_fruit = 21; dose[d(-2)].g_fruit = 17; dose[d(-1)].g_balloon = 8;
+  dose[d(0)].g_fruit = 21; dose[d(-2)].g_fruit = 17; dose[d(-1)].g_balloon = 8; dose[d(-1)].k_apples = 14;
   return {
     current: 'ex',
     patients: {
@@ -373,6 +377,7 @@ function seed() {
         id: 'ex', name: 'Пример: пациент А.', side: 'L', start: d(-9), example: true,
         baseline: { armMax: { L: 82 } },
         games: { fruit: { best: 260, plays: 4, stars: 2, level: 3, bestAng: 104 }, balloon: { best: 120, plays: 2, stars: 2, theta: 95, bestAng: 101 } },
+        hand: { apples: { best: 180, plays: 3, stars: 2, level: 2, openT: 0.62, closeT: 0.3, bestOpen: 74 } },
         tests: [
           { type: 'sts5', day: 1, date: d(-9), v: { t5: 18.4, t5sit: 20.1, lean: 11 } },
           { type: 'tug', day: 1, date: d(-9), v: { total: 21.5, rise: 2.6, walk: 16.2, sit: 2.7 } },
@@ -388,6 +393,7 @@ function seed() {
           { date: d(0), ex: 'g_fruit', reps: 21, partial: 4, hint: 'lean', score: 260 },
           { date: d(0), ex: 'flex', reps: 10, partial: 1, hint: 'lean' },
           { date: d(0), ex: 'sts', reps: 8, partial: 0, hint: 'good' },
+          { date: d(-1), ex: 'k_apples', reps: 14, partial: 3, hint: 'open', score: 180 },
           { date: d(-1), ex: 'abd', reps: 10, partial: 2, hint: 'hike' },
           { date: d(-1), ex: 'knee', reps: 9, partial: 0, hint: 'good' }
         ]
@@ -1149,7 +1155,8 @@ function renderExercises() {
   }).join('');
   $$('#ex-list [data-ex]').forEach(b => b.addEventListener('click', () => openSession('exercise', b.dataset.ex)));
 }
-function actName(id) { return EX[id]?.name || (id.startsWith('g_') && GAMES[id.slice(2)] ? `Игра «${GAMES[id.slice(2)].name}»` : id); }
+const HAND_NAMES = { k_apples: 'Кисть: «Яблоки»', k_berries: 'Кисть: «Ягоды»', k_piano: 'Кисть: «Пианино»' };
+function actName(id) { return EX[id]?.name || HAND_NAMES[id] || (id.startsWith('g_') && GAMES[id.slice(2)] ? `Игра «${GAMES[id.slice(2)].name}»` : id); }
 function pctChange(a, b) { return a ? (b - a) / a * 100 : null; }
 function renderReport() {
   const p = cur();
@@ -1180,8 +1187,9 @@ function renderReport() {
   const sum7 = vals.slice(3).reduce((a, b) => a + b, 0), active7 = vals.slice(3).filter(v => v > 0).length;
   $('#rep-dose-sum').textContent = `7 дней: ${sum7} · ${active7} из 7 дней`;
   const ss = (p.sessions || []).slice(0, 8);
-  $('#rep-sessions').innerHTML = ss.length ? ss.map(s => `<div class="row between small"><span>${esc(fromIso(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))} · ${esc(actName(s.ex))}</span><span class="chip ${s.hint === 'good' ? 'good' : 'warn'}">${s.ex.startsWith('g_') ? `${s.reps} засчит. · ${s.score || 0} очк.` : reps(s.reps)}${s.hint !== 'good' ? ' · ' + esc(FLAG_NAMES[s.hint] || s.hint) : ''}</span></div>`).join('') : '<p class="muted small">Подходов пока нет.</p>';
+  $('#rep-sessions').innerHTML = ss.length ? ss.map(s => `<div class="row between small"><span>${esc(fromIso(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))} · ${esc(actName(s.ex))}</span><span class="chip ${s.hint === 'good' ? 'good' : 'warn'}">${/^[gk]_/.test(s.ex) ? `${s.reps} засчит. · ${s.score || 0} очк.` : reps(s.reps)}${s.hint !== 'good' ? ' · ' + esc(FLAG_NAMES[s.hint] || s.hint) : ''}</span></div>`).join('') : '<p class="muted small">Подходов пока нет.</p>';
 }
+const mvTxt = n => `${n} ${plural(n, 'засчитанное движение', 'засчитанных движения', 'засчитанных движений')}`;
 function reportText() {
   const p = cur(); const lines = [`TURA Motion — отчёт курса`, `Пациент: ${p.name}`, `Сторона поражения: ${sideName(p.side)}`, ``, `Тесты (день 1 → день 10):`];
   for (const [id, t] of Object.entries(TESTS)) {
@@ -1199,7 +1207,15 @@ function reportText() {
     if (g.balloon) lv.push(`«Шары» цель ${g.balloon.theta}°${g.balloon.bestAng ? `, лучший подъём ${g.balloon.bestAng}°` : ''}`);
     if (g.rocket) lv.push(`«Ракета» ${g.rocket.cells} вставаний на пуск`);
     if (g.boat) lv.push(`«Лодка» уровень ${g.boat.level || 1}`);
-    lines.push(`Игры за 7 дней: ${gss.length} ${plural(gss.length, 'раунд', 'раунда', 'раундов')}, ${gss.reduce((a, s) => a + s.reps, 0)} засчитанных движений${lv.length ? '. ' + lv.join('; ') : ''}`);
+    lines.push(`Игры за 7 дней: ${gss.length} ${plural(gss.length, 'раунд', 'раунда', 'раундов')}, ${mvTxt(gss.reduce((a, s) => a + s.reps, 0))}${lv.length ? '. ' + lv.join('; ') : ''}`);
+  }
+  const kss = (p.sessions || []).filter(s => s.ex.startsWith('k_') && s.date >= since);
+  if (kss.length) {
+    const h = p.hand || {}, lv = [];
+    if (h.apples) lv.push(`«Яблоки»: раскрытие кисти до ${h.apples.bestOpen || Math.round((h.apples.openT || 0) * 100)}%`);
+    if (h.berries) lv.push(`«Ягоды»: уровень ${h.berries.level || 1}`);
+    if (h.piano) lv.push(`«Пианино»: чистых нажатий ${h.piano.clean ?? '—'}%`);
+    lines.push(`Кисть за 7 дней: ${kss.length} ${plural(kss.length, 'раунд', 'раунда', 'раундов')}, ${mvTxt(kss.reduce((a, s) => a + s.reps, 0))}${lv.length ? '. ' + lv.join('; ') : ''}`);
   }
   const last = (p.sessions || [])[0]; if (last && last.hint !== 'good') lines.push(`Главная подсказка по технике: ${HINTS[last.hint]}`);
   lines.push('', 'Данные прототипа TURA Motion. Не медицинское изделие: решения принимает врач.');
@@ -1259,11 +1275,15 @@ const GICON = {
   boat: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><path d="M20 6v20" stroke="#56655F" stroke-width="1.6"/><path d="M21 7l11 17H21z" fill="#fff" stroke="#2747C7" stroke-width="1.4"/><path d="M19 10L10 24h9z" fill="#2747C7"/><path d="M6 27h28l-5 6H11z" fill="#B3372B"/><path d="M3 35c4-2 6 2 10 0s6 2 10 0 6 2 10 0" stroke="#2F6BFF" stroke-width="1.6" fill="none"/></svg>'
 };
 const GAME_CUE = { lean: 'корпус ровно', forward: 'сядьте прямо', hike: 'опустите плечо', elbow: 'выпрямите локоть', asym: 'вставайте ровно, на обе ноги' };
-Object.assign(FLAG_NAMES, { asym: 'перекос при вставании', weakside: 'малый наклон в сторону поражения', easy: 'много промахов' });
+Object.assign(FLAG_NAMES, { asym: 'перекос при вставании', weakside: 'малый наклон в сторону поражения', easy: 'много промахов', open: 'неполное раскрытие кисти', close: 'слабое сжатие', fist: 'щипок всей кистью', mass: 'двигаются соседние пальцы' });
 Object.assign(HINTS, {
   asym: 'Вставайте ровно: опирайтесь на обе ноги одинаково.',
   weakside: 'Наклоняйтесь смелее в сторону поражения: туда наклон пока меньше.',
-  easy: 'Двигайтесь плавно и до конца. Игра сама снизила уровень.'
+  easy: 'Двигайтесь плавно и до конца. Игра сама снизила уровень.',
+  open: 'Раскрывайте ладонь полностью, до прямых пальцев.',
+  close: 'Сжимайте кулак плотнее.',
+  fist: 'Берите мелкие предметы кончиками пальцев, остальные пальцы держите раскрытыми.',
+  mass: 'Сгибайте один палец, соседние держите неподвижно.'
 });
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pickOne = a => a[Math.floor(Math.random() * a.length)];
@@ -1958,7 +1978,7 @@ gcv.addEventListener('pointermove', e => { if (GE.src !== 'touch') return; gPtr(
 gcv.addEventListener('pointerleave', () => { if (GE.ptr.mouse) GE.ptr.x = null; });
 
 // ================== Старт ==================
-if (FRAMED) $$('.live-note').forEach(n => n.hidden = false);
+if (FRAMED) { $$('.live-note').forEach(n => n.hidden = false); $$('a.mode[href^="https"]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; }); }
 try { if ('serviceWorker' in navigator && !FRAMED && location.protocol === 'https:' && document.querySelector('link[rel="manifest"]')) navigator.serviceWorker.register('sw.js').catch(() => { }); } catch (e) { }
 const startView = HASH_VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
 show(startView, { push: false });

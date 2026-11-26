@@ -1,0 +1,17 @@
+{
+  "name": "TURA Кисть — игры для кисти после инсульта",
+  "short_name": "TURA Кисть",
+  "description": "Игры для кисти с камерой телефона или планшета: кулак и ладонь, щипок, отдельные пальцы. Очки только за правильное движение. TURA, Астана.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F1F4F3",
+  "theme_color": "#F1F4F3",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
