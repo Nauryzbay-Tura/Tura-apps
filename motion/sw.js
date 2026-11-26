@@ -1,5 +1,5 @@
 /* TURA Motion — service worker: офлайн-работа и кэш модели распознавания позы */
-const VERSION = 'motion-0.2.0';
+const VERSION = 'motion-0.2.1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 const CDN_HOSTS = ['cdn.jsdelivr.net', 'storage.googleapis.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

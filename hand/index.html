@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TURA Кисть</title>
+<meta name="theme-color" content="#F1F4F3">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  /* Тот же дизайн, что у TURA Motion: одна колонка под телефон, тёмная сцена камеры */
+  --bg:#F1F4F3; --surface:#FFFFFF; --surface-2:#E7ECEA; --ink:#14201C; --muted:#56655F; --line:#D5DDD9;
+  --accent:#2747C7; --accent-ink:#FFFFFF; --accent-soft:#E3E8FB;
+  --good:#1B7650; --good-soft:#DDF1E6; --warn:#9A5B00; --warn-soft:#FBEBCF; --crit:#B3372B;
+  --stage:#0A0F13; --stage-ink:#EDF2F0;
+  --font-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:16px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1311; --surface:#161E1B; --surface-2:#1F2925; --ink:#E6EEEA; --muted:#9BAAA4; --line:#2A3632;
+    --accent:#8DA2FF; --accent-ink:#0B1124; --accent-soft:#1E2747;
+    --good:#53C793; --good-soft:#163326; --warn:#E6A848; --warn-soft:#3A2B12; --crit:#F2806F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1311; --surface:#161E1B; --surface-2:#1F2925; --ink:#E6EEEA; --muted:#9BAAA4; --line:#2A3632;
+  --accent:#8DA2FF; --accent-ink:#0B1124; --accent-soft:#1E2747;
+  --good:#53C793; --good-soft:#163326; --warn:#E6A848; --warn-soft:#3A2B12; --crit:#F2806F;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--font-display);font-weight:500;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-0.01em}
+h1{font-size:20px} h2{font-size:18px} h3{font-size:15px}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:10px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+
+.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;padding:12px 16px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-0.02em;white-space:nowrap;background:none;border:0;padding:0}
+.brand span{color:var(--accent)}
+.top .spacer{flex:1}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:44px;min-width:44px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:14px}
+.icon-btn[aria-pressed="false"]{color:var(--muted)}
+
+main{max-width:560px;margin:0 auto;padding:16px 16px 48px}
+.view{display:none;flex-direction:column;gap:16px}
+.view.on{display:flex}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.card.tight{gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:8px}
+
+.btn{border:0;border-radius:12px;min-height:48px;padding:0 18px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.secondary{background:var(--surface-2);color:var(--ink)}
+.btn.ghost{background:transparent;color:var(--accent);padding:0 8px}
+.btn.danger{background:transparent;color:var(--crit);padding:0 8px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.patient{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start}
+.patient .name{font-weight:600;font-size:18px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--muted)}
+.chip.example{background:var(--warn-soft);color:var(--warn)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.accent{background:var(--accent-soft);color:var(--accent)}
+
+.modes{display:grid;gap:12px}
+.mode{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;grid-template-columns:44px 1fr auto;gap:4px 14px;align-items:center}
+.mode:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mode .ic{grid-row:span 2;width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:15px}
+.mode .t{font-weight:600;font-size:17px}
+.mode .d{color:var(--muted);font-size:14px;grid-column:2}
+.mode .go{grid-row:span 2;grid-column:3;color:var(--muted);font-size:22px}
+
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface-2);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-family:var(--font-display);font-weight:500;font-size:20px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+.note{display:flex;gap:10px;font-size:14px;color:var(--muted);align-items:flex-start}
+.note a{color:var(--accent);font-weight:600;word-break:break-word}
+.note .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--good);margin-top:7px}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
+.item .t{font-weight:600}
+.item .d{font-size:14px;color:var(--muted);grid-column:1}
+.item .act{grid-row:1 / span 3;grid-column:2}
+.item .meta{grid-column:1;display:flex;gap:6px;flex-wrap:wrap}
+.progress{grid-column:1;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:3px}
+
+.back{align-self:flex-start}
+.head{display:flex;flex-direction:column;gap:6px}
+
+/* Сцена */
+.sources{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stage-wrap{position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden;color:var(--stage-ink);aspect-ratio:3/4;display:grid;place-items:center}
+.stage-wrap canvas{width:100%;height:100%;object-fit:contain;display:block}
+.stage-idle{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;font-size:15px;color:#B9C6C0;line-height:1.5}
+.hud-top{position:absolute;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;pointer-events:none}
+.pill{background:rgba(10,15,19,.72);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;color:#EDF2F0;backdrop-filter:blur(4px)}
+.pill.warn{background:rgba(160,96,0,.85);border-color:transparent}
+.pill.rec{background:rgba(179,55,43,.85);border-color:transparent}
+.hud-bottom{position:absolute;left:12px;right:60px;bottom:12px;display:flex;align-items:flex-end;gap:12px;pointer-events:none}
+.big{font-family:var(--font-display);font-weight:700;font-size:64px;line-height:.9;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.big small{font-size:22px;font-weight:500;color:#B9C6C0;margin-left:6px}
+.hud-sub{font-size:14px;color:#D4DDD9;padding-bottom:6px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.gauge{position:absolute;right:14px;top:56px;bottom:14px;width:14px;border-radius:7px;background:rgba(255,255,255,.12);pointer-events:none}
+.gauge i{position:absolute;left:0;right:0;bottom:0;border-radius:7px;background:#8DA2FF;transition:height .08s linear}
+.gauge b{position:absolute;left:-6px;right:-6px;height:3px;background:#F5C26B;border-radius:2px}
+.gauge.hidden{display:none}
+.live-cue{position:absolute;left:12px;right:60px;top:48px;pointer-events:none;display:flex}
+.live-cue:empty{display:none}
+
+.result{display:flex;flex-direction:column;gap:12px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:15px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.reps{display:flex;gap:6px;flex-wrap:wrap}
+.rep{min-width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:14px;background:var(--good-soft);color:var(--good)}
+.rep.f{background:var(--warn-soft);color:var(--warn)}
+.rep.p{background:var(--surface-2);color:var(--muted)}
+.hint{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:12px 14px;font-size:16px;font-weight:500}
+.hint.good{border-color:var(--good);background:var(--good-soft)}
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;min-height:40px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* Отчёт */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-weight:600;color:var(--muted);font-size:13px}
+.delta.up{color:var(--good)} .delta.down{color:var(--crit)}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--font-body)}
+.chart .bar{fill:var(--accent)} .chart .bar.today{fill:var(--good)} .chart .grid{stroke:var(--line)}
+.chart .val{fill:var(--ink);font-weight:600}
+
+/* Секундомер */
+.watch{font-family:var(--font-display);font-weight:700;font-size:56px;text-align:center;font-variant-numeric:tabular-nums;padding:8px 0}
+label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+input[type="text"],input[type="number"],input[type="date"],select{border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:46px;padding:0 12px;font-size:16px;width:100%}
+
+/* Диалог */
+.dialog{position:fixed;inset:0;z-index:20;background:rgba(5,10,8,.5);display:grid;place-items:end center;padding:16px}
+.dialog[hidden]{display:none}
+.dialog .card{width:100%;max-width:520px;margin-bottom:env(safe-area-inset-bottom)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+.toast[hidden]{display:none}
+/* Игры */
+.game-item{grid-template-columns:52px 1fr auto;gap:10px 14px}
+.game-item .gicon{grid-row:1;grid-column:1;width:52px;height:52px;border-radius:14px;background:var(--surface-2);display:grid;place-items:center}
+.game-item .gtext{grid-row:1;grid-column:2 / 4;display:flex;flex-direction:column;gap:2px;min-width:0}
+.game-item .meta{grid-row:2;grid-column:1 / 3}
+.game-item > .btn{grid-row:2;grid-column:3;min-height:44px}
+.game-stage{touch-action:none;user-select:none;-webkit-user-select:none}
+.game-stage canvas{touch-action:none}
+.g-banner{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);max-width:86%;text-align:center;background:rgba(10,15,19,.8);color:#fff;border-radius:18px;padding:14px 18px;font-family:var(--font-display);font-weight:700;font-size:clamp(16px,4.6vw,22px);line-height:1.25;pointer-events:none}
+.stars{display:flex;gap:6px;font-size:40px;line-height:1;color:#F5B800}
+.stars .off{color:var(--surface-2)}
+.safety{border-left:4px solid var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:0 12px 12px 0;padding:10px 12px;font-size:14.5px;font-weight:600}
+#g-gain button{font-size:14px;line-height:1.2;padding:6px 8px}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="brand" id="brand" type="button" aria-label="На главную">TURA <span>Кисть</span></button>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="voice-btn" type="button" aria-pressed="true" title="Голосовые подсказки">Голос: вкл</button>
+</header>
+
+<main>
+<!-- Главная -->
+<section id="v-home" class="view on" aria-labelledby="h-home">
+  <h1 id="h-home" style="position:absolute;left:-9999px">TURA Кисть</h1>
+  <div class="card" id="patient-card"></div>
+  <div class="stat-row" id="today-stats"></div>
+  <div class="list" id="games-list"></div>
+  <div class="card tight">
+    <h2>Последние раунды</h2>
+    <div class="stack" id="hist"></div>
+  </div>
+  <a class="mode" id="motion-link" href="https://nauryzbay-tura.github.io/Tura-apps/motion/">
+    <span class="ic">M</span><span class="t">TURA Motion</span><span class="go">›</span>
+    <span class="d">Тесты курса, упражнения для руки и ног, отчёт для CRM. Раунды кисти попадают в тот же отчёт</span>
+  </a>
+  <p class="note live-note" hidden><span class="dot"></span><span>Здесь работают «Пальцем» и «Авто-демо». Игры с камерой: <a href="https://nauryzbay-tura.github.io/Tura-apps/hand/">nauryzbay-tura.github.io/Tura-apps/hand</a></span></p>
+  <p class="note"><span class="dot"></span><span>Видео не записывается и не отправляется: телефон считает только 21 точку кисти. Прототип для обсуждения, не медицинское изделие.</span></p>
+</section>
+
+<!-- Игра -->
+<section id="v-game" class="view" aria-labelledby="h-game">
+  <button class="btn ghost back" type="button" data-go="home">‹ Игры кисти</button>
+  <div class="head"><h1 id="h-game"></h1><p class="small" id="game-goal" style="font-weight:600"></p><p class="muted small" id="game-how"></p></div>
+  <div class="stack" id="game-intro">
+    <div class="seg" id="g-dur" role="group" aria-label="Длительность раунда"><button type="button" data-dur="60" aria-pressed="true">1 мин</button><button type="button" data-dur="90" aria-pressed="false">1,5 мин</button><button type="button" data-dur="120" aria-pressed="false">2 мин</button></div>
+    <div class="stack" id="g-gain-wrap">
+      <span class="small muted">Размах руки</span>
+      <div class="seg" id="g-gain" role="group" aria-label="Размах руки"><button type="button" data-gain="2.4" aria-pressed="false">Малый: кисть почти на месте</button><button type="button" data-gain="1.5" aria-pressed="true">Обычный</button></div>
+    </div>
+    <div class="sources" id="game-src">
+      <button class="btn primary" type="button" data-gsrc="camera" style="grid-column:span 2">Играть с камерой</button>
+      <button class="btn secondary" type="button" data-gsrc="touch">Пальцем</button>
+      <button class="btn secondary" type="button" data-gsrc="auto">Авто-демо</button>
+    </div>
+    <p class="muted small">В дозу и отчёт идут только игры с камерой. «Пальцем» и «Авто-демо» нужны, чтобы показать игру пациенту и родственникам.</p>
+    <p class="note live-note" hidden><span class="dot"></span><span>Здесь работают «Пальцем» и «Авто-демо». Игра с камерой: <a href="https://nauryzbay-tura.github.io/Tura-apps/hand/">nauryzbay-tura.github.io/Tura-apps/hand</a></span></p>
+  </div>
+  <div class="stage-wrap game-stage" id="gstage">
+    <canvas id="gcanvas" width="540" height="720" aria-label="Игровое поле"></canvas>
+    <div class="hud-top"><span class="pill num" id="g-score"></span><span class="pill" id="g-level"></span><span class="pill num" id="g-time"></span></div>
+    <div class="live-cue" id="g-cue" style="right:12px"></div>
+    <div class="g-banner" id="g-banner" role="status" hidden></div>
+  </div>
+  <div class="row" id="game-controls" hidden><button class="btn secondary" style="flex:1" type="button" id="g-pause">Пауза</button><button class="btn secondary" style="flex:1" type="button" id="g-stop">Завершить</button></div>
+  <div class="card result" id="game-result" hidden></div>
+</section>
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module">
+// ================== Утилиты ==================
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const deg = r => r * 180 / Math.PI, rad = d => d * Math.PI / 180;
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const todayIso = () => iso(new Date());
+const fromIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const median = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c); };
+const lerp = (a, b, u) => a + (b - a) * u;
+const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 0.5 - 0.5 * Math.cos(Math.PI * x);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pickOne = a => a[Math.floor(Math.random() * a.length)];
+const approach = (c, want, dt, tau) => c + (want - c) * (1 - Math.exp(-dt / tau));
+let toastTimer = 0;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+
+// ================== Данные: общее хранилище с TURA Motion ==================
+// На одном сайте Motion и Кисть видят одних и тех же пациентов; раунды кисти идут в отчёт Motion.
+const KEY = 'tura-motion-v1';
+function seed() {
+  const now = new Date(); const d = n => iso(addDays(now, n));
+  const dose = {};
+  const plan = [[-9, 18, 14, 0, 6, 10], [-8, 24, 20, 12, 8, 12], [-7, 26, 22, 14, 10, 12], [-6, 0, 0, 0, 0, 0], [-5, 30, 24, 16, 10, 14], [-4, 30, 26, 18, 12, 16], [-3, 32, 28, 20, 12, 16], [-2, 34, 30, 20, 14, 18], [-1, 36, 30, 22, 15, 18], [0, 20, 16, 10, 8, 10]];
+  for (const [o, flex, abd, elbow, sts, knee] of plan) if (flex + abd) dose[d(o)] = { flex, abd, elbow, sts, knee };
+  dose[d(0)].g_fruit = 21; dose[d(-2)].g_fruit = 17; dose[d(-1)].g_balloon = 8; dose[d(-1)].k_apples = 14;
+  return {
+    current: 'ex',
+    patients: {
+      ex: {
+        id: 'ex', name: 'Пример: пациент А.', side: 'L', start: d(-9), example: true,
+        baseline: { armMax: { L: 82 } },
+        games: { fruit: { best: 260, plays: 4, stars: 2, level: 3, bestAng: 104 }, balloon: { best: 120, plays: 2, stars: 2, theta: 95, bestAng: 101 } },
+        hand: { apples: { best: 180, plays: 3, stars: 2, level: 2, openT: 0.62, closeT: 0.3, bestOpen: 74 } },
+        tests: [
+          { type: 'sts5', day: 1, date: d(-9), v: { t5: 18.4, t5sit: 20.1, lean: 11 } },
+          { type: 'tug', day: 1, date: d(-9), v: { total: 21.5, rise: 2.6, walk: 16.2, sit: 2.7 } },
+          { type: 'walk10', day: 1, date: d(-9), v: { time: 17.9, speed: 0.56, dist: 10 } },
+          { type: 'arm', day: 1, date: d(-9), v: { max: 82, lean: 12, hike: 31 } },
+          { type: 'sts5', day: 10, date: d(0), v: { t5: 14.2, t5sit: 15.6, lean: 6 } },
+          { type: 'tug', day: 10, date: d(0), v: { total: 16.8, rise: 1.9, walk: 12.9, sit: 2.0 } },
+          { type: 'walk10', day: 10, date: d(0), v: { time: 13.7, speed: 0.73, dist: 10 } },
+          { type: 'arm', day: 10, date: d(0), v: { max: 104, lean: 7, hike: 14 } }
+        ],
+        dose,
+        sessions: [
+          { date: d(0), ex: 'g_fruit', reps: 21, partial: 4, hint: 'lean', score: 260 },
+          { date: d(0), ex: 'flex', reps: 10, partial: 1, hint: 'lean' },
+          { date: d(0), ex: 'sts', reps: 8, partial: 0, hint: 'good' },
+          { date: d(-1), ex: 'k_apples', reps: 14, partial: 3, hint: 'open', score: 180 },
+          { date: d(-1), ex: 'abd', reps: 10, partial: 2, hint: 'hike' },
+          { date: d(-1), ex: 'knee', reps: 9, partial: 0, hint: 'good' }
+        ]
+      }
+    }
+  };
+}
+function loadStore() {
+  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) { /* хранилище недоступно */ }
+  return seed();
+}
+let store = loadStore();
+function saveStore() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { } }
+const cur = () => store.patients[store.current] || Object.values(store.patients)[0];
+function courseDay(p) { const s = fromIso(p.start || todayIso()); const t = fromIso(todayIso()); return Math.floor((t - s) / 864e5) + 1; }
+const sideName = s => s === 'L' ? 'левая' : 'правая';
+const sideGen = s => s === 'L' ? 'левой' : 'правой';
+
+// ================== Каталог ==================
+const HG_IDS = ['apples', 'berries', 'piano'];
+const HG = {
+  apples: { name: 'Яблоки', goal: 'Сжать кулак и полностью раскрыть кисть', how: 'Сидя у стола, телефон или планшет спереди на 50–70 см. Поднимите поражённую кисть ладонью к камере. Наведите кисть на яблоко и сожмите кулак: яблоко у вас в руке. Перенесите его к корзине и раскройте ладонь. Яблоко упадёт, только если пальцы раскрыты достаточно.', unit: ['яблоко', 'яблока', 'яблок'], cursor: true },
+  berries: { name: 'Ягоды', goal: 'Щипок: большой палец к указательному и другим пальцам', how: 'Ладонь к камере на 50–70 см. Наведите кисть на ягоду и сведите кончики большого и нужного пальца. Цвет ягоды подсказывает палец. Если схватить ягоду всей кистью, она помнётся.', unit: ['ягода', 'ягоды', 'ягод'], cursor: true },
+  piano: { name: 'Пианино', goal: 'Отдельные движения пальцев', how: 'Локоть на столе, кисть ладонью к камере, пальцы вверх. Когда нота доходит до линии, согните палец своей дорожки. Соседние пальцы держите неподвижно: чистое нажатие даёт полные очки.', unit: ['нота', 'ноты', 'нот'], cursor: false }
+};
+const HICON = {
+  apples: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><circle cx="20" cy="23" r="12" fill="#E8453C"/><circle cx="15.5" cy="18.5" r="3.2" fill="#fff" opacity=".35"/><path d="M20 11c0-3 1-5 3-6" stroke="#7A4A1E" stroke-width="2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="9.5" rx="5" ry="2.3" transform="rotate(-25 26 9.5)" fill="#4BA34A"/></svg>',
+  berries: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><circle cx="13" cy="24" r="7" fill="#FF6B5E"/><circle cx="25" cy="27" r="7" fill="#7DA6FF"/><circle cx="21" cy="15" r="6" fill="#5FD38A"/><path d="M21 9l2-5M13 17l-2-4" stroke="#3E8A22" stroke-width="2" stroke-linecap="round"/></svg>',
+  piano: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="5" y="8" width="30" height="24" rx="3" fill="#fff" stroke="#14201C" stroke-width="1.6"/><path d="M12.5 8v24M20 8v24M27.5 8v24" stroke="#14201C" stroke-width="1.2"/><rect x="10.5" y="8" width="4" height="13" fill="#14201C"/><rect x="18" y="8" width="4" height="13" fill="#14201C"/><rect x="25.5" y="8" width="4" height="13" fill="#14201C"/></svg>'
+};
+// Пальцы: ориентиры MediaPipe Hand Landmarker (21 точка): кончики 8, 12, 16, 20; пястно-фаланговые 5, 9, 13, 17; большой палец 1–4
+const FINGERS = [
+  { name: 'указательный', dat: 'указательным', short: 'указ.', color: '#FF6B5E', tip: 8, mcp: 5 },
+  { name: 'средний', dat: 'средним', short: 'сред.', color: '#FFB547', tip: 12, mcp: 9 },
+  { name: 'безымянный', dat: 'безымянным', short: 'безым.', color: '#5FD38A', tip: 16, mcp: 13 },
+  { name: 'мизинец', dat: 'мизинцем', short: 'мизин.', color: '#7DA6FF', tip: 20, mcp: 17 }
+];
+const HINTS = {
+  open: 'Раскрывайте ладонь полностью, до прямых пальцев: тогда яблоко падает в корзину.',
+  close: 'Сжимайте кулак плотнее, чтобы удержать яблоко.',
+  fist: 'Берите ягоду кончиками пальцев, остальные пальцы держите раскрытыми.',
+  mass: 'Сгибайте только палец своей дорожки, соседние держите неподвижно.',
+  easy: 'Двигайтесь плавно и до конца. Игра сама снизила уровень.',
+  good: 'Хорошая игра: движения полные и чистые. Продолжайте.'
+};
+const FLAG_NAMES = { open: 'неполное раскрытие кисти', close: 'слабое сжатие', fist: 'щипок всей кистью', mass: 'двигаются соседние пальцы', easy: 'много промахов' };
+const hs = (p, id) => (p.hand && p.hand[id]) || {};
+const unitOf = (id, n) => { const u = HG[id].unit; return `${n} ${plural(n, u[0], u[1], u[2])}`; };
+function maxKey(o) { let k = null, m = 0; for (const [a, v] of Object.entries(o || {})) if (v > m) { m = v; k = a; } return k; }
+function starsFor(reps, acc, comp) { if (reps < 3) return reps > 0 ? 1 : 0; return 1 + (acc >= 0.6 && comp <= 0.3 ? 1 : 0) + (acc >= 0.8 && comp <= 0.1 ? 1 : 0); }
+
+// ================== Навигация ==================
+function show(view) {
+  if (view !== 'game' && GE.running) stopGame();
+  $$('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
+  if (view === 'home') renderHome();
+  window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) show(g.dataset.go); });
+$('#brand').addEventListener('click', () => show('home'));
+
+// ================== Голос и звук ==================
+let voiceOn = true, audioCtx = null, noiseBuf = null;
+$('#voice-btn').addEventListener('click', e => { voiceOn = !voiceOn; e.currentTarget.setAttribute('aria-pressed', voiceOn); e.currentTarget.textContent = voiceOn ? 'Голос: вкл' : 'Голос: выкл'; if (!voiceOn) try { speechSynthesis.cancel(); } catch (x) { } });
+function say(text) { if (!voiceOn) return; try { const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; u.rate = 1.05; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
+function sfx(type, arg) {
+  if (!voiceOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ac = audioCtx, t = ac.currentTime, out = ac.createGain(); out.gain.value = 0.09; out.connect(ac.destination);
+    const tone = (f0, f1, dur, typ = 'sine', at = 0, vol = 1) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = typ; o.frequency.setValueAtTime(f0, t + at); o.frequency.exponentialRampToValueAtTime(f1, t + at + dur); g.gain.setValueAtTime(vol, t + at); g.gain.exponentialRampToValueAtTime(0.001, t + at + dur); o.connect(g); g.connect(out); o.start(t + at); o.stop(t + at + dur + 0.02); };
+    const noise = (dur, freq, at = 0, vol = 1) => {
+      if (!noiseBuf) { noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.6, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+      const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; const g = ac.createGain();
+      g.gain.setValueAtTime(vol, t + at); g.gain.exponentialRampToValueAtTime(0.001, t + at + dur); s.connect(f); f.connect(g); g.connect(out); s.start(t + at); s.stop(t + at + dur + 0.02);
+    };
+    if (type === 'grab') { tone(330, 220, 0.1, 'triangle', 0, 0.6); noise(0.06, 900, 0, 0.6); }
+    else if (type === 'place') { tone(523, 523, 0.1, 'triangle', 0, 0.7); tone(784, 784, 0.18, 'triangle', 0.08, 0.7); }
+    else if (type === 'thud') tone(170, 70, 0.18, 'sine', 0, 1);
+    else if (type === 'miss') tone(320, 170, 0.22, 'triangle', 0, 0.45);
+    else if (type === 'pick') { tone(880, 1320, 0.08, 'sine', 0, 0.6); tone(1320, 1320, 0.08, 'sine', 0.06, 0.4); }
+    else if (type === 'squash') { noise(0.14, 400, 0, 1.2); tone(200, 90, 0.16, 'sine', 0, 0.6); }
+    else if (type === 'note') { const f = [523.25, 659.25, 783.99, 1046.5][arg] || 523.25; tone(f, f, 0.5, 'triangle', 0, 0.9); tone(f * 2, f * 2, 0.25, 'sine', 0, 0.2); }
+    else if (type === 'level') [523, 659, 784, 1046].forEach((f, i) => tone(f, f, 0.16, 'triangle', i * 0.09, 0.6));
+  } catch (e) { }
+}
+function tick() { sfx('pick'); }
+
+// ================== Модель кисти ==================
+const LIVE_URL = 'https://nauryzbay-tura.github.io/Tura-apps/hand/';
+const FRAMED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+let landmarker = null, modelPromise = null, modelError = '';
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3';
+const MODEL_SOURCES = [
+  { bundle: MP + '/vision_bundle.mjs', wasm: MP + '/wasm', model: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' }
+];
+async function tryModel(src) {
+  const vision = await import(src.bundle);
+  const fs = await vision.FilesetResolver.forVisionTasks(src.wasm);
+  const opts = d => ({ baseOptions: { modelAssetPath: src.model, delegate: d }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+  try { return await vision.HandLandmarker.createFromOptions(fs, opts('GPU')); }
+  catch (e) { return await vision.HandLandmarker.createFromOptions(fs, opts('CPU')); }
+}
+function ensureModel() {
+  if (landmarker) return Promise.resolve(landmarker);
+  if (modelPromise) return modelPromise;
+  modelPromise = (async () => {
+    for (const src of MODEL_SOURCES) { try { landmarker = await tryModel(src); return landmarker; } catch (e) { modelError = String(e && e.message || e); } }
+    throw new Error(modelError || 'model');
+  })();
+  modelPromise.catch(() => { modelPromise = null; });
+  return modelPromise;
+}
+// MediaPipe требует строго возрастающие метки времени
+let MPT = 0;
+function mpDetect(src, t) { const ts = Math.max(t, MPT + 1); MPT = ts; return landmarker.detectForVideo(src, ts); }
+
+// ================== Признаки кисти ==================
+const v3 = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: (a.z || 0) - (b.z || 0) });
+const n3 = a => Math.hypot(a.x, a.y, a.z);
+const ang3 = (a, b) => { const n = n3(a) * n3(b); return n ? deg(Math.acos(clamp((a.x * b.x + a.y * b.y + a.z * b.z) / n, -1, 1))) : 0; };
+const HB = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
+// g — раскрытие кисти: 0 кулак, 1 ладонь с прямыми пальцами (кончики от запястья в длинах ладони)
+// F — сгибание пальца: сумма углов в трёх суставах, градусы; pinch — кончик большого до кончика пальца в длинах ладони
+function handFeatures(w) {
+  const palm = n3(v3(w[9], w[0])) || 1e-3;
+  const o = [8, 12, 16, 20].reduce((s, t) => s + n3(v3(w[t], w[0])), 0) / 4 / palm;
+  const g = clamp((o - 1.0) / 0.85, 0, 1.15);
+  const F = FINGERS.map(f => { const m = f.mcp; return ang3(v3(w[m], w[0]), v3(w[m + 1], w[m])) + ang3(v3(w[m + 1], w[m]), v3(w[m + 2], w[m + 1])) + ang3(v3(w[m + 2], w[m + 1]), v3(w[m + 3], w[m + 2])); });
+  const pinch = FINGERS.map(f => n3(v3(w[4], w[f.tip])) / palm);
+  return { o, g, F, pinch };
+}
+function dispH(lm, i) { const p = lm[i]; return { x: (GE.mirror ? 1 - p.x : p.x) * GE.aspect, y: p.y }; }
+// MediaPipe размечает руки как в зеркальном селфи. В необращённом кадре камеры, смотрящей на ладонь, метка обратная.
+function pickHand(res) {
+  const L = (res && res.landmarks) || []; if (!L.length) return null;
+  const H = res.handedness || res.handednesses || [], W = res.worldLandmarks || [], side = cur().side;
+  let best = -1, other = false;
+  L.forEach((lm, i) => { const lab = H[i] && H[i][0] && H[i][0].categoryName; const real = lab === 'Left' ? 'R' : lab === 'Right' ? 'L' : null; if (real === side && best < 0) best = i; });
+  if (best < 0) {
+    other = true; best = 0;
+    if (GE.lastWrist && L.length > 1) { let bd = 9; L.forEach((lm, i) => { const d = Math.hypot(lm[0].x - GE.lastWrist.x, lm[0].y - GE.lastWrist.y); if (d < bd) { bd = d; best = i; } }); }
+  }
+  if (!W[best]) return null;
+  GE.lastWrist = { x: L[best][0].x, y: L[best][0].y };
+  return { lm: L[best], w: W[best], other };
+}
+
+// ================== Демо-кисть (авто-демо) ==================
+// Ладонь к камере, пальцы вверх. Единица длины — ладонь (запястье → основание среднего пальца).
+const FING_GEO = [
+  { mx: 0.30, my: 0.95, seg: [0.45, 0.28, 0.23], tilt: 0.10 },
+  { mx: 0.10, my: 1.00, seg: [0.50, 0.33, 0.25], tilt: 0.03 },
+  { mx: -0.10, my: 0.95, seg: [0.46, 0.30, 0.24], tilt: -0.04 },
+  { mx: -0.28, my: 0.85, seg: [0.36, 0.22, 0.20], tilt: -0.12 }];
+const addp = (a, b, k = 1) => ({ x: a.x + b.x * k, y: a.y + b.y * k, z: a.z + b.z * k });
+const lerp3 = (a, b, u) => ({ x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), z: lerp(a.z, b.z, u) });
+function buildHand(o) {
+  const sx = o.side === 'R' ? 1 : -1, P = new Array(21);
+  P[0] = { x: 0, y: 0, z: 0 };
+  for (let k = 0; k < 4; k++) {
+    const G = FING_GEO[k], f = clamp((o.flex && o.flex[k]) || 0, 0, 1), base = 5 + 4 * k;
+    let p = { x: G.mx * sx, y: G.my, z: 0 }; P[base] = p;
+    const a = [rad(80 * f), rad(100 * f), rad(70 * f)], sp = G.tilt * sx * (1 - f);
+    let th = 0;
+    for (let j = 0; j < 3; j++) { th += a[j]; const L = G.seg[j]; p = { x: p.x + Math.sin(sp) * L * Math.cos(th), y: p.y + Math.cos(sp) * L * Math.cos(th), z: p.z - L * Math.sin(th) }; P[base + 1 + j] = p; }
+  }
+  const cmc = { x: 0.22 * sx, y: 0.22, z: -0.05 };
+  const dir = (a, z) => ({ x: Math.sin(rad(a)) * sx, y: Math.cos(rad(a)), z });
+  const r1 = addp(cmc, dir(55, -0.1), 0.36), r2 = addp(r1, dir(40, -0.05), 0.30), r3 = addp(r2, dir(30, 0), 0.25);
+  const opp = clamp(o.opp || 0, 0, 1);
+  let tgt;
+  if (o.to === 'palm') { const a = P[6], b = P[10]; tgt = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 - 0.08 }; }
+  else { const t = P[8 + 4 * (o.to || 0)]; tgt = { x: t.x, y: t.y - 0.03, z: t.z - 0.03 }; }
+  const d = v3(tgt, cmc), o1 = addp(addp(cmc, d, 0.38), { x: 0, y: 0, z: -0.18 }), o2 = addp(addp(cmc, d, 0.72), { x: 0, y: 0, z: -0.1 });
+  P[1] = cmc; P[2] = lerp3(r1, o1, opp); P[3] = lerp3(r2, o2, opp); P[4] = lerp3(r3, tgt, opp);
+  const A = o.aspect, L = o.L, ro = o.roll || 0, c = Math.cos(ro), s = Math.sin(ro);
+  const lm = P.map(q => { const x = q.x * c - q.y * s, y = q.x * s + q.y * c; return { x: o.x + x * L / A, y: o.y - y * L, z: q.z * L, visibility: 1 }; });
+  const w = P.map(q => ({ x: q.x * 0.09, y: -q.y * 0.09, z: q.z * 0.09 }));
+  return { lm, w };
+}
+const HAND_L = 0.16; // длина ладони в долях высоты кадра для демо-кисти
+// Положение демо-кисти, при котором курсор окажется в точке (cx, cy)
+function poseForCursor(cx, cy, extra) {
+  const A = GE.aspect, ref = GE.ref || { x: A / 2, y: 0.62 - 0.75 * HAND_L }, gain = GE.gain;
+  const px = ref.x + (cx - A / 2) / gain, py = ref.y + (cy - 0.55) / gain;
+  return Object.assign({ x: px / A, y: py + 0.75 * HAND_L, L: HAND_L, side: cur().side, aspect: A }, extra);
+}
+function idlePose(extra) { return Object.assign({ x: 0.5, y: 0.62, L: HAND_L, side: cur().side, aspect: GE.aspect, flex: [0.05, 0.05, 0.05, 0.05] }, extra); }
+
+// ================== Игровой движок ==================
+const GE = { id: null, src: null, running: false, paused: false, raf: 0, tPrev: 0, time: 0, dur: 60, gain: 1.5, phase: 'calib', phaseT: 0, game: null, inp: null, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], ptr: { x: null, y: null, down: false, mouse: false }, aspect: 0.75, mirror: false, stream: null, speed: 1, missingT: 0, missBanner: false, lastCue: {}, clock: 0, tok: 0, lastVT: -1, lastRes: null, lastWrist: null, otherT: 0 };
+const gcv = $('#gcanvas'), gx = gcv.getContext('2d');
+const gvideo = document.createElement('video'); gvideo.muted = true; gvideo.playsInline = true; gvideo.setAttribute('playsinline', '');
+window.__tura = { GE, ensureModel, store: () => store };
+function sayCue(key, text, gap = 6) { const now = performance.now(); if (now - (GE.lastCue[key] || -1e9) < gap * 1000) return; GE.lastCue[key] = now; say(text); }
+let bannerTimer = 0;
+function banner(text, sticky, secs = 1.6) { const b = $('#g-banner'); if (b.textContent !== text) b.textContent = text; b.hidden = false; clearTimeout(bannerTimer); if (!sticky) bannerTimer = setTimeout(() => { b.hidden = true; }, secs * 1000 / (GE.speed || 1)); }
+function hideBanner() { clearTimeout(bannerTimer); $('#g-banner').hidden = true; }
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+
+function addPart(p) { GE.parts.push(Object.assign({ t: 0, life: 0.8, vx: 0, vy: 0, g: 1.3 }, p)); if (GE.parts.length > 260) GE.parts.splice(0, GE.parts.length - 260); }
+function burst(x, y, colors, n = 14, sp = 0.6, size = 0.012) { for (let i = 0; i < n; i++) { const a = rnd(0, Math.PI * 2), v = rnd(0.25, 1) * sp; addPart({ type: 'dot', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.2, color: pickOne(colors), size: rnd(0.6, 1.2) * size, life: rnd(0.45, 0.9) }); } }
+function floatText(x, y, text, color = '#FFFFFF', size = 0.05) { addPart({ type: 'text', x, y, vy: -0.18, g: 0, text, color, size, life: 0.9 }); }
+function updateParts(dt) { for (const p of GE.parts) { p.t += dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; } GE.parts = GE.parts.filter(p => p.t < p.life); }
+function drawParts(c, K) {
+  for (const p of GE.parts) {
+    const a = 1 - p.t / p.life; c.globalAlpha = clamp(a * 1.5, 0, 1);
+    if (p.type === 'dot') { c.fillStyle = p.color; c.beginPath(); c.arc(p.x * K, p.y * K, p.size * K * (0.5 + 0.5 * a), 0, Math.PI * 2); c.fill(); }
+    else if (p.type === 'text') { c.fillStyle = p.color; c.font = `700 ${Math.round(p.size * K)}px Unbounded, "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 0.008 * K; c.strokeStyle = 'rgba(0,0,0,.35)'; c.strokeText(p.text, p.x * K, p.y * K); c.fillText(p.text, p.x * K, p.y * K); }
+  }
+  c.globalAlpha = 1;
+}
+function roundRectPath(c, x, y, w, h, r) { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); }
+function labelPill(c, K, x, y, text, bg = 'rgba(10,15,19,.72)', fg = '#fff') {
+  c.font = `600 ${Math.round(0.03 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  const w = c.measureText(text).width + 0.03 * K, h = 0.048 * K;
+  c.fillStyle = bg; roundRectPath(c, x * K - w / 2, y * K - h / 2, w, h, h / 2); c.fill(); c.fillStyle = fg; c.fillText(text, x * K, y * K + 1);
+}
+function cursorFrom(p) { const A = GE.aspect; return { x: clamp(A / 2 + (p.x - GE.ref.x) * GE.gain, 0.04, A - 0.04), y: clamp(0.55 + (p.y - GE.ref.y) * GE.gain, 0.06, 0.96) }; }
+
+function touchInput() {
+  const pt = GE.ptr, has = pt.x != null, F = [0, 0, 0, 0];
+  if (GE.game.id === 'piano' && pt.down && pt.x != null) { const k = GE.game.laneAt(pt.x); if (k != null) F[k] = 120; }
+  return { ok: true, touch: true, g: pt.down ? 0.02 : 1, F, pinch: FINGERS.map(() => pt.down ? 0.1 : 1), cursor: has ? { x: pt.x, y: pt.y } : null, lm: null, other: false };
+}
+function readInput(dt) {
+  if (GE.src === 'touch') return touchInput();
+  let lm, w, other = false;
+  if (GE.src === 'auto') {
+    const fr = buildHand(GE.phase === 'play' ? GE.game.autopilot(dt, GE.inp) : idlePose());
+    lm = fr.lm; w = fr.w;
+  } else {
+    if (gvideo.readyState < 2) return { ok: false };
+    const vt = gvideo.currentTime;
+    if (vt !== GE.lastVT) { GE.lastVT = vt; try { GE.lastRes = mpDetect(gvideo, performance.now()); } catch (e) { GE.lastRes = null; } }
+    const h = pickHand(GE.lastRes); if (!h) { GE.ema = null; return { ok: false }; }
+    lm = h.lm; w = h.w; other = h.other;
+  }
+  const a = 0.55;
+  if (!GE.ema) GE.ema = { lm: lm.map(p => ({ ...p })), w: w.map(p => ({ ...p })) };
+  else for (let i = 0; i < 21; i++) {
+    const L = GE.ema.lm[i], l = lm[i], W = GE.ema.w[i], q = w[i];
+    L.x += a * (l.x - L.x); L.y += a * (l.y - L.y); L.z += a * ((l.z || 0) - (L.z || 0));
+    W.x += a * (q.x - W.x); W.y += a * (q.y - W.y); W.z += a * (q.z - W.z);
+  }
+  const sl = GE.ema.lm, f = handFeatures(GE.ema.w), D = i => dispH(sl, i);
+  const palmC = [0, 5, 9, 13, 17].map(D).reduce((s, p) => ({ x: s.x + p.x / 5, y: s.y + p.y / 5 }), { x: 0, y: 0 });
+  return { ok: true, lm: sl, ...f, palmC, tipX: FINGERS.map(q => D(q.tip).x), cursor: GE.ref ? cursorFrom(palmC) : null, other };
+}
+
+function drawHandSkel(c, K, inp) {
+  if (!inp.lm) return;
+  const lm = inp.lm, P = i => dispH(lm, i), cam = GE.src === 'camera';
+  c.save(); c.globalAlpha = cam ? 0.9 : 0.45; c.lineCap = 'round'; c.strokeStyle = 'rgba(237,242,240,.75)'; c.lineWidth = 0.006 * K;
+  for (const [a, b] of HB) { const pa = P(a), pb = P(b); c.beginPath(); c.moveTo(pa.x * K, pa.y * K); c.lineTo(pb.x * K, pb.y * K); c.stroke(); }
+  const colored = GE.game.coloredTips;
+  for (let i = 0; i < 21; i++) {
+    const p = P(i), k = FINGERS.findIndex(f => f.tip === i);
+    const col = colored && k >= 0 ? FINGERS[k].color : i === 4 && colored ? '#FFFFFF' : 'rgba(237,242,240,.9)';
+    c.fillStyle = col; c.beginPath(); c.arc(p.x * K, p.y * K, (k >= 0 || i === 4 ? 0.011 : 0.006) * K, 0, Math.PI * 2); c.fill();
+  }
+  c.restore();
+}
+
+// ---------- Игра 1: Яблоки (кулак — ладонь) ----------
+class ApplesGame {
+  constructor(p, st) {
+    this.id = 'apples'; this.level = clamp(st.level || 1, 1, 6); this.lv0 = this.level;
+    this.openT = clamp(st.openT || 0.6, 0.3, 0.95); this.closeT = clamp(st.closeT || 0.32, 0.05, this.openT - 0.12); this.o0 = this.openT;
+    this.apples = []; this.held = null; this.armed = false; this.hoverT = 0; this.minHover = 1; this.basketT = 0; this.maxInB = 0; this.peak = 0; this.treeT = 0.3;
+    this.score = 0; this.hits = 0; this.drops = 0; this.openFails = 0; this.closeFails = 0; this.win = []; this.bestOpen = 0; this.bestClose = 1; this.peaks = []; this.cue = ''; this.g = 1;
+  }
+  levelLabel() { return `Ур. ${this.level}`; }
+  get basket() { const A = GE.aspect; return { x: A / 2, y: 0.86, w: Math.min(0.36, A * 0.45), h: 0.12 }; }
+  setLevel(n) { const o = this.level; this.level = clamp(n, 1, 6); if (this.level === o) return; banner(this.level > o ? `Уровень ${this.level}` : `Уровень ${this.level}: чуть проще`, false, 1.4); sfx(this.level > o ? 'level' : 'miss'); }
+  outcome(v) { this.win.push(v); if (this.win.length >= 6) { const r = this.win.reduce((a, b) => a + b) / this.win.length; if (r >= 0.8) this.setLevel(this.level + 1); else if (r <= 0.4) this.setLevel(this.level - 1); this.win = []; } }
+  newTree() {
+    const A = GE.aspect, L = this.level, yTop = Math.max(0.17, 0.5 - 0.06 * (L - 1)), xs = Math.min(A / 2 - 0.08, 0.1 + 0.05 * (L - 1));
+    this.apples = [];
+    for (let i = 0; i < 5; i++) {
+      for (let t = 0; t < 30; t++) {
+        const x = A / 2 + rnd(-xs, xs), y = rnd(yTop, yTop + 0.13);
+        if (this.apples.some(a => Math.hypot(a.x - x, a.y - y) < 0.12)) continue;
+        this.apples.push({ x, y, x0: x, y0: y, r: 0.045, state: 'tree', t: rnd(0, 6) }); break;
+      }
+    }
+  }
+  update(dt, inp) {
+    for (const a of this.apples) {
+      a.t += dt;
+      if (a.state === 'fall') { a.vy = (a.vy || 0) + 1.6 * dt; a.y += a.vy * dt; if (a.y > 1.15) { a.state = 'regrow'; a.rt = 0; } }
+      else if (a.state === 'regrow') { a.rt += dt; if (a.rt > 0.8) { a.state = 'tree'; a.x = a.x0; a.y = a.y0; a.vy = 0; } }
+      else if (a.state === 'in') { a.y = approach(a.y, a.ty, dt, 0.08); }
+    }
+    if (!this.held && !this.apples.some(a => a.state === 'tree' || a.state === 'fall' || a.state === 'regrow')) { this.treeT -= dt; if (this.treeT <= 0) { if (this.apples.length) { this.score += 20; floatText(GE.aspect / 2, 0.4, 'Урожай +20', '#FFD24A', 0.055); sfx('level'); } this.newTree(); this.treeT = 0.8; } }
+    const c = inp.cursor, g = inp.g; this.g = g;
+    if (!c) { this.cue = ''; return; }
+    if (!this.held) {
+      if (g > this.closeT + 0.08) this.armed = true;
+      const over = this.apples.find(a => a.state === 'tree' && Math.hypot(a.x - c.x, a.y - c.y) < a.r + 0.05);
+      if (over) {
+        this.hoverT += dt; this.minHover = Math.min(this.minHover, g);
+        if (this.armed && g < this.closeT) {
+          this.held = over; over.state = 'held'; this.armed = false; this.hoverT = 0; this.minHover = 1; this.peak = 0; this.basketT = 0; this.maxInB = 0;
+          sfx('grab'); this.cue = ''; return;
+        }
+        if (this.hoverT > 6) {
+          this.closeFails++; this.outcome(0);
+          this.closeT = Math.min(this.openT - 0.12, Math.max(this.closeT + 0.04, this.minHover + 0.03));
+          this.hoverT = 0; this.minHover = 1; banner('Сжатие стало легче', false, 1.4);
+        }
+        this.cue = !this.armed ? 'Сначала раскройте кисть' : 'Сожмите кулак';
+        if (this.armed) sayCue('close', 'Сожмите кулак', 7);
+      } else { this.hoverT = 0; this.minHover = 1; this.cue = ''; }
+    } else {
+      const a = this.held, B = this.basket; a.x = c.x; a.y = c.y + 0.01;
+      const inB = Math.abs(c.x - B.x) < B.w / 2 + 0.02 && c.y > B.y - B.h * 1.6 && c.y < B.y + B.h / 2;
+      this.peak = Math.max(this.peak, g); this.bestClose = Math.min(this.bestClose, g);
+      if (g > this.openT) {
+        this.held = null; this.hoverT = 0;
+        if (inB) {
+          a.state = 'in'; a.x = clamp(c.x, B.x - B.w / 2 + 0.04, B.x + B.w / 2 - 0.04); a.ty = B.y - 0.02 + rnd(-0.01, 0.015); a.y = Math.min(a.y, a.ty);
+          const pts = 10 + 2 * this.level; this.score += pts; this.hits++; this.peaks.push(this.peak); this.bestOpen = Math.max(this.bestOpen, this.peak);
+          floatText(a.x, B.y - 0.12, '+' + pts, '#FFFFFF', 0.05); burst(a.x, B.y - 0.04, ['#FFD24A', '#E8453C', '#FFFFFF'], 12, 0.5, 0.01); sfx('place');
+          this.openT = Math.max(this.openT, Math.min(0.95, this.openT + 0.015, this.bestOpen + 0.05)); this.closeT = Math.min(this.closeT, Math.max(0.05, this.closeT - 0.01, this.bestClose + 0.05)); this.outcome(1);
+          if (this.hits % 4 === 0) say('Отлично');
+        } else { a.state = 'fall'; a.vy = 0; this.drops++; this.outcome(0); floatText(a.x, a.y - 0.06, 'мимо корзины', 'rgba(255,255,255,.85)', 0.032); sfx('miss'); }
+        this.cue = ''; return;
+      }
+      if (inB) {
+        this.basketT += dt; this.maxInB = Math.max(this.maxInB, g);
+        this.cue = g > this.closeT + 0.06 ? 'Шире! Раскройте пальцы' : 'Раскройте ладонь';
+        sayCue('open', 'Раскройте ладонь', 6);
+        if (this.basketT > 6) {
+          this.openFails++; this.outcome(0);
+          this.openT = Math.max(this.closeT + 0.12, Math.min(this.openT - 0.04, this.maxInB - 0.02));
+          this.basketT = 0; this.maxInB = 0; banner('Раскрытие стало легче', false, 1.4);
+        }
+      } else { this.basketT = 0; this.cue = ''; }
+    }
+  }
+  bg(c, overlay) {
+    const W = gcv.width, H = gcv.height;
+    if (!overlay) { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#173B2E'); g.addColorStop(1, '#0D241C'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+    // крона
+    const A = GE.aspect, K = H;
+    c.fillStyle = overlay ? 'rgba(60,130,70,.22)' : 'rgba(70,150,80,.35)';
+    for (const [dx, dy, r] of [[-0.22, 0.3, 0.2], [0, 0.22, 0.24], [0.22, 0.3, 0.2], [-0.1, 0.42, 0.18], [0.12, 0.42, 0.18]]) { c.beginPath(); c.arc((A / 2 + dx) * K, dy * K, r * K, 0, Math.PI * 2); c.fill(); }
+  }
+  draw(c, K) {
+    const B = this.basket;
+    // корзина: задняя стенка
+    c.fillStyle = '#7A4A1E'; roundRectPath(c, (B.x - B.w / 2) * K, (B.y - B.h / 2) * K, B.w * K, B.h * K, 0.02 * K); c.fill();
+    for (const a of this.apples) if (a.state === 'in') drawApple(c, K, a.x, a.y, a.r * 0.85);
+    c.fillStyle = '#A8682C'; roundRectPath(c, (B.x - B.w / 2) * K, (B.y - B.h * 0.1) * K, B.w * K, B.h * 0.6 * K, 0.02 * K); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = 0.004 * K; for (let i = 1; i < 6; i++) { const x = (B.x - B.w / 2 + B.w * i / 6) * K; c.beginPath(); c.moveTo(x, (B.y - B.h * 0.1) * K); c.lineTo(x, (B.y + B.h * 0.5) * K); c.stroke(); }
+    if (this.held) { c.strokeStyle = 'rgba(124,240,176,.9)'; c.lineWidth = 0.006 * K; c.setLineDash([0.015 * K, 0.01 * K]); roundRectPath(c, (B.x - B.w / 2 - 0.02) * K, (B.y - B.h * 1.6) * K, (B.w + 0.04) * K, B.h * 2.1 * K, 0.03 * K); c.stroke(); c.setLineDash([]); }
+    for (const a of this.apples) if (a.state === 'tree' || a.state === 'fall' || a.state === 'held') drawApple(c, K, a.x, a.y + (a.state === 'tree' ? Math.sin(a.t * 1.5) * 0.004 : 0), a.r);
+    for (const a of this.apples) if (a.state === 'regrow') drawApple(c, K, a.x0, a.y0, a.r * ease(a.rt / 0.8));
+    this.drawGauge(c, K);
+  }
+  drawGauge(c, K) {
+    const A = GE.aspect, x = (A - 0.05) * K, y0 = 0.18 * K, h = 0.5 * K, w = 0.028 * K, g = clamp(this.g, 0, 1);
+    c.fillStyle = 'rgba(255,255,255,.14)'; roundRectPath(c, x - w / 2, y0, w, h, w / 2); c.fill();
+    c.fillStyle = this.held ? '#FFB547' : '#8DA2FF'; roundRectPath(c, x - w / 2, y0 + h * (1 - g), w, h * g, w / 2); c.fill();
+    for (const [v, col] of [[this.openT, '#7CF0B0'], [this.closeT, '#F5C26B']]) { const y = y0 + h * (1 - v); c.strokeStyle = col; c.lineWidth = 0.005 * K; c.beginPath(); c.moveTo(x - w, y); c.lineTo(x + w, y); c.stroke(); }
+    c.fillStyle = 'rgba(255,255,255,.85)'; c.font = `600 ${Math.round(0.024 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'top';
+    c.fillText('ладонь', x, y0 - 0.035 * K); c.textBaseline = 'bottom'; c.fillText('кулак', x, y0 + h + 0.04 * K);
+  }
+  drawCursor(c, K, inp) {
+    const cu = inp.cursor; if (!cu) return;
+    const g = clamp(inp.g, 0, 1), X = cu.x * K, Y = cu.y * K, R = 0.03 * K;
+    c.save(); c.globalAlpha = 0.95; c.lineCap = 'round';
+    c.strokeStyle = this.held ? '#FFB547' : '#FFFFFF'; c.lineWidth = 0.012 * K;
+    for (let i = 0; i < 4; i++) { const a = rad(-60 + i * 30) - Math.PI / 2, L = R * (0.4 + 1.2 * g); c.beginPath(); c.moveTo(X + Math.cos(a) * R * 0.8, Y + Math.sin(a) * R * 0.8); c.lineTo(X + Math.cos(a) * (R * 0.8 + L), Y + Math.sin(a) * (R * 0.8 + L)); c.stroke(); }
+    { const a = rad(55) - Math.PI / 2 + Math.PI / 2 * 0.9, L = R * (0.3 + 0.8 * g); c.beginPath(); c.moveTo(X + Math.cos(a) * R * 0.8, Y + Math.sin(a) * R * 0.8); c.lineTo(X + Math.cos(a) * (R * 0.8 + L), Y + Math.sin(a) * (R * 0.8 + L)); c.stroke(); }
+    c.fillStyle = this.held ? 'rgba(255,181,71,.35)' : 'rgba(255,255,255,.25)'; c.beginPath(); c.arc(X, Y, R, 0, Math.PI * 2); c.fill(); c.lineWidth = 0.006 * K; c.stroke();
+    c.restore();
+  }
+  demoObjects() { this.newTree(); this.g = 0.55; }
+  autopilot(dt) {
+    const A = this.ap || (this.ap = { cx: GE.aspect / 2, cy: 0.55, f: 0.05, inB: 0, partial: false, wasHeld: false });
+    let tx = A.cx, ty = A.cy, want = 0.05;
+    if (!this.held) {
+      A.wasHeld = false;
+      const t = this.apples.find(a => a.state === 'tree');
+      if (t) { tx = t.x; ty = t.y; if (Math.hypot(A.cx - t.x, A.cy - t.y) < 0.03) want = 1; }
+    } else {
+      if (!A.wasHeld) { A.wasHeld = true; A.partial = Math.random() < 0.35; A.inB = 0; }
+      const B = this.basket; tx = B.x + rnd(-0.005, 0.005); ty = B.y - 0.06;
+      if (Math.hypot(A.cx - tx, A.cy - ty) < 0.04) { A.inB += dt; want = A.partial && A.inB < 1.8 ? 0.42 : 0; } else { A.inB = 0; want = 1; }
+    }
+    A.cx = approach(A.cx, tx, dt, 0.3); A.cy = approach(A.cy, ty, dt, 0.3); A.f = approach(A.f, want, dt, 0.12);
+    return poseForCursor(A.cx, A.cy, { flex: [A.f, A.f, A.f, A.f], opp: A.f, to: 'palm' });
+  }
+  result() {
+    const att = this.hits + this.drops + this.openFails + this.closeFails, acc = att ? this.hits / att : 0, comp = (this.hits + this.openFails) ? this.openFails / (this.hits + this.openFails) : 0;
+    const hint = this.openFails >= Math.max(1, this.hits / 3) ? 'open' : this.closeFails >= Math.max(1, this.hits / 3) ? 'close' : acc < 0.5 && att >= 4 ? 'easy' : 'good';
+    const extra = [['Мимо корзины', String(this.drops)], ['Лучшее раскрытие кисти', this.bestOpen ? Math.round(Math.min(1, this.bestOpen) * 100) + '%' : '—'], ['Среднее раскрытие при броске', this.peaks.length ? Math.round(Math.min(1, median(this.peaks)) * 100) + '%' : '—'], ['Цель раскрытия', `${Math.round(this.o0 * 100)}% → ${Math.round(this.openT * 100)}%`], ['Уровень', `${this.lv0} → ${this.level}`]];
+    return { id: 'apples', score: this.score, reps: this.hits, misses: this.drops, hint, stars: starsFor(this.hits, acc, comp), extra, save: { level: this.level, openT: +this.openT.toFixed(3), closeT: +this.closeT.toFixed(3) }, bestOpen: Math.round(Math.min(1, this.bestOpen) * 100) };
+  }
+}
+function drawApple(c, K, x, y, r) {
+  if (r <= 0.001) return;
+  const X = x * K, Y = y * K, R = r * K;
+  const g = c.createRadialGradient(X - R * 0.35, Y - R * 0.35, R * 0.1, X, Y, R);
+  g.addColorStop(0, '#FF9A90'); g.addColorStop(0.55, '#E8453C'); g.addColorStop(1, '#9E1B1B');
+  c.fillStyle = g; c.beginPath(); c.arc(X, Y, R, 0, Math.PI * 2); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(X - R * 0.35, Y - R * 0.42, R * 0.26, R * 0.14, -0.6, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#6B3E17'; c.lineWidth = R * 0.12; c.lineCap = 'round'; c.beginPath(); c.moveTo(X, Y - R * 0.85); c.lineTo(X + R * 0.12, Y - R * 1.2); c.stroke();
+  c.fillStyle = '#4BA34A'; c.beginPath(); c.ellipse(X + R * 0.38, Y - R * 1.05, R * 0.32, R * 0.14, -0.5, 0, Math.PI * 2); c.fill();
+}
+
+// ---------- Игра 2: Ягоды (щипок) ----------
+const BERRY_LV = [null, { r: 0.065, life: 9, max: 2 }, { r: 0.058, life: 8, max: 2 }, { r: 0.052, life: 7, max: 3 }, { r: 0.048, life: 6, max: 3 }, { r: 0.044, life: 5, max: 3 }, { r: 0.04, life: 4.5, max: 4 }];
+class BerriesGame {
+  constructor(p, st) {
+    this.id = 'berries'; this.level = clamp(st.level || 1, 1, 6); this.lv0 = this.level; this.coloredTips = true;
+    this.pinchT = clamp(st.pinchT || 0.42, 0.2, 0.8); this.p0 = this.pinchT;
+    this.berries = []; this.spawnT = 0.6; this.armed = false; this.hoverT = 0; this.minD = 9; this.waveLeft = 0; this.finger = 0; this.fi = -1;
+    this.score = 0; this.hits = 0; this.misses = 0; this.squashed = 0; this.win = []; this.byF = [0, 0, 0, 0]; this.cue = ''; this.d = 1;
+    this.newWave(true);
+  }
+  levelLabel() { return `Ур. ${this.level}`; }
+  fingersFor() { return this.level <= 2 ? [0] : this.level === 3 ? [0, 1] : this.level === 4 ? [0, 1, 2] : [0, 1, 2, 3]; }
+  setLevel(n) { const o = this.level; this.level = clamp(n, 1, 6); if (this.level === o) return; banner(this.level > o ? `Уровень ${this.level}` : `Уровень ${this.level}: чуть проще`, false, 1.4); sfx(this.level > o ? 'level' : 'miss'); }
+  outcome(v) { this.win.push(v); if (this.win.length >= 6) { const r = this.win.reduce((a, b) => a + b) / this.win.length; if (r >= 0.8) this.setLevel(this.level + 1); else if (r <= 0.4) this.setLevel(this.level - 1); this.win = []; } }
+  newWave(silent) {
+    const fs = this.fingersFor(); this.fi = (this.fi + 1) % fs.length; this.finger = fs[this.fi]; this.waveLeft = 4;
+    this.berries.forEach(b => { if (b.state === 'live') b.state = 'fade'; });
+    if (!silent) { banner(`Щипок: большой + ${FINGERS[this.finger].name}`, false, 1.6); say(`Большой и ${FINGERS[this.finger].name}`); }
+  }
+  spawn() {
+    const A = GE.aspect, L = BERRY_LV[this.level], xs = Math.min(A / 2 - 0.1, 0.12 + 0.04 * this.level);
+    for (let t = 0; t < 20; t++) {
+      const x = A / 2 + rnd(-xs, xs), y = rnd(0.22, 0.62);
+      if (this.berries.some(b => b.state === 'live' && Math.hypot(b.x - x, b.y - y) < 0.15)) continue;
+      this.berries.push({ x, y, r: L.r, t: 0, life: L.life, k: this.finger, state: 'live' }); return;
+    }
+  }
+  get bowl() { return { x: GE.aspect / 2, y: 0.88, w: Math.min(0.3, GE.aspect * 0.4) }; }
+  update(dt, inp) {
+    const L = BERRY_LV[this.level];
+    for (const b of this.berries) {
+      b.t += dt;
+      if (b.state === 'fly') { b.u += dt / 0.45; b.x = lerp(b.sx, this.bowl.x + b.ox, ease(b.u)); b.y = lerp(b.sy, this.bowl.y - 0.03, ease(b.u)) - Math.sin(Math.PI * clamp(b.u, 0, 1)) * 0.12; if (b.u >= 1) b.state = 'bowl'; }
+      if (b.state === 'live' && b.t > b.life) { b.state = 'fade'; this.misses++; this.outcome(0); floatText(b.x, b.y - 0.07, 'упала', 'rgba(255,255,255,.8)', 0.032); sfx('miss'); }
+    }
+    this.berries = this.berries.filter(b => !(b.state === 'fade' && b.t > b.life + 0.6) && !(b.state === 'squash' && b.t > 0.8) && !(b.state === 'fade' && b.ft > 0.5));
+    this.berries.forEach(b => { if (b.state === 'fade') b.ft = (b.ft || 0) + dt; });
+    if (this.berries.filter(b => b.state === 'live').length < L.max) { this.spawnT -= dt; if (this.spawnT <= 0) { this.spawn(); this.spawnT = rnd(0.5, 1.0); } }
+    const k = this.finger, d = inp.pinch[k], c = inp.cursor; this.d = d;
+    if (d > this.pinchT + 0.18) this.armed = true;
+    if (!c) { this.cue = ''; return; }
+    const over = this.berries.find(b => b.state === 'live' && Math.hypot(b.x - c.x, b.y - c.y) < b.r + 0.045);
+    if (!over) { this.hoverT = 0; this.minD = 9; this.cue = ''; return; }
+    this.hoverT += dt; this.minD = Math.min(this.minD, d);
+    if (this.armed && d < this.pinchT) {
+      this.armed = false; this.hoverT = 0; this.minD = 9;
+      const fistLim = this.level >= 4 ? 0.4 : 0.25;
+      if (!inp.touch && this.level >= 2 && inp.g < fistLim) {
+        over.state = 'squash'; over.t = 0; this.squashed++; this.outcome(0); sfx('squash');
+        floatText(over.x, over.y - 0.07, 'помялась', '#FFB3A8', 0.034); this.cue = 'Кончиками пальцев, не кулаком'; sayCue('fist', 'Берите кончиками пальцев', 6); return;
+      }
+      over.state = 'fly'; over.u = 0; over.sx = over.x; over.sy = over.y; over.ox = rnd(-0.06, 0.06);
+      const pts = 10 + 2 * this.level; this.score += pts; this.hits++; this.byF[k]++; this.outcome(1);
+      this.pinchT = Math.max(0.2, this.pinchT - 0.01);
+      floatText(over.x, over.y - 0.08, '+' + pts, '#FFFFFF', 0.048); burst(over.x, over.y, [FINGERS[k].color, '#FFFFFF'], 10, 0.4, 0.009); sfx('pick');
+      this.waveLeft--; if (this.waveLeft <= 0) this.newWave(this.fingersFor().length === 1);
+      this.cue = ''; return;
+    }
+    if (this.hoverT > 6) { this.pinchT = Math.min(0.8, Math.max(this.pinchT + 0.05, this.minD + 0.04)); this.hoverT = 0; this.minD = 9; banner('Щипок стал легче', false, 1.4); }
+    this.cue = !this.armed ? 'Разведите пальцы' : `Сведите большой с ${FINGERS[k].dat}`;
+  }
+  bg(c, overlay) {
+    const W = gcv.width, H = gcv.height, A = GE.aspect, K = H;
+    if (!overlay) { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1E3A2A'); g.addColorStop(1, '#10231A'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+    c.fillStyle = overlay ? 'rgba(50,110,60,.2)' : 'rgba(60,130,70,.32)';
+    for (const [dx, dy, r] of [[-0.25, 0.45, 0.16], [0, 0.35, 0.22], [0.25, 0.45, 0.16], [-0.12, 0.6, 0.15], [0.14, 0.6, 0.15]]) { c.beginPath(); c.arc((A / 2 + dx) * K, dy * K, r * K, 0, Math.PI * 2); c.fill(); }
+  }
+  draw(c, K) {
+    const B = this.bowl;
+    c.fillStyle = '#C9D6E3'; c.beginPath(); c.ellipse(B.x * K, (B.y - 0.02) * K, B.w / 2 * K, 0.03 * K, 0, 0, Math.PI * 2); c.fill();
+    for (const b of this.berries) if (b.state === 'bowl') drawBerry(c, K, b.x, b.y, b.r * 0.8, FINGERS[b.k].color, 1);
+    c.fillStyle = '#E8EEF4'; c.beginPath(); c.moveTo((B.x - B.w / 2) * K, (B.y - 0.02) * K); c.quadraticCurveTo(B.x * K, (B.y + 0.12) * K, (B.x + B.w / 2) * K, (B.y - 0.02) * K); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(20,32,28,.55)'; c.font = `700 ${Math.round(0.03 * K)}px Unbounded, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(this.hits), B.x * K, (B.y + 0.03) * K);
+    for (const b of this.berries) {
+      if (b.state === 'live') {
+        const s = Math.min(1, 0.4 + b.t / 0.3 * 0.6); drawBerry(c, K, b.x, b.y, b.r * s, FINGERS[b.k].color, 1);
+        const left = 1 - b.t / b.life; c.strokeStyle = left < 0.3 ? 'rgba(255,140,120,.9)' : 'rgba(255,255,255,.5)'; c.lineWidth = 0.005 * K; c.beginPath(); c.arc(b.x * K, b.y * K, b.r * K * 1.35, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.stroke();
+      } else if (b.state === 'fly') drawBerry(c, K, b.x, b.y, b.r, FINGERS[b.k].color, 1);
+      else if (b.state === 'fade') drawBerry(c, K, b.x, b.y + (b.ft || 0) * 0.3, b.r, FINGERS[b.k].color, 1 - clamp((b.ft || 0) / 0.5, 0, 1));
+      else if (b.state === 'squash') { c.globalAlpha = 1 - b.t / 0.8; c.fillStyle = FINGERS[b.k].color; c.beginPath(); c.ellipse(b.x * K, b.y * K, b.r * 1.5 * K, b.r * 0.6 * K, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
+    }
+    labelPill(c, K, GE.aspect / 2, 0.76, `Большой + ${FINGERS[this.finger].name}`, 'rgba(10,15,19,.72)', FINGERS[this.finger].color);
+  }
+  drawCursor(c, K, inp) {
+    const cu = inp.cursor; if (!cu) return;
+    const k = this.finger, gap = (0.012 + 0.045 * clamp((this.d - 0.1) / 0.9, 0, 1)) * K, X = cu.x * K, Y = cu.y * K;
+    c.save(); c.lineWidth = 0.005 * K; c.strokeStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.arc(X, Y, 0.05 * K, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(X - gap * 0.7, Y + gap * 0.7, 0.014 * K, 0, Math.PI * 2); c.fill();
+    c.fillStyle = FINGERS[k].color; c.beginPath(); c.arc(X + gap * 0.7, Y - gap * 0.7, 0.014 * K, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+  demoObjects() { const A = GE.aspect; this.berries = [{ x: A * 0.35, y: 0.35, r: 0.06, t: 1, life: 9, k: 0, state: 'live' }, { x: A * 0.62, y: 0.48, r: 0.06, t: 1, life: 9, k: 0, state: 'live' }]; }
+  autopilot(dt) {
+    const A = this.ap || (this.ap = { cx: GE.aspect / 2, cy: 0.5, opp: 0, fk: 0, fist: 0, tgt: null, mode: null });
+    if (!A.tgt || A.tgt.state !== 'live') { A.tgt = this.berries.find(b => b.state === 'live') || null; A.mode = this.level >= 2 && Math.random() < 0.2 ? 'fist' : 'pinch'; }
+    let tx = A.cx, ty = A.cy, wantOpp = 0, wantFist = 0;
+    if (A.tgt) { tx = A.tgt.x; ty = A.tgt.y; if (Math.hypot(A.cx - tx, A.cy - ty) < 0.03 && A.tgt.t > 0.4) { if (A.mode === 'fist') wantFist = 1; else wantOpp = 1; } }
+    A.cx = approach(A.cx, tx, dt, 0.28); A.cy = approach(A.cy, ty, dt, 0.28); A.opp = approach(A.opp, wantOpp, dt, 0.1); A.fist = approach(A.fist, wantFist, dt, 0.1);
+    const flex = [0.05, 0.05, 0.05, 0.05]; flex[this.finger] = Math.max(flex[this.finger], 0.35 * A.opp);
+    for (let i = 0; i < 4; i++) flex[i] = Math.max(flex[i], 0.95 * A.fist);
+    return poseForCursor(A.cx, A.cy, { flex, opp: Math.max(A.opp, A.fist), to: A.fist > A.opp ? 'palm' : this.finger });
+  }
+  result() {
+    const att = this.hits + this.misses + this.squashed, acc = att ? this.hits / att : 0, comp = (this.hits + this.squashed) ? this.squashed / (this.hits + this.squashed) : 0;
+    const hint = comp > 0.25 ? 'fist' : acc < 0.5 && att >= 4 ? 'easy' : 'good';
+    const used = this.byF.map((n, i) => n ? `${FINGERS[i].short} ${n}` : '').filter(Boolean).join(', ');
+    const extra = [['Упали', String(this.misses)], ['Помяты всей кистью', String(this.squashed)], ['Щипки по пальцам', used || '—'], ['Порог щипка', `${Math.round(this.p0 * 100)} → ${Math.round(this.pinchT * 100)}% ладони`], ['Уровень', `${this.lv0} → ${this.level}`]];
+    return { id: 'berries', score: this.score, reps: this.hits, misses: this.misses, hint, stars: starsFor(this.hits, acc, comp), extra, save: { level: this.level, pinchT: +this.pinchT.toFixed(3) } };
+  }
+}
+function drawBerry(c, K, x, y, r, color, alpha) {
+  if (r <= 0.001 || alpha <= 0) return;
+  const X = x * K, Y = y * K, R = r * K;
+  c.save(); c.globalAlpha = alpha;
+  const g = c.createRadialGradient(X - R * 0.3, Y - R * 0.35, R * 0.1, X, Y, R); g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.25, color); g.addColorStop(1, color);
+  c.fillStyle = g; c.beginPath(); c.arc(X, Y, R, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = R * 0.08; c.stroke();
+  c.fillStyle = '#3E8A22'; c.beginPath(); c.ellipse(X + R * 0.15, Y - R * 1.0, R * 0.35, R * 0.15, -0.4, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+
+// ---------- Игра 3: Пианино (отдельные пальцы) ----------
+const PIANO_LV = [null, { n: 2, gap: 2.4, fall: 3.2, win: 0.5 }, { n: 3, gap: 2.0, fall: 2.9, win: 0.45 }, { n: 4, gap: 1.8, fall: 2.6, win: 0.42 }, { n: 4, gap: 1.5, fall: 2.3, win: 0.38 }, { n: 4, gap: 1.25, fall: 2.1, win: 0.34 }, { n: 4, gap: 1.05, fall: 1.9, win: 0.3 }];
+class PianoGame {
+  constructor(p, st) {
+    this.id = 'piano'; this.level = clamp(st.level || 1, 1, 6); this.lv0 = this.level; this.coloredTips = true;
+    this.T = (st.T && st.T.length === 4 ? st.T : [40, 40, 40, 40]).map(v => clamp(v, 12, 90)); this.T0 = this.T.slice();
+    this.notes = []; this.spawnT = 1.0; this.down = [false, false, false, false]; this.e = [0, 0, 0, 0]; this.order = [0, 1, 2, 3]; this.last = -1;
+    this.score = 0; this.hits = 0; this.clean = 0; this.misses = 0; this.win = []; this.byF = FINGERS.map(() => ({ hit: 0, clean: 0, miss: 0 })); this.cue = ''; this.flash = [0, 0, 0, 0];
+  }
+  levelLabel() { return `Ур. ${this.level}`; }
+  get L() { return PIANO_LV[this.level]; }
+  active() { return [0, 1, 2, 3].slice(0, this.L.n); }
+  lanes() { const act = this.active(); return this.order.filter(k => act.includes(k)); }
+  laneGeo() { const A = GE.aspect, ln = this.lanes(), w = Math.min(0.24, A * 0.84 / ln.length), x0 = A / 2 - w * ln.length / 2; return { ln, w, x0, hitY: 0.76 }; }
+  laneX(k) { const G = this.laneGeo(), i = G.ln.indexOf(k); return i < 0 ? null : G.x0 + G.w * (i + 0.5); }
+  laneAt(x) { const G = this.laneGeo(), i = Math.floor((x - G.x0) / G.w); return i >= 0 && i < G.ln.length ? G.ln[i] : null; }
+  onCalibrated() { if (GE.tipX) this.order = [0, 1, 2, 3].sort((a, b) => GE.tipX[a] - GE.tipX[b]); }
+  setLevel(n) { const o = this.level; this.level = clamp(n, 1, 6); if (this.level === o) return; banner(this.level > o ? `Уровень ${this.level}` : `Уровень ${this.level}: чуть проще`, false, 1.4); sfx(this.level > o ? 'level' : 'miss'); }
+  outcome(v) { this.win.push(v); if (this.win.length >= 8) { const r = this.win.reduce((a, b) => a + b) / this.win.length; if (r >= 0.8) this.setLevel(this.level + 1); else if (r <= 0.4) this.setLevel(this.level - 1); this.win = []; } }
+  update(dt, inp) {
+    const L = this.L, act = this.active();
+    this.spawnT -= dt;
+    if (this.spawnT <= 0) {
+      let k = pickOne(act); if (k === this.last && act.length > 1 && Math.random() < 0.6) k = pickOne(act.filter(x => x !== k));
+      this.last = k; this.notes.push({ k, t: 0, fall: L.fall, state: 'live', sloppy: Math.random() < 0.3, skip: Math.random() < 0.08 });
+      this.spawnT = L.gap * rnd(0.85, 1.15);
+    }
+    const R = inp.touch ? [0, 0, 0, 0] : (GE.R || [0, 0, 0, 0]);
+    this.e = inp.F.map((v, j) => v - R[j]);
+    for (let j = 0; j < 4; j++) {
+      this.flash[j] = Math.max(0, this.flash[j] - dt);
+      if (!this.down[j] && this.e[j] > this.T[j]) { this.down[j] = true; this.press(j, inp); }
+      else if (this.down[j] && this.e[j] < this.T[j] * 0.5) this.down[j] = false;
+    }
+    for (const n of this.notes) {
+      n.t += dt;
+      if (n.state === 'live' && n.t > n.fall + L.win) {
+        n.state = 'miss'; this.misses++; this.byF[n.k].miss++; this.T[n.k] = Math.max(12, this.T[n.k] - 4); this.outcome(0);
+        const x = this.laneX(n.k); if (x != null) floatText(x, 0.68, 'мимо', 'rgba(255,255,255,.8)', 0.03); sfx('miss');
+      }
+    }
+    this.notes = this.notes.filter(n => n.state === 'live' || n.t < n.fall + L.win + 0.6);
+    const nxt = this.notes.filter(n => n.state === 'live').sort((a, b) => (b.t - b.fall) - (a.t - a.fall))[0];
+    if (!this.cueT || GE.clock > this.cueT) this.cue = nxt && nxt.fall - nxt.t < 0.8 ? `Согните ${FINGERS[nxt.k].name}` : '';
+  }
+  press(j, inp) {
+    const L = this.L, cand = this.notes.filter(n => n.state === 'live' && n.k === j && Math.abs(n.t - n.fall) <= L.win).sort((a, b) => Math.abs(a.t - a.fall) - Math.abs(b.t - b.fall))[0];
+    if (!cand) return;
+    const others = [0, 1, 2, 3].filter(o => o !== j && this.e[o] > Math.max(20, 0.5 * this.T[o]));
+    const clean = inp.touch || others.length === 0;
+    cand.state = 'hit'; this.hits++; this.byF[j].hit++; this.flash[j] = 0.25;
+    const x = this.laneX(j) ?? GE.aspect / 2, pts = clean ? 10 + 2 * this.level : 5;
+    this.score += pts; floatText(x, 0.66, '+' + pts, clean ? '#FFFFFF' : '#F5C26B', 0.045); burst(x, 0.76, [FINGERS[j].color, '#FFFFFF'], 10, 0.45, 0.009); sfx('note', this.lanes().indexOf(j));
+    if (clean) { this.clean++; this.byF[j].clean++; this.T[j] = Math.min(90, this.T[j] + 2); this.outcome(1); }
+    else { this.outcome(0.5); this.cue = `Чисто не вышло: дрогнул ${FINGERS[others[0]].name}`; this.cueT = GE.clock + 1.2; sayCue('mass', 'Остальные пальцы неподвижно', 8); }
+  }
+  bg(c, overlay) {
+    const W = gcv.width, H = gcv.height;
+    if (!overlay) { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1A1F3A'); g.addColorStop(1, '#0D1022'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+  }
+  draw(c, K) {
+    const G = this.laneGeo(), L = this.L;
+    G.ln.forEach((k, i) => {
+      const x = G.x0 + G.w * i, f = FINGERS[k];
+      c.fillStyle = i % 2 ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.1)'; c.fillRect(x * K, 0.1 * K, G.w * K, 0.84 * K);
+      if (this.flash[k] > 0) { c.fillStyle = `rgba(255,255,255,${this.flash[k]})`; c.fillRect(x * K, 0.1 * K, G.w * K, 0.84 * K); }
+      // шкала сгибания пальца: прямая обратная связь
+      const v = clamp(this.e[k] / this.T[k], 0, 1.3), bx = (x + G.w * 0.2) * K, bw = G.w * 0.6 * K, by = 0.84 * K, bh = 0.05 * K;
+      c.fillStyle = 'rgba(255,255,255,.15)'; roundRectPath(c, bx, by, bw, bh, bh / 2); c.fill();
+      c.fillStyle = this.down[k] ? f.color : 'rgba(255,255,255,.55)'; roundRectPath(c, bx, by, bw * Math.min(1, v / 1.3), bh, bh / 2); c.fill();
+      c.strokeStyle = '#FFFFFF'; c.lineWidth = 0.004 * K; c.beginPath(); c.moveTo(bx + bw / 1.3, by - 0.006 * K); c.lineTo(bx + bw / 1.3, by + bh + 0.006 * K); c.stroke();
+      c.fillStyle = f.color; c.font = `600 ${Math.round(0.028 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'top'; c.fillText(f.short, (x + G.w / 2) * K, by + bh + 0.012 * K);
+    });
+    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 0.006 * K; c.beginPath(); c.moveTo(G.x0 * K, G.hitY * K); c.lineTo((G.x0 + G.w * G.ln.length) * K, G.hitY * K); c.stroke();
+    for (const n of this.notes) {
+      const x = this.laneX(n.k); if (x == null) continue;
+      const y = 0.08 + (G.hitY - 0.08) * (n.t / n.fall), R = Math.min(G.w * 0.32, 0.055) * K;
+      if (n.state === 'hit') continue;
+      c.globalAlpha = n.state === 'miss' ? 0.3 : 1; c.fillStyle = FINGERS[n.k].color; c.beginPath(); c.arc(x * K, y * K, R, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.4)'; c.beginPath(); c.arc(x * K - R * 0.3, y * K - R * 0.3, R * 0.3, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+    }
+  }
+  drawCursor() { }
+  demoObjects() { this.notes = [{ k: 0, t: 2.0, fall: 3.2, state: 'live' }, { k: 1, t: 1.0, fall: 3.2, state: 'live' }]; this.e = [30, 5, 0, 0]; }
+  autopilot(dt) {
+    const A = this.ap || (this.ap = { f: [0.05, 0.05, 0.05, 0.05] }), want = [0.05, 0.05, 0.05, 0.05];
+    for (const n of this.notes) if (n.state === 'live' && !n.skip && Math.abs(n.t - n.fall) < 0.16) { want[n.k] = 0.6; if (n.sloppy) { const nb = n.k < 3 ? n.k + 1 : n.k - 1; want[nb] = Math.max(want[nb], 0.35); } }
+    for (let i = 0; i < 4; i++) A.f[i] = approach(A.f[i], want[i], dt, 0.05);
+    return idlePose({ flex: A.f.slice() });
+  }
+  result() {
+    const att = this.hits + this.misses, acc = att ? this.hits / att : 0, cleanShare = this.hits ? this.clean / this.hits : 0;
+    const hint = this.hits >= 3 && cleanShare < 0.7 ? 'mass' : acc < 0.5 && att >= 4 ? 'easy' : 'good';
+    const per = this.byF.map((s, i) => s.hit + s.miss ? `${FINGERS[i].short} ${s.clean}/${s.hit + s.miss}` : '').filter(Boolean).join(', ');
+    const extra = [['Чистых нажатий', this.hits ? `${this.clean} из ${this.hits} (${Math.round(cleanShare * 100)}%)` : '—'], ['Пропущено', String(this.misses)], ['Чисто по пальцам', per || '—'], ['Уровень', `${this.lv0} → ${this.level}`]];
+    return { id: 'piano', score: this.score, reps: this.hits, misses: this.misses, hint, stars: starsFor(this.hits, acc, 1 - cleanShare), extra, save: { level: this.level, T: this.T.map(v => Math.round(v)) }, clean: Math.round(cleanShare * 100) };
+  }
+}
+function makeGame(id, p) { const st = hs(p, id); return id === 'apples' ? new ApplesGame(p, st) : id === 'berries' ? new BerriesGame(p, st) : new PianoGame(p, st); }
+
+// ---------- Экраны ----------
+function levelText(id, st) {
+  if (id === 'apples') return st.openT ? `раскрытие ${Math.round(st.openT * 100)}%` : 'уровень 1';
+  if (id === 'berries') { const l = st.level || 1; return l <= 2 ? 'большой + указательный' : l === 3 ? '+ средний' : l === 4 ? '+ безымянный' : 'все пальцы'; }
+  const n = PIANO_LV[st.level || 1].n; return `${n} ${plural(n, 'палец', 'пальца', 'пальцев')}`;
+}
+function renderHome() {
+  const p = cur(), day = courseDay(p);
+  const opts = Object.values(store.patients).map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  $('#patient-card').innerHTML = `
+    <div class="patient"><div><div class="name">${esc(p.name)}</div><div class="muted small">Сторона поражения: ${sideName(p.side)} · день курса ${day > 0 ? day : '—'}${day > 10 ? ' (курс завершён)' : ' из 10'}</div></div>${p.example ? '<span class="chip example">пример</span>' : ''}</div>
+    <div class="row"><label for="pt-select" style="flex:1">Пациент<select id="pt-select">${opts}</select></label></div>
+    <div class="seg" role="group" aria-label="Поражённая кисть"><button type="button" data-side="L" aria-pressed="${p.side === 'L'}">Левая кисть</button><button type="button" data-side="R" aria-pressed="${p.side === 'R'}">Правая кисть</button></div>
+    <p class="muted small">Новых пациентов добавляйте в TURA Motion: список общий.</p>`;
+  $('#pt-select').addEventListener('change', e => { store.current = e.target.value; saveStore(); renderHome(); });
+  $$('#patient-card [data-side]').forEach(b => b.addEventListener('click', () => { p.side = b.dataset.side; saveStore(); renderHome(); }));
+  const today = (p.dose || {})[todayIso()] || {}, mv = Object.entries(today).filter(([k]) => k.startsWith('k_')).reduce((a, [, v]) => a + v, 0);
+  const rounds = (p.sessions || []).filter(s => s.date === todayIso() && s.ex.startsWith('k_')).length;
+  const days7 = [...Array(7)].map((_, i) => iso(addDays(new Date(), -i))).filter(d => Object.entries((p.dose || {})[d] || {}).some(([k, v]) => k.startsWith('k_') && v > 0)).length;
+  $('#today-stats').innerHTML = `<div class="stat"><b>${mv}</b><span>движений кистью сегодня</span></div><div class="stat"><b>${rounds}</b><span>${plural(rounds, 'раунд', 'раунда', 'раундов')} сегодня</span></div><div class="stat"><b>${days7}/7</b><span>дней с кистью</span></div>`;
+  $('#games-list').innerHTML = HG_IDS.map(id => {
+    const g = HG[id], st = hs(p, id);
+    const stars = st.stars ? `<span class="chip good" aria-label="${st.stars} из 3 звёзд">${'★'.repeat(st.stars)}${'☆'.repeat(3 - st.stars)}</span>` : '';
+    return `<div class="item game-item"><div class="gicon">${HICON[id]}</div><div class="gtext"><div class="t">${esc(g.name)}</div><div class="d">${esc(g.goal)}</div></div><div class="meta"><span class="chip">${st.best ? 'рекорд ' + st.best : 'ещё не играли'}</span><span class="chip accent">${esc(levelText(id, st))}</span>${stars}</div><button class="btn primary" type="button" data-game="${id}">Играть</button></div>`;
+  }).join('');
+  $$('#games-list [data-game]').forEach(b => b.addEventListener('click', () => openGame(b.dataset.game)));
+  const hist = (p.sessions || []).filter(s => s.ex.startsWith('k_')).slice(0, 5);
+  $('#hist').innerHTML = hist.length ? hist.map(s => `<div class="row between small"><span>${esc(fromIso(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))} · ${esc(HG[s.ex.slice(2)]?.name || s.ex)}</span><span class="chip ${s.hint === 'good' ? 'good' : 'warn'}">${s.reps} засчит. · ${s.score || 0} очк.${s.hint !== 'good' ? ' · ' + esc(FLAG_NAMES[s.hint] || s.hint) : ''}</span></div>`).join('') : '<p class="muted small">Раундов пока нет.</p>';
+}
+function setupCanvas(aspect) { GE.aspect = aspect; gcv.height = 720; gcv.width = Math.round(720 * aspect); $('#gstage').style.aspectRatio = `${gcv.width} / 720`; }
+function openGame(id) {
+  stopGame(); GE.id = id;
+  const g = HG[id], p = cur();
+  $('#h-game').textContent = g.name; $('#game-goal').textContent = `${g.goal} · ${sideName(p.side)} кисть`; $('#game-how').textContent = g.how;
+  $('#g-gain-wrap').hidden = !g.cursor;
+  $('#game-intro').hidden = false; $('#game-controls').hidden = true; $('#game-result').hidden = true;
+  $$('#g-dur button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.dur) === GE.dur));
+  $$('#g-gain button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.gain) === GE.gain));
+  setupCanvas(0.75); GE.src = 'touch'; GE.game = makeGame(id, p); GE.game.demoObjects(); GE.parts = []; GE.clock = 0;
+  const K = gcv.height; GE.game.bg(gx, false); GE.game.draw(gx, K);
+  gHud(); banner('Выберите: камера, пальцем или авто-демо', true);
+  show('game');
+}
+function gameFail(msg) { stopGame(); $('#game-intro').hidden = false; $('#game-controls').hidden = true; banner(msg, true); }
+async function startGame(src) {
+  stopGame(); const tok = GE.tok;
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume && audioCtx.resume(); } catch (e) { }
+  const p = cur();
+  Object.assign(GE, { src, paused: false, time: 0, phase: src === 'touch' ? 'play' : 'calib', phaseT: 0, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], missingT: 0, missBanner: false, lastCue: {}, inp: null, mirror: false, clock: 0, lastVT: -1, lastRes: null, lastWrist: null, otherT: 0 });
+  $('#game-intro').hidden = true; $('#game-result').hidden = true; $('#game-controls').hidden = false; $('#g-pause').textContent = 'Пауза';
+  if (src === 'camera') {
+    setupCanvas(0.75); gx.fillStyle = '#0A0F13'; gx.fillRect(0, 0, gcv.width, gcv.height); banner('Загружаю модель распознавания кисти…', true);
+    try { await ensureModel(); } catch (e) { if (tok === GE.tok) gameFail(FRAMED ? 'В этом окне камера и модель распознавания недоступны. Играйте пальцем или откройте версию на сайте TURA.' : 'Не удалось загрузить модель распознавания кисти. Проверьте интернет.'); return; }
+    if (tok !== GE.tok) return;
+    try {
+      GE.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      gvideo.srcObject = GE.stream; await gvideo.play();
+    } catch (e) { if (tok === GE.tok) gameFail(FRAMED ? 'Живая камера в этом окне недоступна. Играйте пальцем или откройте версию на сайте TURA.' : 'Нет доступа к камере. Разрешите камеру для этого сайта в настройках браузера.'); return; }
+    if (tok !== GE.tok) { GE.stream && GE.stream.getTracks().forEach(t => t.stop()); return; }
+    GE.mirror = true; setupCanvas((gvideo.videoWidth || 480) / (gvideo.videoHeight || 640));
+  } else setupCanvas(0.75);
+  GE.game = makeGame(GE.id, p); GE.running = true; GE.tPrev = performance.now();
+  if (src === 'touch') { banner(GE.id === 'apples' ? 'Прижмите палец к яблоку, перетащите в корзину и отпустите' : GE.id === 'berries' ? 'Касайтесь ягод' : 'Нажимайте дорожку, когда нота на линии', false, 2.4); GE.game.onCalibrated && GE.game.onCalibrated(); }
+  else hideBanner();
+  gloop();
+}
+function stopGame() {
+  GE.tok++; GE.running = false; cancelAnimationFrame(GE.raf);
+  if (GE.stream) { GE.stream.getTracks().forEach(t => t.stop()); GE.stream = null; }
+  try { gvideo.pause(); gvideo.srcObject = null; } catch (e) { }
+  hideBanner(); $('#g-cue').innerHTML = '';
+}
+function gloop() {
+  if (!GE.running) return;
+  GE.raf = requestAnimationFrame(gloop);
+  const now = performance.now(), dt = Math.min(0.05, (now - GE.tPrev) / 1000) * GE.speed; GE.tPrev = now; GE.clock += dt;
+  const inp = readInput(dt); GE.inp = inp;
+  if (GE.phase === 'calib') {
+    if (inp.ok) {
+      GE.phaseT += dt; GE.calBuf.push(inp);
+      banner(GE.id === 'piano' ? 'Локоть на стол, ладонь к камере, пальцы вверх и раскрыты' : 'Поднимите кисть ладонью к камере и раскройте пальцы', true);
+      if (GE.phaseT > 1.2 && GE.calBuf.length >= 8) {
+        const B = GE.calBuf.slice(-30);
+        GE.ref = { x: median(B.map(b => b.palmC.x)), y: median(B.map(b => b.palmC.y)) };
+        GE.R = [0, 1, 2, 3].map(j => median(B.map(b => b.F[j])));
+        GE.tipX = [0, 1, 2, 3].map(j => median(B.map(b => b.tipX[j])));
+        GE.game.onCalibrated && GE.game.onCalibrated();
+        GE.phase = 'count'; GE.phaseT = 0;
+      }
+    } else { GE.phaseT = 0; banner('Не вижу кисть: поднимите её ладонью к камере', true); }
+  } else if (GE.phase === 'count') {
+    GE.phaseT += dt; const n = 3 - Math.floor(GE.phaseT); banner(n > 0 ? String(n) : 'Старт!', true);
+    if (GE.phaseT >= 3) { GE.phase = 'play'; banner('Старт!', false, 0.8); say('Старт'); }
+  } else if (GE.phase === 'play' && !GE.paused) {
+    GE.missingT = inp.ok ? 0 : GE.missingT + dt;
+    if (GE.missingT < 0.6) {
+      if (GE.missBanner) { hideBanner(); GE.missBanner = false; }
+      GE.time += dt; GE.game.update(dt, inp);
+      GE.otherT = inp.other ? GE.otherT + dt : 0;
+    } else { banner('Не вижу кисть: держите ладонь перед камерой', true); GE.missBanner = true; }
+    if (GE.time >= GE.dur) { endGame(); return; }
+  }
+  updateParts(dt); drawGameFrame(inp); gHud();
+}
+function drawGameFrame(inp) {
+  const c = gx, W = gcv.width, H = gcv.height, K = H;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  if (GE.src === 'camera' && gvideo.readyState >= 2) {
+    c.save(); if (GE.mirror) { c.translate(W, 0); c.scale(-1, 1); } c.drawImage(gvideo, 0, 0, W, H); c.restore();
+    c.fillStyle = 'rgba(6,10,14,.45)'; c.fillRect(0, 0, W, H); GE.game.bg(c, true);
+  } else GE.game.bg(c, false);
+  if (inp.lm) drawHandSkel(c, K, inp);
+  GE.game.draw(c, K, inp);
+  if (GE.phase === 'play' && inp.ok) GE.game.drawCursor(c, K, inp);
+  drawParts(c, K);
+}
+function gHud() {
+  const gm = GE.game; if (!gm) return;
+  setText($('#g-score'), `Очки ${gm.score}`); setText($('#g-level'), gm.levelLabel());
+  const rem = Math.max(0, GE.dur - GE.time); setText($('#g-time'), `${Math.floor(rem / 60)}:${pad(Math.floor(rem % 60))}`);
+  let cue = GE.running && GE.phase === 'play' ? gm.cue : '';
+  if (GE.running && GE.phase === 'play' && GE.otherT > 3) cue = `Играйте ${sideGen(cur().side)} кистью`;
+  const el = $('#g-cue'), html = cue ? `<span class="pill ${/^Согните/.test(cue) ? '' : 'warn'}">${esc(cue)}</span>` : '';
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+function endGame() {
+  if (!GE.running) return;
+  const res = GE.game.result(); res.demo = GE.src !== 'camera'; res.src = GE.src;
+  stopGame(); renderGameResult(res);
+}
+function renderGameResult(r) {
+  const p = cur(), g = HG[r.id], st = hs(p, r.id), record = !r.demo && r.score > (st.best || 0) && r.score > 0;
+  let html = `<div class="row between"><h2>Итог игры «${esc(g.name)}»</h2>${r.demo ? '<span class="chip example">Демо, не сохраняется</span>' : (r.reps > 0 ? '<span class="chip good">Сохранено в дозу</span>' : '<span class="chip">Нет засчитанных движений</span>')}</div>`;
+  html += `<div class="stars" aria-label="${r.stars} из 3 звёзд">${[0, 1, 2].map(i => `<span class="${i < r.stars ? '' : 'off'}">★</span>`).join('')}</div>`;
+  html += `<dl class="kv"><dt>Очки</dt><dd>${r.score}${record ? ' · новый рекорд' : st.best ? ` · рекорд ${st.best}` : ''}</dd><dt>Засчитано</dt><dd>${unitOf(r.id, r.reps)}</dd>${r.extra.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+  html += `<div class="hint ${r.hint === 'good' ? 'good' : ''}">${esc(HINTS[r.hint])}</div>`;
+  html += `<div class="row"><button class="btn primary" style="flex:1" type="button" id="gr-again">Ещё раунд</button><button class="btn secondary" style="flex:1" type="button" data-go="home">К играм</button></div>`;
+  const box = $('#game-result'); box.innerHTML = html; box.hidden = false; $('#game-controls').hidden = true; $('#game-intro').hidden = true;
+  $('#gr-again').addEventListener('click', () => startGame(r.src));
+  if (!r.demo && r.reps + r.misses > 0) {
+    p.hand = p.hand || {}; const s = p.hand[r.id] = Object.assign({ best: 0, plays: 0 }, p.hand[r.id]);
+    s.plays++; s.best = Math.max(s.best, r.score); s.stars = Math.max(s.stars || 0, r.stars); Object.assign(s, r.save);
+    if (r.bestOpen != null) s.bestOpen = Math.max(s.bestOpen || 0, r.bestOpen);
+    if (r.clean != null) s.clean = r.clean;
+    const d = todayIso(), key = 'k_' + r.id; p.dose = p.dose || {}; p.dose[d] = p.dose[d] || {}; p.dose[d][key] = (p.dose[d][key] || 0) + r.reps;
+    p.sessions = p.sessions || []; p.sessions.unshift({ date: d, ex: key, reps: r.reps, partial: r.misses, hint: r.hint, score: r.score }); p.sessions = p.sessions.slice(0, 60);
+    saveStore();
+  }
+  say(r.hint === 'good' ? 'Отличная игра' : HINTS[r.hint]);
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$$('#game-src [data-gsrc]').forEach(b => b.addEventListener('click', () => startGame(b.dataset.gsrc)));
+$$('#g-dur button').forEach(b => b.addEventListener('click', () => { GE.dur = Number(b.dataset.dur); $$('#g-dur button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+$$('#g-gain button').forEach(b => b.addEventListener('click', () => { GE.gain = Number(b.dataset.gain); $$('#g-gain button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+$('#g-pause').addEventListener('click', e => { if (!GE.running) return; GE.paused = !GE.paused; e.currentTarget.textContent = GE.paused ? 'Продолжить' : 'Пауза'; if (GE.paused) banner('Пауза', true); else hideBanner(); });
+$('#g-stop').addEventListener('click', endGame);
+function gPtr(e) { const r = gcv.getBoundingClientRect(); GE.ptr.x = (e.clientX - r.left) / r.width * GE.aspect; GE.ptr.y = (e.clientY - r.top) / r.height; GE.ptr.mouse = e.pointerType === 'mouse'; }
+gcv.addEventListener('pointerdown', e => { if (GE.src !== 'touch' || !GE.running) return; try { gcv.setPointerCapture(e.pointerId); } catch (x) { } GE.ptr.down = true; gPtr(e); e.preventDefault(); });
+gcv.addEventListener('pointermove', e => { if (GE.src !== 'touch') return; gPtr(e); });
+['pointerup', 'pointercancel'].forEach(t => gcv.addEventListener(t, () => { GE.ptr.down = false; }));
+gcv.addEventListener('pointerleave', () => { if (GE.ptr.mouse) GE.ptr.x = null; });
+
+// ================== Старт ==================
+if (FRAMED) { $$('.live-note').forEach(n => n.hidden = false); $$('a.mode[href^="https"]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; }); }
+try { if ('serviceWorker' in navigator && !FRAMED && location.protocol === 'https:' && document.querySelector('link[rel="manifest"]')) navigator.serviceWorker.register('sw.js').catch(() => { }); } catch (e) { }
+show('home');
+</script>
+</body>
+</html>
