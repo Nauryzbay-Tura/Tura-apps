@@ -214,7 +214,7 @@ input[type="text"],input[type="number"],input[type="date"],select{border:1px sol
     </button>
     <a class="mode" href="https://nauryzbay-tura.github.io/Tura-apps/hand/">
       <span class="ic">4</span><span class="t">Кисть</span><span class="go">›</span>
-      <span class="d">Отдельный модуль: «Яблоки» (кулак и ладонь), «Ягоды» (щипок), «Пианино» (отдельные пальцы)</span>
+      <span class="d">Отдельный модуль: «Яблоки» (кулак и ладонь), «Ягоды» (щипок), «Пианино» (отдельные пальцы), «Машинка» (подъём пальца с опорой на стол)</span>
     </a>
     <button class="mode" type="button" data-go="report">
       <span class="ic">5</span><span class="t">Отчёт курса</span><span class="go">›</span>
@@ -1155,7 +1155,7 @@ function renderExercises() {
   }).join('');
   $$('#ex-list [data-ex]').forEach(b => b.addEventListener('click', () => openSession('exercise', b.dataset.ex)));
 }
-const HAND_NAMES = { k_apples: 'Кисть: «Яблоки»', k_berries: 'Кисть: «Ягоды»', k_piano: 'Кисть: «Пианино»' };
+const HAND_NAMES = { k_apples: 'Кисть: «Яблоки»', k_berries: 'Кисть: «Ягоды»', k_piano: 'Кисть: «Пианино»', k_car: 'Кисть: «Машинка»' };
 function actName(id) { return EX[id]?.name || HAND_NAMES[id] || (id.startsWith('g_') && GAMES[id.slice(2)] ? `Игра «${GAMES[id.slice(2)].name}»` : id); }
 function pctChange(a, b) { return a ? (b - a) / a * 100 : null; }
 function renderReport() {
@@ -1215,6 +1215,7 @@ function reportText() {
     if (h.apples) lv.push(`«Яблоки»: раскрытие кисти до ${h.apples.bestOpen || Math.round((h.apples.openT || 0) * 100)}%`);
     if (h.berries) lv.push(`«Ягоды»: уровень ${h.berries.level || 1}`);
     if (h.piano) lv.push(`«Пианино»: чистых нажатий ${h.piano.clean ?? '—'}%`);
+    if (h.car) lv.push(`«Машинка»: подъём пальца до ${h.car.bestLift ?? Math.round(h.car.Lmax || 0)}°`);
     lines.push(`Кисть за 7 дней: ${kss.length} ${plural(kss.length, 'раунд', 'раунда', 'раундов')}, ${mvTxt(kss.reduce((a, s) => a + s.reps, 0))}${lv.length ? '. ' + lv.join('; ') : ''}`);
   }
   const last = (p.sessions || [])[0]; if (last && last.hint !== 'good') lines.push(`Главная подсказка по технике: ${HINTS[last.hint]}`);
@@ -1275,7 +1276,7 @@ const GICON = {
   boat: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><path d="M20 6v20" stroke="#56655F" stroke-width="1.6"/><path d="M21 7l11 17H21z" fill="#fff" stroke="#2747C7" stroke-width="1.4"/><path d="M19 10L10 24h9z" fill="#2747C7"/><path d="M6 27h28l-5 6H11z" fill="#B3372B"/><path d="M3 35c4-2 6 2 10 0s6 2 10 0 6 2 10 0" stroke="#2F6BFF" stroke-width="1.6" fill="none"/></svg>'
 };
 const GAME_CUE = { lean: 'корпус ровно', forward: 'сядьте прямо', hike: 'опустите плечо', elbow: 'выпрямите локоть', asym: 'вставайте ровно, на обе ноги' };
-Object.assign(FLAG_NAMES, { asym: 'перекос при вставании', weakside: 'малый наклон в сторону поражения', easy: 'много промахов', open: 'неполное раскрытие кисти', close: 'слабое сжатие', fist: 'щипок всей кистью', mass: 'двигаются соседние пальцы' });
+Object.assign(FLAG_NAMES, { asym: 'перекос при вставании', weakside: 'малый наклон в сторону поражения', easy: 'много промахов', open: 'неполное раскрытие кисти', close: 'слабое сжатие', fist: 'щипок всей кистью', mass: 'двигаются соседние пальцы', lift: 'поднимались другие пальцы' });
 Object.assign(HINTS, {
   asym: 'Вставайте ровно: опирайтесь на обе ноги одинаково.',
   weakside: 'Наклоняйтесь смелее в сторону поражения: туда наклон пока меньше.',
@@ -1283,7 +1284,8 @@ Object.assign(HINTS, {
   open: 'Раскрывайте ладонь полностью, до прямых пальцев.',
   close: 'Сжимайте кулак плотнее.',
   fist: 'Берите мелкие предметы кончиками пальцев, остальные пальцы держите раскрытыми.',
-  mass: 'Сгибайте один палец, соседние держите неподвижно.'
+  mass: 'Сгибайте один палец, соседние держите неподвижно.',
+  lift: 'Поднимайте один палец, остальные пальцы лежат на столе.'
 });
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pickOne = a => a[Math.floor(Math.random() * a.length)];
