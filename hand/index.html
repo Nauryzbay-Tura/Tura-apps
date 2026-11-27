@@ -185,6 +185,15 @@ input[type="text"],input[type="number"],input[type="date"],select{border:1px sol
 .stars .off{color:var(--surface-2)}
 .safety{border-left:4px solid var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:0 12px 12px 0;padding:10px 12px;font-size:14.5px;font-weight:600}
 #g-gain button{font-size:14px;line-height:1.2;padding:6px 8px}
+.setup{display:grid;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.setup svg{width:100%;height:auto;display:block}
+.setup ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14.5px}
+.setup h3{margin:0;font-size:15px}
+#g-flip{justify-self:start;font-size:14px}
+.g-check{display:grid;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;font-size:15px}
+.g-check b{font-size:14px}
+.g-check .ok{color:var(--good)} .g-check .no{color:var(--crit)}
+.g-check .msg{color:var(--ink);font-weight:600}
 @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
 </style>
 </head>
@@ -219,6 +228,7 @@ input[type="text"],input[type="number"],input[type="date"],select{border:1px sol
   <button class="btn ghost back" type="button" data-go="home">‹ Игры кисти</button>
   <div class="head"><h1 id="h-game"></h1><p class="small" id="game-goal" style="font-weight:600"></p><p class="muted small" id="game-how"></p></div>
   <div class="stack" id="game-intro">
+    <div class="setup" id="g-setup"></div>
     <div class="seg" id="g-dur" role="group" aria-label="Длительность раунда"><button type="button" data-dur="60" aria-pressed="true">1 мин</button><button type="button" data-dur="90" aria-pressed="false">1,5 мин</button><button type="button" data-dur="120" aria-pressed="false">2 мин</button></div>
     <div class="stack" id="g-gain-wrap">
       <span class="small muted">Размах руки</span>
@@ -238,6 +248,8 @@ input[type="text"],input[type="number"],input[type="date"],select{border:1px sol
     <div class="live-cue" id="g-cue" style="right:12px"></div>
     <div class="g-banner" id="g-banner" role="status" hidden></div>
   </div>
+  <div class="g-check" id="g-check" role="status" hidden></div>
+  <button class="btn ghost" type="button" id="g-flip" hidden>Для инструктора: рука определилась неверно — поменять</button>
   <div class="row" id="game-controls" hidden><button class="btn secondary" style="flex:1" type="button" id="g-pause">Пауза</button><button class="btn secondary" style="flex:1" type="button" id="g-stop">Завершить</button></div>
   <div class="card result" id="game-result" hidden></div>
 </section>
@@ -319,16 +331,18 @@ const sideName = s => s === 'L' ? 'левая' : 'правая';
 const sideGen = s => s === 'L' ? 'левой' : 'правой';
 
 // ================== Каталог ==================
-const HG_IDS = ['apples', 'berries', 'piano'];
+const HG_IDS = ['apples', 'berries', 'piano', 'car'];
 const HG = {
   apples: { name: 'Яблоки', goal: 'Сжать кулак и полностью раскрыть кисть', how: 'Сидя у стола, телефон или планшет спереди на 50–70 см. Поднимите поражённую кисть ладонью к камере. Наведите кисть на яблоко и сожмите кулак: яблоко у вас в руке. Перенесите его к корзине и раскройте ладонь. Яблоко упадёт, только если пальцы раскрыты достаточно.', unit: ['яблоко', 'яблока', 'яблок'], cursor: true },
   berries: { name: 'Ягоды', goal: 'Щипок: большой палец к указательному и другим пальцам', how: 'Ладонь к камере на 50–70 см. Наведите кисть на ягоду и сведите кончики большого и нужного пальца. Цвет ягоды подсказывает палец. Если схватить ягоду всей кистью, она помнётся.', unit: ['ягода', 'ягоды', 'ягод'], cursor: true },
-  piano: { name: 'Пианино', goal: 'Отдельные движения пальцев', how: 'Локоть на столе, кисть ладонью к камере, пальцы вверх. Когда нота доходит до линии, согните палец своей дорожки. Соседние пальцы держите неподвижно: чистое нажатие даёт полные очки.', unit: ['нота', 'ноты', 'нот'], cursor: false }
+  piano: { name: 'Пианино', goal: 'Отдельные движения пальцев', how: 'Локоть на столе, кисть ладонью к камере, пальцы вверх. Когда нота доходит до линии, согните палец своей дорожки. Соседние пальцы держите неподвижно: чистое нажатие даёт полные очки.', unit: ['нота', 'ноты', 'нот'], cursor: false },
+  car: { name: 'Машинка', goal: 'Подъём одного пальца точно до заданного уровня', how: 'Предплечье и ладонь лежат на столе, пальцы смотрят на экран. Под палец подъезжает машинка. Поднимайте только этот палец: машинка едет вверх по линейке справа. Доведите её до отмеченного этажа и задержите, пока она не припаркуется, затем опустите палец. Остальные пальцы всё время лежат на столе.', unit: ['машинка', 'машинки', 'машинок'], cursor: false, view: 'table' }
 };
 const HICON = {
   apples: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><circle cx="20" cy="23" r="12" fill="#E8453C"/><circle cx="15.5" cy="18.5" r="3.2" fill="#fff" opacity=".35"/><path d="M20 11c0-3 1-5 3-6" stroke="#7A4A1E" stroke-width="2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="9.5" rx="5" ry="2.3" transform="rotate(-25 26 9.5)" fill="#4BA34A"/></svg>',
   berries: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><circle cx="13" cy="24" r="7" fill="#FF6B5E"/><circle cx="25" cy="27" r="7" fill="#7DA6FF"/><circle cx="21" cy="15" r="6" fill="#5FD38A"/><path d="M21 9l2-5M13 17l-2-4" stroke="#3E8A22" stroke-width="2" stroke-linecap="round"/></svg>',
-  piano: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="5" y="8" width="30" height="24" rx="3" fill="#fff" stroke="#14201C" stroke-width="1.6"/><path d="M12.5 8v24M20 8v24M27.5 8v24" stroke="#14201C" stroke-width="1.2"/><rect x="10.5" y="8" width="4" height="13" fill="#14201C"/><rect x="18" y="8" width="4" height="13" fill="#14201C"/><rect x="25.5" y="8" width="4" height="13" fill="#14201C"/></svg>'
+  piano: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="5" y="8" width="30" height="24" rx="3" fill="#fff" stroke="#14201C" stroke-width="1.6"/><path d="M12.5 8v24M20 8v24M27.5 8v24" stroke="#14201C" stroke-width="1.2"/><rect x="10.5" y="8" width="4" height="13" fill="#14201C"/><rect x="18" y="8" width="4" height="13" fill="#14201C"/><rect x="25.5" y="8" width="4" height="13" fill="#14201C"/></svg>',
+  car: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="5" y="18" width="30" height="10" rx="4" fill="#FF6B5E"/><rect x="11" y="11" width="16" height="9" rx="3.5" fill="#FF6B5E"/><rect x="13" y="13" width="5.5" height="5" rx="1.2" fill="#D2EBFF"/><rect x="20" y="13" width="5.5" height="5" rx="1.2" fill="#D2EBFF"/><circle cx="12" cy="29" r="4" fill="#1C2228"/><circle cx="28" cy="29" r="4" fill="#1C2228"/><circle cx="12" cy="29" r="1.6" fill="#C9D2DA"/><circle cx="28" cy="29" r="1.6" fill="#C9D2DA"/></svg>'
 };
 // Пальцы: ориентиры MediaPipe Hand Landmarker (21 точка): кончики 8, 12, 16, 20; пястно-фаланговые 5, 9, 13, 17; большой палец 1–4
 const FINGERS = [
@@ -342,10 +356,52 @@ const HINTS = {
   close: 'Сжимайте кулак плотнее, чтобы удержать яблоко.',
   fist: 'Берите ягоду кончиками пальцев, остальные пальцы держите раскрытыми.',
   mass: 'Сгибайте только палец своей дорожки, соседние держите неподвижно.',
+  lift: 'Поднимайте только палец с машинкой, остальные пальцы лежат на столе.',
   easy: 'Двигайтесь плавно и до конца. Игра сама снизила уровень.',
   good: 'Хорошая игра: движения полные и чистые. Продолжайте.'
 };
-const FLAG_NAMES = { open: 'неполное раскрытие кисти', close: 'слабое сжатие', fist: 'щипок всей кистью', mass: 'двигаются соседние пальцы', easy: 'много промахов' };
+const FLAG_NAMES = { open: 'неполное раскрытие кисти', close: 'слабое сжатие', fist: 'щипок всей кистью', mass: 'двигаются соседние пальцы', lift: 'поднимались другие пальцы', easy: 'много промахов' };
+const SETUP = {
+  palm: `<h3>Как поставить камеру</h3>
+<svg viewBox="0 0 320 150" role="img" aria-label="Сбоку: планшет на подставке, локоть на столе, кисть поднята ладонью к экрану">
+  <rect x="8" y="118" width="304" height="8" rx="3" fill="#C8B08A"/>
+  <circle cx="34" cy="38" r="12" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M46 40 L262 64" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 4" opacity=".6"/>
+  <text x="120" y="44" font-size="10" fill="currentColor" opacity=".8">видит экран</text>
+  <path d="M60 116 L84 62" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+  <path d="M84 62 L92 30" stroke="currentColor" stroke-width="12" stroke-linecap="round"/>
+  <path d="M93 32 l4 -16 M88 30 l3 -18 M98 34 l5 -14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+  <text x="56" y="112" font-size="10" fill="currentColor">локоть на столе</text>
+  <path d="M266 36 L104 26 M266 36 L104 82" stroke="#2747C7" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <path d="M258 118 l14 -84 l9 2 l-14 84z" fill="#2B3440"/><path d="M262 118 l18 0 l-6 -30z" fill="#56655F"/>
+  <circle cx="273" cy="38" r="3" fill="#7DA6FF"/>
+  <path d="M96 138 L262 138" stroke="currentColor" stroke-width="1.2" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <text x="150" y="134" font-size="11" font-weight="600" fill="currentColor">50–70 см</text>
+  <defs><marker id="ah" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L6 3 L0 6z" fill="currentColor"/></marker></defs>
+</svg>
+<ul><li>Планшет или телефон на подставке, экраном к пациенту, в 50–70 см от кисти.</li><li>Локоть на столе, кисть поднята ладонью к экрану.</li><li>Свет спереди или сбоку, не за спиной пациента.</li><li>После «Играть с камерой» идёт проверка кадра: когда все пункты зелёные, игра начнётся.</li></ul>`,
+  table: `<h3>Как поставить камеру</h3>
+<svg viewBox="0 0 320 150" role="img" aria-label="Сбоку: предплечье и ладонь на столе, пальцы к планшету, камера планшета смотрит на кисть сверху-спереди">
+  <rect x="8" y="118" width="304" height="8" rx="3" fill="#C8B08A"/>
+  <rect x="34" y="108" width="104" height="10" rx="4" fill="#E6D3AE"/><text x="40" y="93" font-size="10" fill="currentColor">полотенце-опора</text>
+  <circle cx="28" cy="40" r="12" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M40 44 L260 66" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 4" opacity=".6"/>
+  <text x="104" y="48" font-size="10" fill="currentColor" opacity=".8">видит экран</text>
+  <path d="M40 104 L150 107" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+  <path d="M150 108 L184 112" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+  <path d="M184 113 L206 114" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+  <path d="M184 110 L205 99" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  <path d="M212 104 q6 -10 0 -18" fill="none" stroke="#FF6B5E" stroke-width="2" marker-end="url(#ah2)"/>
+  <rect x="210" y="108" width="16" height="6" rx="2" fill="#FF6B5E"/><circle cx="214" cy="115" r="2" fill="#1C2228"/><circle cx="223" cy="115" r="2" fill="#1C2228"/>
+  <path d="M266 34 L150 100 M266 34 L232 120" stroke="#2747C7" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <path d="M258 118 l14 -84 l9 2 l-14 84z" fill="#2B3440"/><path d="M262 118 l18 0 l-6 -30z" fill="#56655F"/>
+  <circle cx="273" cy="38" r="3" fill="#7DA6FF"/>
+  <path d="M208 138 L262 138" stroke="currentColor" stroke-width="1.2" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+  <text x="196" y="134" font-size="11" font-weight="600" fill="currentColor">40–60 см</text>
+  <defs><marker id="ah2" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L6 3 L0 6z" fill="currentColor"/></marker></defs>
+</svg>
+<ul><li>Планшет на подставке, экраном к пациенту, в 40–60 см от кончиков пальцев.</li><li>Предплечье и ладонь на столе, под предплечьем сложенное полотенце. Пальцы смотрят на экран.</li><li>Камера планшета видит кисть сверху и спереди. Если кисть обрезана нижним краем кадра, отодвиньте планшет дальше или поставьте его ниже.</li><li>На экране кисть как в зеркале и крупно: игра сама приближает её. Справа линейка с этажами.</li><li>После «Играть с камерой» идёт проверка кадра: когда все пункты зелёные, игра начнётся.</li></ul>`
+};
 const hs = (p, id) => (p.hand && p.hand[id]) || {};
 const unitOf = (id, n) => { const u = HG[id].unit; return `${n} ${plural(n, u[0], u[1], u[2])}`; };
 function maxKey(o) { let k = null, m = 0; for (const [a, v] of Object.entries(o || {})) if (v > m) { m = v; k = a; } return k; }
@@ -424,28 +480,40 @@ const ang3 = (a, b) => { const n = n3(a) * n3(b); return n ? deg(Math.acos(clamp
 const HB = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
 // g — раскрытие кисти: 0 кулак, 1 ладонь с прямыми пальцами (кончики от запястья в длинах ладони)
 // F — сгибание пальца: сумма углов в трёх суставах, градусы; pinch — кончик большого до кончика пальца в длинах ладони
-function handFeatures(w) {
+const cr3 = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+// E — подъём пальца: угол линии «основание — кончик» над плоскостью ладони в сторону тыла кисти, градусы.
+// Нормаль (5−0)×(17−0) у правой кисти смотрит в ладонь, у левой — в тыл (по метке руки самой модели).
+function handFeatures(w, lab) {
   const palm = n3(v3(w[9], w[0])) || 1e-3;
   const o = [8, 12, 16, 20].reduce((s, t) => s + n3(v3(w[t], w[0])), 0) / 4 / palm;
   const g = clamp((o - 1.0) / 0.85, 0, 1.15);
   const F = FINGERS.map(f => { const m = f.mcp; return ang3(v3(w[m], w[0]), v3(w[m + 1], w[m])) + ang3(v3(w[m + 1], w[m]), v3(w[m + 2], w[m + 1])) + ang3(v3(w[m + 2], w[m + 1]), v3(w[m + 3], w[m + 2])); });
   const pinch = FINGERS.map(f => n3(v3(w[4], w[f.tip])) / palm);
-  return { o, g, F, pinch };
+  let nv = cr3(v3(w[5], w[0]), v3(w[17], w[0])); const nn = n3(nv) || 1; nv = { x: nv.x / nn, y: nv.y / nn, z: nv.z / nn };
+  if (lab === 'Right') nv = { x: -nv.x, y: -nv.y, z: -nv.z };
+  const E = FINGERS.map(f => { const u = v3(w[f.tip], w[f.mcp]), ul = n3(u) || 1; return deg(Math.asin(clamp((u.x * nv.x + u.y * nv.y + u.z * nv.z) / ul, -1, 1))); });
+  return { o, g, F, pinch, E };
 }
-function dispH(lm, i) { const p = lm[i]; return { x: (GE.mirror ? 1 - p.x : p.x) * GE.aspect, y: p.y }; }
-// MediaPipe размечает руки как в зеркальном селфи. В необращённом кадре камеры, смотрящей на ладонь, метка обратная.
+// Экранные координаты точки: зеркало для фронтальной камеры и приближение кисти (GE.view) в «Машинке»
+function dispH(lm, i) { const p = lm[i], u = GE.mirror ? 1 - p.x : p.x, V = GE.view; return V ? { x: ((u - V.cu) * V.z + 0.5) * GE.aspect, y: (p.y - V.cv) * V.z + 0.5 } : { x: u * GE.aspect, y: p.y }; }
+// Играет только поражённая кисть. MediaPipe ставит метку руки по силуэту так, будто ладонь смотрит в камеру в зеркальном кадре.
+// Наш кадр не зеркальный: если ладонь смотрит в камеру (Яблоки, Ягоды, Пианино), метка обратная;
+// если в камеру смотрит тыл кисти (Машинка: ладонь на столе), метка верная. Проверено на фото кисти и его зеркальной копии.
+let handFlip = false; try { handFlip = localStorage.getItem('tura-hand-flip') === '1'; } catch (e) { }
+function realSide(lab) {
+  if (lab !== 'Left' && lab !== 'Right') return null;
+  let r = lab === 'Right' ? 'R' : 'L';
+  if (!(GE.game && GE.game.view === 'table')) r = r === 'R' ? 'L' : 'R';
+  if (handFlip) r = r === 'R' ? 'L' : 'R';
+  return r;
+}
 function pickHand(res) {
   const L = (res && res.landmarks) || []; if (!L.length) return null;
   const H = res.handedness || res.handednesses || [], W = res.worldLandmarks || [], side = cur().side;
-  let best = -1, other = false;
-  L.forEach((lm, i) => { const lab = H[i] && H[i][0] && H[i][0].categoryName; const real = lab === 'Left' ? 'R' : lab === 'Right' ? 'L' : null; if (real === side && best < 0) best = i; });
-  if (best < 0) {
-    other = true; best = 0;
-    if (GE.lastWrist && L.length > 1) { let bd = 9; L.forEach((lm, i) => { const d = Math.hypot(lm[0].x - GE.lastWrist.x, lm[0].y - GE.lastWrist.y); if (d < bd) { bd = d; best = i; } }); }
-  }
-  if (!W[best]) return null;
-  GE.lastWrist = { x: L[best][0].x, y: L[best][0].y };
-  return { lm: L[best], w: W[best], other };
+  let best = -1, seen = null;
+  L.forEach((lm, i) => { const r = realSide(H[i] && H[i][0] && H[i][0].categoryName); if (r === side && best < 0 && W[i]) best = i; else if (!seen) seen = r; });
+  if (best < 0) return { wrong: true, seen: seen || (side === 'L' ? 'R' : 'L') };
+  return { lm: L[best], w: W[best], lab: H[best][0].categoryName };
 }
 
 // ================== Демо-кисть (авто-демо) ==================
@@ -461,9 +529,9 @@ function buildHand(o) {
   const sx = o.side === 'R' ? 1 : -1, P = new Array(21);
   P[0] = { x: 0, y: 0, z: 0 };
   for (let k = 0; k < 4; k++) {
-    const G = FING_GEO[k], f = clamp((o.flex && o.flex[k]) || 0, 0, 1), base = 5 + 4 * k;
+    const G = FING_GEO[k], f = clamp((o.flex && o.flex[k]) || 0, -0.6, 1), fp = Math.max(0, f), base = 5 + 4 * k;
     let p = { x: G.mx * sx, y: G.my, z: 0 }; P[base] = p;
-    const a = [rad(80 * f), rad(100 * f), rad(70 * f)], sp = G.tilt * sx * (1 - f);
+    const a = [rad(80 * f), rad(100 * fp), rad(70 * fp)], sp = G.tilt * sx * (1 - fp);
     let th = 0;
     for (let j = 0; j < 3; j++) { th += a[j]; const L = G.seg[j]; p = { x: p.x + Math.sin(sp) * L * Math.cos(th), y: p.y + Math.cos(sp) * L * Math.cos(th), z: p.z - L * Math.sin(th) }; P[base + 1 + j] = p; }
   }
@@ -476,9 +544,14 @@ function buildHand(o) {
   else { const t = P[8 + 4 * (o.to || 0)]; tgt = { x: t.x, y: t.y - 0.03, z: t.z - 0.03 }; }
   const d = v3(tgt, cmc), o1 = addp(addp(cmc, d, 0.38), { x: 0, y: 0, z: -0.18 }), o2 = addp(addp(cmc, d, 0.72), { x: 0, y: 0, z: -0.1 });
   P[1] = cmc; P[2] = lerp3(r1, o1, opp); P[3] = lerp3(r2, o2, opp); P[4] = lerp3(r3, tgt, opp);
-  const A = o.aspect, L = o.L, ro = o.roll || 0, c = Math.cos(ro), s = Math.sin(ro);
-  const lm = P.map(q => { const x = q.x * c - q.y * s, y = q.x * s + q.y * c; return { x: o.x + x * L / A, y: o.y - y * L, z: q.z * L, visibility: 1 }; });
-  const w = P.map(q => ({ x: q.x * 0.09, y: -q.y * 0.09, z: q.z * 0.09 }));
+  const A = o.aspect, L = o.L;
+  let Q = P.map(q => ({ x: q.x, y: -q.y, z: q.z })); // оси камеры: y вниз, z от камеры
+  if (o.pose === 'table') { // ладонь на столе, пальцы к камере, камера сверху-спереди под углом tilt
+    const ph = rad(o.tilt ?? 35), cs = Math.cos(ph), sn = Math.sin(ph);
+    Q = Q.map(q => ({ x: q.x, y: -sn * q.y - cs * q.z, z: cs * q.y - sn * q.z }));
+  }
+  const lm = Q.map(q => ({ x: o.x + q.x * L / A, y: o.y + q.y * L, z: q.z * L, visibility: 1 }));
+  const w = Q.map(q => ({ x: q.x * 0.09, y: q.y * 0.09, z: q.z * 0.09 }));
   return { lm, w };
 }
 const HAND_L = 0.16; // длина ладони в долях высоты кадра для демо-кисти
@@ -491,7 +564,7 @@ function poseForCursor(cx, cy, extra) {
 function idlePose(extra) { return Object.assign({ x: 0.5, y: 0.62, L: HAND_L, side: cur().side, aspect: GE.aspect, flex: [0.05, 0.05, 0.05, 0.05] }, extra); }
 
 // ================== Игровой движок ==================
-const GE = { id: null, src: null, running: false, paused: false, raf: 0, tPrev: 0, time: 0, dur: 60, gain: 1.5, phase: 'calib', phaseT: 0, game: null, inp: null, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], ptr: { x: null, y: null, down: false, mouse: false }, aspect: 0.75, mirror: false, stream: null, speed: 1, missingT: 0, missBanner: false, lastCue: {}, clock: 0, tok: 0, lastVT: -1, lastRes: null, lastWrist: null, otherT: 0 };
+const GE = { id: null, src: null, running: false, paused: false, raf: 0, tPrev: 0, time: 0, dur: 60, gain: 1.5, phase: 'calib', phaseT: 0, game: null, inp: null, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], ptr: { x: null, y: null, down: false, mouse: false }, aspect: 0.75, mirror: false, stream: null, speed: 1, missingT: 0, missBanner: false, lastCue: {}, clock: 0, tok: 0, lastVT: -1, lastRes: null, wrongT: 0, view: null, chk: null, RE: null };
 const gcv = $('#gcanvas'), gx = gcv.getContext('2d');
 const gvideo = document.createElement('video'); gvideo.muted = true; gvideo.playsInline = true; gvideo.setAttribute('playsinline', '');
 window.__tura = { GE, ensureModel, store: () => store };
@@ -522,22 +595,24 @@ function labelPill(c, K, x, y, text, bg = 'rgba(10,15,19,.72)', fg = '#fff') {
 function cursorFrom(p) { const A = GE.aspect; return { x: clamp(A / 2 + (p.x - GE.ref.x) * GE.gain, 0.04, A - 0.04), y: clamp(0.55 + (p.y - GE.ref.y) * GE.gain, 0.06, 0.96) }; }
 
 function touchInput() {
-  const pt = GE.ptr, has = pt.x != null, F = [0, 0, 0, 0];
-  if (GE.game.id === 'piano' && pt.down && pt.x != null) { const k = GE.game.laneAt(pt.x); if (k != null) F[k] = 120; }
-  return { ok: true, touch: true, g: pt.down ? 0.02 : 1, F, pinch: FINGERS.map(() => pt.down ? 0.1 : 1), cursor: has ? { x: pt.x, y: pt.y } : null, lm: null, other: false };
+  const pt = GE.ptr, has = pt.x != null, F = [0, 0, 0, 0], E = [0, 0, 0, 0], gm = GE.game;
+  if (gm.id === 'piano' && pt.down && pt.x != null) { const k = gm.laneAt(pt.x); if (k != null) F[k] = 120; }
+  if (gm.id === 'car' && pt.down && pt.x != null && gm.car) E[gm.car.k] = gm.touchLift(pt);
+  return { ok: true, touch: true, g: pt.down ? 0.02 : 1, F, E, pinch: FINGERS.map(() => pt.down ? 0.1 : 1), cursor: has ? { x: pt.x, y: pt.y } : null, lm: null };
 }
 function readInput(dt) {
   if (GE.src === 'touch') return touchInput();
-  let lm, w, other = false;
+  let lm, w, lab;
   if (GE.src === 'auto') {
-    const fr = buildHand(GE.phase === 'play' ? GE.game.autopilot(dt, GE.inp) : idlePose());
-    lm = fr.lm; w = fr.w;
+    const fr = buildHand(GE.phase === 'play' ? GE.game.autopilot(dt, GE.inp) : (GE.game.idle ? GE.game.idle() : idlePose()));
+    lm = fr.lm; w = fr.w; lab = cur().side === 'R' ? 'Right' : 'Left';
   } else {
     if (gvideo.readyState < 2) return { ok: false };
     const vt = gvideo.currentTime;
     if (vt !== GE.lastVT) { GE.lastVT = vt; try { GE.lastRes = mpDetect(gvideo, performance.now()); } catch (e) { GE.lastRes = null; } }
     const h = pickHand(GE.lastRes); if (!h) { GE.ema = null; return { ok: false }; }
-    lm = h.lm; w = h.w; other = h.other;
+    if (h.wrong) { GE.ema = null; return { ok: false, wrong: true, seen: h.seen }; }
+    lm = h.lm; w = h.w; lab = h.lab;
   }
   const a = 0.55;
   if (!GE.ema) GE.ema = { lm: lm.map(p => ({ ...p })), w: w.map(p => ({ ...p })) };
@@ -546,15 +621,15 @@ function readInput(dt) {
     L.x += a * (l.x - L.x); L.y += a * (l.y - L.y); L.z += a * ((l.z || 0) - (L.z || 0));
     W.x += a * (q.x - W.x); W.y += a * (q.y - W.y); W.z += a * (q.z - W.z);
   }
-  const sl = GE.ema.lm, f = handFeatures(GE.ema.w), D = i => dispH(sl, i);
+  const sl = GE.ema.lm, f = handFeatures(GE.ema.w, lab), D = i => dispH(sl, i);
   const palmC = [0, 5, 9, 13, 17].map(D).reduce((s, p) => ({ x: s.x + p.x / 5, y: s.y + p.y / 5 }), { x: 0, y: 0 });
-  return { ok: true, lm: sl, ...f, palmC, tipX: FINGERS.map(q => D(q.tip).x), cursor: GE.ref ? cursorFrom(palmC) : null, other };
+  return { ok: true, lm: sl, ...f, palmC, tipX: FINGERS.map(q => D(q.tip).x), cursor: GE.ref ? cursorFrom(palmC) : null };
 }
 
 function drawHandSkel(c, K, inp) {
   if (!inp.lm) return;
   const lm = inp.lm, P = i => dispH(lm, i), cam = GE.src === 'camera';
-  c.save(); c.globalAlpha = cam ? 0.9 : 0.45; c.lineCap = 'round'; c.strokeStyle = 'rgba(237,242,240,.75)'; c.lineWidth = 0.006 * K;
+  c.save(); c.globalAlpha = cam ? 0.9 : GE.game.view === 'table' ? 0.85 : 0.45; c.lineCap = 'round'; c.strokeStyle = 'rgba(237,242,240,.75)'; c.lineWidth = 0.006 * K;
   for (const [a, b] of HB) { const pa = P(a), pb = P(b); c.beginPath(); c.moveTo(pa.x * K, pa.y * K); c.lineTo(pb.x * K, pb.y * K); c.stroke(); }
   const colored = GE.game.coloredTips;
   for (let i = 0; i < 21; i++) {
@@ -933,10 +1008,171 @@ class PianoGame {
     return { id: 'piano', score: this.score, reps: this.hits, misses: this.misses, hint, stars: starsFor(this.hits, acc, 1 - cleanShare), extra, save: { level: this.level, T: this.T.map(v => Math.round(v)) }, clean: Math.round(cleanShare * 100) };
   }
 }
-function makeGame(id, p) { const st = hs(p, id); return id === 'apples' ? new ApplesGame(p, st) : id === 'berries' ? new BerriesGame(p, st) : new PianoGame(p, st); }
+// ---------- Игра 4: Машинка (отдельный подъём пальца с опорой на стол) ----------
+// Подъём пальца — угол линии «основание — кончик» над плоскостью ладони (градусы) минус положение на столе.
+const CAR_LV = [null,
+  { fingers: [0], tol: 0.1, hold: 0.8, time: 12 },
+  { fingers: [0], tol: 0.09, hold: 1.0, time: 11 },
+  { fingers: [0, 1], tol: 0.08, hold: 1.2, time: 10 },
+  { fingers: [0, 1, 2], tol: 0.07, hold: 1.3, time: 10 },
+  { fingers: [0, 1, 2, 3], tol: 0.065, hold: 1.5, time: 9 },
+  { fingers: [0, 1, 2, 3], tol: 0.055, hold: 1.7, time: 9 }];
+const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fingerCall = k => k === 3 ? 'Мизинец' : `${capFirst(FINGERS[k].name)} палец`;
+function drawCar(c, K, x, y, s, color, alpha = 1) {
+  const X = x * K, Y = y * K, S = s * K;
+  c.save(); c.globalAlpha = alpha;
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(X, Y + S * 0.42, S * 1.05, S * 0.14, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = color; roundRectPath(c, X - S, Y - S * 0.25, S * 2, S * 0.55, S * 0.22); c.fill();
+  roundRectPath(c, X - S * 0.55, Y - S * 0.62, S * 1.05, S * 0.48, S * 0.2); c.fill();
+  c.fillStyle = 'rgba(210,235,255,.9)'; roundRectPath(c, X - S * 0.42, Y - S * 0.52, S * 0.36, S * 0.3, S * 0.08); c.fill(); roundRectPath(c, X + S * 0.02, Y - S * 0.52, S * 0.36, S * 0.3, S * 0.08); c.fill();
+  c.fillStyle = '#1C2228'; for (const dx of [-0.58, 0.58]) { c.beginPath(); c.arc(X + dx * S, Y + S * 0.3, S * 0.24, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = '#C9D2DA'; for (const dx of [-0.58, 0.58]) { c.beginPath(); c.arc(X + dx * S, Y + S * 0.3, S * 0.1, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = '#FFE38A'; c.beginPath(); c.arc(X + S * 0.92, Y - S * 0.06, S * 0.08, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+class CarGame {
+  constructor(p, st) {
+    this.id = 'car'; this.view = 'table'; this.coloredTips = true; this.level = clamp(st.level || 1, 1, 6); this.lv0 = this.level;
+    this.Lmax = clamp(st.Lmax || 20, 6, 60); this.L0 = this.Lmax;
+    this.car = null; this.restNeed = false; this.nextT = 0.6; this.lastK = -1;
+    this.score = 0; this.hits = 0; this.misses = 0; this.flaggedN = 0; this.win = []; this.byF = [0, 0, 0, 0]; this.bestLift = 0; this.lift = [0, 0, 0, 0]; this.cue = ''; this.parked = [];
+  }
+  levelLabel() { return `Ур. ${this.level}`; }
+  get L() { return CAR_LV[this.level]; }
+  setLevel(n) { const o = this.level; this.level = clamp(n, 1, 6); if (this.level === o) return; banner(this.level > o ? `Уровень ${this.level}` : `Уровень ${this.level}: чуть проще`, false, 1.4); sfx(this.level > o ? 'level' : 'miss'); }
+  outcome(v) { this.win.push(v); if (this.win.length >= 5) { const r = this.win.reduce((a, b) => a + b) / this.win.length; if (r >= 0.8) this.setLevel(this.level + 1); else if (r <= 0.4) this.setLevel(this.level - 1); this.win = []; } }
+  panel() { const A = GE.aspect, w = Math.min(0.24, A * 0.3), wide = A > 1.1; return { x: A - w - 0.03, y: wide ? 0.25 : 0.15, w, h: wide ? 0.62 : 0.72 }; }
+  posY(v) { const P = this.panel(); return P.y + P.h * (1 - clamp(v, 0, 1.15) / 1.15); }
+  touchLift(pt) { const P = this.panel(); return clamp((P.y + P.h - pt.y) / P.h * 1.15, 0, 1.15) * this.Lmax; }
+  newCar() {
+    const fs = this.L.fingers; let k = pickOne(fs); if (k === this.lastK && fs.length > 1) k = pickOne(fs.filter(x => x !== k)); this.lastK = k;
+    const f = pickOne(this.level <= 1 ? [1, 2, 3] : this.level === 2 ? [1, 2, 3, 4] : [1, 2, 3, 4, 5]);
+    const r = Math.random();
+    this.car = { k, f, t: f * 0.2, state: 'arrive', at: 0, hold: 0, peak: 0, flagged: false, mode: r < 0.2 ? 'under' : r < 0.36 ? 'comp' : 'ok' };
+    say(`${fingerCall(k)}, этаж ${f}`);
+  }
+  update(dt, inp) {
+    const R = inp.touch ? [0, 0, 0, 0] : (GE.RE || [0, 0, 0, 0]);
+    this.lift = inp.E.map((v, j) => v - R[j]);
+    const car = this.car;
+    if (!car) {
+      if (this.restNeed) {
+        const up = Math.max(...this.lift) / this.Lmax;
+        this.cue = up > 0.15 ? 'Опустите палец на стол' : '';
+        if (up <= 0.15) { this.restNeed = false; this.nextT = 0.5; }
+        return;
+      }
+      this.cue = ''; this.nextT -= dt; if (this.nextT <= 0) this.newCar(); return;
+    }
+    car.at += dt;
+    if (car.state === 'arrive') { this.cue = `${fingerCall(car.k)}: этаж ${car.f}`; if (car.at > 1.0) { car.state = 'wait'; car.at = 0; } return; }
+    if (car.state === 'park' || car.state === 'leave') { if (car.at > 0.9) { this.car = null; this.restNeed = true; } return; }
+    const k = car.k, L = this.L, p = this.lift[k] / this.Lmax;
+    car.peak = Math.max(car.peak, this.lift[k]); this.bestLift = Math.max(this.bestLift, this.lift[k]);
+    const others = [0, 1, 2, 3].filter(j => j !== k && this.lift[j] > Math.max(8, 0.35 * this.Lmax));
+    if (!inp.touch && others.length) {
+      if (!car.flagged) { car.flagged = true; this.flaggedN++; }
+      car.hold = Math.max(0, car.hold - dt * 2); this.cue = `${capFirst(FINGERS[others[0]].name)} — на стол`; sayCue('lift', 'Остальные пальцы на столе', 6);
+    } else if (Math.abs(p - car.t) <= L.tol) { car.hold += dt; this.cue = 'Держите!'; }
+    else { car.hold = Math.max(0, car.hold - dt * 2); this.cue = p < car.t - L.tol ? 'Выше' : 'Чуть ниже'; }
+    if (car.hold >= L.hold) {
+      car.state = 'park'; car.at = 0; this.hits++; this.byF[k]++; this.parked.push({ f: car.f, k });
+      const pts = 10 + 2 * this.level + 2 * car.f, P = this.panel(); this.score += pts; this.outcome(1);
+      floatText(P.x + P.w / 2, this.posY(car.t) - 0.06, '+' + pts, '#FFFFFF', 0.045); burst(P.x + P.w / 2, this.posY(car.t), [FINGERS[k].color, '#FFFFFF'], 12, 0.45, 0.01); sfx('place');
+      if (car.t >= 0.99 && !car.flagged) this.Lmax = Math.min(60, this.Lmax + 1.5);
+      if (this.hits % 4 === 0) say('Отлично');
+      this.cue = ''; return;
+    }
+    if (car.at > L.time) {
+      car.state = 'leave'; car.at = 0; this.misses++; this.outcome(0); sfx('miss');
+      if (car.peak / this.Lmax < car.t - L.tol) { this.Lmax = Math.max(6, Math.min(this.Lmax, car.peak / Math.max(0.15, car.t - L.tol))); banner('Линейка подстроилась: стало легче', false, 1.4); }
+      this.cue = '';
+    }
+  }
+  bg(c, overlay) {
+    const W = gcv.width, H = gcv.height;
+    if (overlay) return;
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#5A3E26'); g.addColorStop(1, '#3B2817'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.strokeStyle = 'rgba(255,255,255,.05)'; c.lineWidth = 2; for (let i = 0; i < 14; i++) { const y = (i + 0.5) / 14 * H; c.beginPath(); c.moveTo(0, y); c.bezierCurveTo(W * 0.3, y + 6, W * 0.6, y - 6, W, y + 3); c.stroke(); }
+  }
+  draw(c, K, inp) {
+    const car = this.car;
+    // машинка у кончика нужного пальца (на изображении кисти)
+    if (car && inp && inp.lm) {
+      const f = FINGERS[car.k], tip = dispH(inp.lm, f.tip), dip = dispH(inp.lm, f.tip - 1), palm0 = dispH(inp.lm, 0), palm9 = dispH(inp.lm, 9);
+      const dx = tip.x - dip.x, dy = tip.y - dip.y, dl = Math.hypot(dx, dy) || 1, s = clamp(Math.hypot(palm9.x - palm0.x, palm9.y - palm0.y) * 0.32, 0.022, 0.07);
+      const tx = tip.x + dx / dl * s * 1.2, ty = tip.y + dy / dl * s * 1.2;
+      let x = tx, y = ty, a = 1;
+      if (car.state === 'arrive') { const u = ease(car.at / 1.0); x = lerp(-0.1, tx, u); y = ty; }
+      else if (car.state === 'park' || car.state === 'leave') a = 1 - clamp(car.at / 0.6, 0, 1);
+      c.save(); c.strokeStyle = f.color; c.lineWidth = 0.006 * K; c.beginPath(); c.arc(tip.x * K, tip.y * K, s * 0.9 * K, 0, Math.PI * 2); c.stroke(); c.restore();
+      drawCar(c, K, x, y, s, f.color, a);
+    }
+    this.drawPanel(c, K);
+    this.drawFingers(c, K);
+  }
+  drawPanel(c, K) {
+    const P = this.panel(), car = this.car, L = this.L, X0 = P.x * K, W = P.w * K;
+    c.fillStyle = 'rgba(10,15,19,.74)'; roundRectPath(c, X0, (P.y - 0.05) * K, W, (P.h + 0.1) * K, 0.03 * K); c.fill();
+    if (car && car.state !== 'arrive') {
+      const y1 = this.posY(car.t + L.tol), y2 = this.posY(car.t - L.tol), on = car.state === 'park';
+      c.fillStyle = on ? 'rgba(124,240,176,.55)' : 'rgba(124,240,176,.28)'; c.fillRect(X0 + 0.008 * K, y1 * K, W - 0.016 * K, (y2 - y1) * K);
+      c.fillStyle = '#7CF0B0'; c.font = `700 ${Math.round(0.03 * K)}px Unbounded, sans-serif`; c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillText('P', X0 + W - 0.014 * K, this.posY(car.t) * K);
+    }
+    c.font = `600 ${Math.round(0.026 * K)}px "Golos Text", sans-serif`; c.textAlign = 'left'; c.textBaseline = 'middle';
+    for (let f = 0; f <= 5; f++) {
+      const y = this.posY(f * 0.2) * K, tgt = car && car.f === f;
+      c.strokeStyle = f === 0 ? 'rgba(255,255,255,.8)' : 'rgba(255,255,255,.35)'; c.lineWidth = (f === 0 ? 0.006 : 0.003) * K;
+      c.beginPath(); c.moveTo(X0 + 0.008 * K, y); c.lineTo(X0 + W - 0.008 * K, y); c.stroke();
+      c.fillStyle = tgt ? '#7CF0B0' : 'rgba(255,255,255,.8)'; c.fillText(f === 0 ? 'стол' : String(f), X0 + 0.012 * K, y - 0.016 * K);
+    }
+    c.fillStyle = 'rgba(255,255,255,.9)'; c.font = `700 ${Math.round(0.028 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    c.fillText(car ? `этаж ${car.f}` : 'парковка', X0 + W / 2, (P.y - 0.015) * K);
+    c.font = `500 ${Math.round(0.022 * K)}px "Golos Text", sans-serif`; c.fillStyle = 'rgba(255,255,255,.6)'; c.textBaseline = 'top';
+    c.fillText(`5-й этаж = ${Math.round(this.Lmax)}°`, X0 + W / 2, (P.y + P.h + 0.012) * K);
+    if (car) {
+      const v = car.state === 'park' ? car.t : car.state === 'arrive' ? 0 : this.lift[car.k] / this.Lmax, s = Math.min(0.045, P.w * 0.2), cx = P.x + P.w * 0.56, cy = this.posY(v) - s * 0.35;
+      drawCar(c, K, cx, cy, s, FINGERS[car.k].color, car.state === 'leave' ? 1 - clamp(car.at / 0.6, 0, 1) : 1);
+      if (car.state === 'wait' && car.hold > 0) { c.strokeStyle = '#7CF0B0'; c.lineWidth = 0.007 * K; c.lineCap = 'round'; c.beginPath(); c.arc(cx * K, cy * K, s * 1.45 * K, -Math.PI / 2, -Math.PI / 2 + Math.min(1, car.hold / L.hold) * Math.PI * 2); c.stroke(); }
+    }
+  }
+  drawFingers(c, K) {
+    const car = this.car, y = 0.94;
+    c.font = `600 ${Math.round(0.022 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'top';
+    FINGERS.forEach((f, j) => {
+      const x = 0.05 + j * 0.075, tgt = car && car.k === j, up = this.lift[j] > Math.max(8, 0.35 * this.Lmax);
+      c.fillStyle = tgt ? f.color : up ? '#F5A524' : 'rgba(124,240,176,.9)';
+      c.beginPath(); c.arc(x * K, (y - 0.02) * K, (tgt ? 0.016 : 0.012) * K, 0, Math.PI * 2); c.fill();
+    });
+  }
+  drawCursor() { }
+  demoObjects() { this.car = { k: 0, f: 3, t: 0.6, state: 'wait', at: 1, hold: 0.4, peak: 0, flagged: false, mode: 'ok' }; this.lift = [0.55 * this.Lmax, 0, 0, 0]; }
+  idle(extra) { return Object.assign({ x: 0.4, y: 0.3, L: 0.2, side: cur().side, aspect: GE.aspect, pose: 'table', tilt: 40, flex: [0, 0, 0, 0] }, extra); }
+  autopilot(dt) {
+    const A = this.ap || (this.ap = { d: [0, 0, 0, 0] }), want = [0, 0, 0, 0], car = this.car;
+    if (car && car.state === 'wait') {
+      let p = car.t + Math.sin(GE.clock * 2.3) * 0.02;
+      if (car.mode === 'under' && car.at < 2.2) p = Math.max(0.05, car.t - 0.25);
+      want[car.k] = p * this.Lmax;
+      if (car.mode === 'comp' && car.at > 0.5 && car.at < 1.8) { const nb = car.k < 3 ? car.k + 1 : car.k - 1; want[nb] = 0.6 * this.Lmax; }
+    } else if (car && car.state === 'park') want[car.k] = car.t * this.Lmax;
+    for (let i = 0; i < 4; i++) A.d[i] = approach(A.d[i], want[i], dt, 0.3);
+    return this.idle({ flex: A.d.map(d => -d / 80) });
+  }
+  result() {
+    const att = this.hits + this.misses, acc = att ? this.hits / att : 0, comp = att ? this.flaggedN / att : 0;
+    const hint = comp > 0.3 ? 'lift' : acc < 0.5 && att >= 3 ? 'easy' : 'good';
+    const per = this.byF.map((n, i) => n ? `${FINGERS[i].short} ${n}` : '').filter(Boolean).join(', ');
+    const extra = [['Не доехали', String(this.misses)], ['Поднимались другие пальцы', att ? `${this.flaggedN} из ${att}` : '—'], ['Лучший подъём пальца', this.bestLift ? Math.round(this.bestLift) + '°' : '—'], ['Линейка: 5-й этаж', `${Math.round(this.L0)}° → ${Math.round(this.Lmax)}°`], ['Припарковано по пальцам', per || '—'], ['Уровень', `${this.lv0} → ${this.level}`]];
+    return { id: 'car', score: this.score, reps: this.hits, misses: this.misses, hint, stars: starsFor(this.hits, acc, comp), extra, save: { level: this.level, Lmax: Math.round(this.Lmax * 10) / 10 }, bestLift: Math.round(this.bestLift) };
+  }
+}
+function makeGame(id, p) { const st = hs(p, id); return id === 'apples' ? new ApplesGame(p, st) : id === 'berries' ? new BerriesGame(p, st) : id === 'car' ? new CarGame(p, st) : new PianoGame(p, st); }
 
 // ---------- Экраны ----------
 function levelText(id, st) {
+  if (id === 'car') { const l = st.level || 1; return `${l <= 2 ? 'указательный' : l === 3 ? '+ средний' : l === 4 ? '+ безымянный' : 'все пальцы'} · ${Math.round(st.Lmax || 20)}°`; }
   if (id === 'apples') return st.openT ? `раскрытие ${Math.round(st.openT * 100)}%` : 'уровень 1';
   if (id === 'berries') { const l = st.level || 1; return l <= 2 ? 'большой + указательный' : l === 3 ? '+ средний' : l === 4 ? '+ безымянный' : 'все пальцы'; }
   const n = PIANO_LV[st.level || 1].n; return `${n} ${plural(n, 'палец', 'пальца', 'пальцев')}`;
@@ -948,7 +1184,7 @@ function renderHome() {
     <div class="patient"><div><div class="name">${esc(p.name)}</div><div class="muted small">Сторона поражения: ${sideName(p.side)} · день курса ${day > 0 ? day : '—'}${day > 10 ? ' (курс завершён)' : ' из 10'}</div></div>${p.example ? '<span class="chip example">пример</span>' : ''}</div>
     <div class="row"><label for="pt-select" style="flex:1">Пациент<select id="pt-select">${opts}</select></label></div>
     <div class="seg" role="group" aria-label="Поражённая кисть"><button type="button" data-side="L" aria-pressed="${p.side === 'L'}">Левая кисть</button><button type="button" data-side="R" aria-pressed="${p.side === 'R'}">Правая кисть</button></div>
-    <p class="muted small">Новых пациентов добавляйте в TURA Motion: список общий.</p>`;
+    <p class="muted small">Играет только поражённая кисть: здоровую игра видит, но не засчитывает. Новых пациентов добавляйте в TURA Motion: список общий.</p>`;
   $('#pt-select').addEventListener('change', e => { store.current = e.target.value; saveStore(); renderHome(); });
   $$('#patient-card [data-side]').forEach(b => b.addEventListener('click', () => { p.side = b.dataset.side; saveStore(); renderHome(); }));
   const today = (p.dose || {})[todayIso()] || {}, mv = Object.entries(today).filter(([k]) => k.startsWith('k_')).reduce((a, [, v]) => a + v, 0);
@@ -964,17 +1200,66 @@ function renderHome() {
   const hist = (p.sessions || []).filter(s => s.ex.startsWith('k_')).slice(0, 5);
   $('#hist').innerHTML = hist.length ? hist.map(s => `<div class="row between small"><span>${esc(fromIso(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))} · ${esc(HG[s.ex.slice(2)]?.name || s.ex)}</span><span class="chip ${s.hint === 'good' ? 'good' : 'warn'}">${s.reps} засчит. · ${s.score || 0} очк.${s.hint !== 'good' ? ' · ' + esc(FLAG_NAMES[s.hint] || s.hint) : ''}</span></div>`).join('') : '<p class="muted small">Раундов пока нет.</p>';
 }
+const sideNom = s => s === 'L' ? 'левая' : 'правая';
+const sideAcc = s => s === 'L' ? 'левую' : 'правую';
+function wrongText(seen) { return `Вижу ${sideAcc(seen)} руку. Играет только ${sideNom(cur().side)} (поражённая)`; }
+// Проверка кадра перед игрой с камерой: нужная рука, вся кисть в кадре, размер, направление пальцев
+function frameChecks(inp) {
+  const table = GE.game.view === 'table', side = cur().side, items = [];
+  if (GE.src !== 'camera') return { ok: inp.ok, items, msg: 'Не вижу кисть' };
+  const seen = inp.ok || inp.wrong;
+  items.push({ ok: seen, t: 'Кисть видна' });
+  if (!seen) return { ok: false, items, msg: table ? 'Положите кисть на стол перед планшетом: камера её пока не видит' : 'Поднимите кисть ладонью к камере' };
+  items.push({ ok: !inp.wrong, t: inp.wrong ? `Это ${sideNom(inp.seen)} рука, нужна ${sideNom(side)}` : `Рука ${sideNom(side)}` });
+  if (inp.wrong) return { ok: false, items, msg: wrongText(inp.seen) };
+  const r = inp.lm, xs = r.map(p => p.x), ys = r.map(p => p.y), m = 0.02;
+  const full = Math.min(...xs) > m && Math.max(...xs) < 1 - m && Math.min(...ys) > m && Math.max(...ys) < 1 - m;
+  const palm = Math.hypot((r[9].x - r[0].x) * GE.aspect, r[9].y - r[0].y), big = palm >= (table ? 0.06 : 0.08);
+  const orient = table ? r[12].y > r[0].y + 0.02 : r[12].y < r[0].y - 0.02;
+  items.push({ ok: full, t: 'Вся кисть в кадре' }, { ok: big, t: 'Кисть достаточно крупно' }, { ok: orient, t: table ? 'Пальцы смотрят на экран' : 'Пальцы вверх' });
+  let msg = '';
+  if (!full) {
+    const mirr = x => GE.mirror ? 1 - x : x, minX = Math.min(...xs.map(mirr)), maxX = Math.max(...xs.map(mirr));
+    msg = Math.max(...ys) >= 1 - m ? (table ? 'Кисть обрезана снизу: отодвиньте планшет дальше или поставьте его ниже' : 'Кисть обрезана снизу: поднимите её выше') : Math.min(...ys) <= m ? 'Кисть обрезана сверху: опустите её ниже' : minX <= m ? 'Кисть у левого края: сдвиньте её к центру' : maxX >= 1 - m ? 'Кисть у правого края: сдвиньте её к центру' : 'Кисть у края кадра';
+  } else if (!big) msg = 'Кисть далеко: придвиньте планшет ближе';
+  else if (!orient) msg = table ? 'Положите ладонь на стол, пальцами к экрану' : 'Поверните кисть пальцами вверх, ладонью к камере';
+  return { ok: full && big && orient, items, msg };
+}
+function drawCalib(c, K) {
+  const A = GE.aspect, table = GE.game.view === 'table', ok = GE.chk && GE.chk.ok;
+  const zw = Math.min(A * 0.5, table ? 0.6 : 0.45), zh = table ? 0.38 : 0.55, zx = A / 2 - zw / 2, zy = table ? 0.56 : 0.18;
+  c.save(); c.setLineDash([0.02 * K, 0.014 * K]); c.lineWidth = 0.006 * K; c.strokeStyle = ok ? 'rgba(124,240,176,.95)' : 'rgba(255,255,255,.75)';
+  roundRectPath(c, zx * K, zy * K, zw * K, zh * K, 0.04 * K); c.stroke(); c.setLineDash([]);
+  c.fillStyle = 'rgba(255,255,255,.85)'; c.font = `600 ${Math.round(0.026 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
+  c.fillText(table ? 'кисть на столе здесь' : 'кисть здесь', (zx + zw / 2) * K, (zy - 0.008) * K);
+  c.restore();
+}
+function renderChecks() {
+  const box = $('#g-check'), on = GE.running && GE.phase === 'calib' && GE.src === 'camera' && GE.chk;
+  if (!on) { if (!box.hidden) box.hidden = true; return; }
+  const html = `<b>Проверка кадра</b>${GE.chk.items.map(it => `<span class="${it.ok ? 'ok' : 'no'}">${it.ok ? '✓' : '✗'} ${esc(it.t)}</span>`).join('')}${GE.chk.ok ? '<span class="msg">Всё в порядке, держите кисть неподвижно</span>' : GE.chk.msg ? `<span class="msg">${esc(GE.chk.msg)}</span>` : ''}`;
+  if (box.innerHTML !== html) box.innerHTML = html; if (box.hidden) box.hidden = false;
+}
+// «Машинка»: экран приближает кисть, чтобы пальцы были крупными
+function clampView(V) { const h = 0.5 / V.z; V.cu = clamp(V.cu, h, 1 - h); V.cv = clamp(V.cv, h, 1 - h); return V; }
+function handCenter(r) { const x = (r[0].x + r[12].x) / 2, y = (r[0].y + r[12].y) / 2; return { u: GE.mirror ? 1 - x : x, v: y }; }
+function setZoom(B) {
+  const cs = B.map(b => handCenter(b.lm)), len = median(B.map(b => Math.hypot((b.lm[12].x - b.lm[0].x) * GE.aspect, b.lm[12].y - b.lm[0].y)));
+  const z = clamp(0.42 / Math.max(len, 0.05), 1, 2.4);
+  GE.view = clampView({ cu: median(cs.map(c => c.u)) + 0.12 / z, cv: median(cs.map(c => c.v)) + 0.04 / z, z });
+}
 function setupCanvas(aspect) { GE.aspect = aspect; gcv.height = 720; gcv.width = Math.round(720 * aspect); $('#gstage').style.aspectRatio = `${gcv.width} / 720`; }
 function openGame(id) {
   stopGame(); GE.id = id;
   const g = HG[id], p = cur();
   $('#h-game').textContent = g.name; $('#game-goal').textContent = `${g.goal} · ${sideName(p.side)} кисть`; $('#game-how').textContent = g.how;
   $('#g-gain-wrap').hidden = !g.cursor;
+  $('#g-setup').innerHTML = SETUP[g.view || 'palm'];
   $('#game-intro').hidden = false; $('#game-controls').hidden = true; $('#game-result').hidden = true;
   $$('#g-dur button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.dur) === GE.dur));
   $$('#g-gain button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.gain) === GE.gain));
   setupCanvas(0.75); GE.src = 'touch'; GE.game = makeGame(id, p); GE.game.demoObjects(); GE.parts = []; GE.clock = 0;
-  const K = gcv.height; GE.game.bg(gx, false); GE.game.draw(gx, K);
+  GE.view = null; const K = gcv.height; GE.game.bg(gx, false); GE.game.draw(gx, K, { lm: null });
   gHud(); banner('Выберите: камера, пальцем или авто-демо', true);
   show('game');
 }
@@ -983,21 +1268,21 @@ async function startGame(src) {
   stopGame(); const tok = GE.tok;
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume && audioCtx.resume(); } catch (e) { }
   const p = cur();
-  Object.assign(GE, { src, paused: false, time: 0, phase: src === 'touch' ? 'play' : 'calib', phaseT: 0, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], missingT: 0, missBanner: false, lastCue: {}, inp: null, mirror: false, clock: 0, lastVT: -1, lastRes: null, lastWrist: null, otherT: 0 });
+  Object.assign(GE, { src, paused: false, time: 0, phase: src === 'touch' ? 'play' : 'calib', phaseT: 0, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], missingT: 0, missBanner: false, lastCue: {}, inp: null, mirror: false, clock: 0, lastVT: -1, lastRes: null, wrongT: 0, view: null, chk: null, RE: null });
   $('#game-intro').hidden = true; $('#game-result').hidden = true; $('#game-controls').hidden = false; $('#g-pause').textContent = 'Пауза';
   if (src === 'camera') {
     setupCanvas(0.75); gx.fillStyle = '#0A0F13'; gx.fillRect(0, 0, gcv.width, gcv.height); banner('Загружаю модель распознавания кисти…', true);
     try { await ensureModel(); } catch (e) { if (tok === GE.tok) gameFail(FRAMED ? 'В этом окне камера и модель распознавания недоступны. Играйте пальцем или откройте версию на сайте TURA.' : 'Не удалось загрузить модель распознавания кисти. Проверьте интернет.'); return; }
     if (tok !== GE.tok) return;
     try {
-      GE.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      GE.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
       gvideo.srcObject = GE.stream; await gvideo.play();
     } catch (e) { if (tok === GE.tok) gameFail(FRAMED ? 'Живая камера в этом окне недоступна. Играйте пальцем или откройте версию на сайте TURA.' : 'Нет доступа к камере. Разрешите камеру для этого сайта в настройках браузера.'); return; }
     if (tok !== GE.tok) { GE.stream && GE.stream.getTracks().forEach(t => t.stop()); return; }
     GE.mirror = true; setupCanvas((gvideo.videoWidth || 480) / (gvideo.videoHeight || 640));
   } else setupCanvas(0.75);
   GE.game = makeGame(GE.id, p); GE.running = true; GE.tPrev = performance.now();
-  if (src === 'touch') { banner(GE.id === 'apples' ? 'Прижмите палец к яблоку, перетащите в корзину и отпустите' : GE.id === 'berries' ? 'Касайтесь ягод' : 'Нажимайте дорожку, когда нота на линии', false, 2.4); GE.game.onCalibrated && GE.game.onCalibrated(); }
+  if (src === 'touch') { banner(GE.id === 'apples' ? 'Прижмите палец к яблоку, перетащите в корзину и отпустите' : GE.id === 'berries' ? 'Касайтесь ягод' : GE.id === 'car' ? 'Ведите машинку пальцем по линейке справа' : 'Нажимайте дорожку, когда нота на линии', false, 2.4); GE.game.onCalibrated && GE.game.onCalibrated(); }
   else hideBanner();
   gloop();
 }
@@ -1005,26 +1290,30 @@ function stopGame() {
   GE.tok++; GE.running = false; cancelAnimationFrame(GE.raf);
   if (GE.stream) { GE.stream.getTracks().forEach(t => t.stop()); GE.stream = null; }
   try { gvideo.pause(); gvideo.srcObject = null; } catch (e) { }
-  hideBanner(); $('#g-cue').innerHTML = '';
+  hideBanner(); $('#g-cue').innerHTML = ''; $('#g-flip').hidden = true; $('#g-check').hidden = true;
 }
 function gloop() {
   if (!GE.running) return;
   GE.raf = requestAnimationFrame(gloop);
   const now = performance.now(), dt = Math.min(0.05, (now - GE.tPrev) / 1000) * GE.speed; GE.tPrev = now; GE.clock += dt;
   const inp = readInput(dt); GE.inp = inp;
+  GE.wrongT = inp.wrong ? GE.wrongT + dt : 0;
   if (GE.phase === 'calib') {
-    if (inp.ok) {
+    const chk = frameChecks(inp); GE.chk = chk;
+    if (chk.ok) {
       GE.phaseT += dt; GE.calBuf.push(inp);
-      banner(GE.id === 'piano' ? 'Локоть на стол, ладонь к камере, пальцы вверх и раскрыты' : 'Поднимите кисть ладонью к камере и раскройте пальцы', true);
+      if (GE.src === 'camera') hideBanner(); else banner(GE.id === 'car' ? 'Пальцы лежат на столе. Держите так…' : GE.id === 'piano' ? 'Локоть на стол, ладонь к камере, пальцы вверх и раскрыты' : 'Кисть ладонью к камере, пальцы раскрыты', true);
       if (GE.phaseT > 1.2 && GE.calBuf.length >= 8) {
         const B = GE.calBuf.slice(-30);
         GE.ref = { x: median(B.map(b => b.palmC.x)), y: median(B.map(b => b.palmC.y)) };
         GE.R = [0, 1, 2, 3].map(j => median(B.map(b => b.F[j])));
+        GE.RE = [0, 1, 2, 3].map(j => median(B.map(b => b.E[j])));
         GE.tipX = [0, 1, 2, 3].map(j => median(B.map(b => b.tipX[j])));
+        if (GE.game.view === 'table' && GE.src === 'camera') setZoom(B);
         GE.game.onCalibrated && GE.game.onCalibrated();
         GE.phase = 'count'; GE.phaseT = 0;
       }
-    } else { GE.phaseT = 0; banner('Не вижу кисть: поднимите её ладонью к камере', true); }
+    } else { GE.phaseT = 0; GE.calBuf = []; if (GE.src === 'camera') hideBanner(); else banner(chk.msg, true); }
   } else if (GE.phase === 'count') {
     GE.phaseT += dt; const n = 3 - Math.floor(GE.phaseT); banner(n > 0 ? String(n) : 'Старт!', true);
     if (GE.phaseT >= 3) { GE.phase = 'play'; banner('Старт!', false, 0.8); say('Старт'); }
@@ -1033,20 +1322,27 @@ function gloop() {
     if (GE.missingT < 0.6) {
       if (GE.missBanner) { hideBanner(); GE.missBanner = false; }
       GE.time += dt; GE.game.update(dt, inp);
-      GE.otherT = inp.other ? GE.otherT + dt : 0;
-    } else { banner('Не вижу кисть: держите ладонь перед камерой', true); GE.missBanner = true; }
+      if (GE.view && inp.ok) { const hc = handCenter(inp.lm), V = GE.view; V.cu = approach(V.cu, hc.u + 0.12 / V.z, dt, 2.5); V.cv = approach(V.cv, hc.v + 0.04 / V.z, dt, 2.5); clampView(V); }
+    } else { banner(inp.wrong ? wrongText(inp.seen) : GE.game.view === 'table' ? 'Не вижу кисть: положите её на стол перед планшетом' : 'Не вижу кисть: держите ладонь перед камерой', true); GE.missBanner = true; }
     if (GE.time >= GE.dur) { endGame(); return; }
   }
+  const showFlip = GE.src === 'camera' && GE.wrongT > 2.5; if ($('#g-flip').hidden === showFlip) $('#g-flip').hidden = !showFlip;
+  renderChecks();
   updateParts(dt); drawGameFrame(inp); gHud();
 }
 function drawGameFrame(inp) {
   const c = gx, W = gcv.width, H = gcv.height, K = H;
   c.setTransform(1, 0, 0, 1, 0, 0);
   if (GE.src === 'camera' && gvideo.readyState >= 2) {
-    c.save(); if (GE.mirror) { c.translate(W, 0); c.scale(-1, 1); } c.drawImage(gvideo, 0, 0, W, H); c.restore();
-    c.fillStyle = 'rgba(6,10,14,.45)'; c.fillRect(0, 0, W, H); GE.game.bg(c, true);
+    const vw = gvideo.videoWidth, vh = gvideo.videoHeight, V = GE.view;
+    c.save(); if (GE.mirror) { c.translate(W, 0); c.scale(-1, 1); }
+    if (V) { const h = 0.5 / V.z; c.drawImage(gvideo, (GE.mirror ? 1 - (V.cu + h) : V.cu - h) * vw, (V.cv - h) * vh, vw / V.z, vh / V.z, 0, 0, W, H); }
+    else c.drawImage(gvideo, 0, 0, W, H);
+    c.restore();
+    c.fillStyle = `rgba(6,10,14,${GE.phase === 'calib' ? 0.12 : GE.game.view === 'table' ? 0.3 : 0.45})`; c.fillRect(0, 0, W, H); GE.game.bg(c, true);
   } else GE.game.bg(c, false);
   if (inp.lm) drawHandSkel(c, K, inp);
+  if (GE.phase === 'calib' && GE.src === 'camera') { drawCalib(c, K); drawParts(c, K); return; }
   GE.game.draw(c, K, inp);
   if (GE.phase === 'play' && inp.ok) GE.game.drawCursor(c, K, inp);
   drawParts(c, K);
@@ -1055,9 +1351,8 @@ function gHud() {
   const gm = GE.game; if (!gm) return;
   setText($('#g-score'), `Очки ${gm.score}`); setText($('#g-level'), gm.levelLabel());
   const rem = Math.max(0, GE.dur - GE.time); setText($('#g-time'), `${Math.floor(rem / 60)}:${pad(Math.floor(rem % 60))}`);
-  let cue = GE.running && GE.phase === 'play' ? gm.cue : '';
-  if (GE.running && GE.phase === 'play' && GE.otherT > 3) cue = `Играйте ${sideGen(cur().side)} кистью`;
-  const el = $('#g-cue'), html = cue ? `<span class="pill ${/^Согните/.test(cue) ? '' : 'warn'}">${esc(cue)}</span>` : '';
+  const cue = GE.running && GE.phase === 'play' ? gm.cue : '';
+  const el = $('#g-cue'), html = cue ? `<span class="pill ${/^(Согните|Держите|Указательный|Средний|Безымянный|Мизинец)/.test(cue) ? '' : 'warn'}">${esc(cue)}</span>` : '';
   if (el.innerHTML !== html) el.innerHTML = html;
 }
 function endGame() {
@@ -1079,6 +1374,7 @@ function renderGameResult(r) {
     s.plays++; s.best = Math.max(s.best, r.score); s.stars = Math.max(s.stars || 0, r.stars); Object.assign(s, r.save);
     if (r.bestOpen != null) s.bestOpen = Math.max(s.bestOpen || 0, r.bestOpen);
     if (r.clean != null) s.clean = r.clean;
+    if (r.bestLift != null) s.bestLift = Math.max(s.bestLift || 0, r.bestLift);
     const d = todayIso(), key = 'k_' + r.id; p.dose = p.dose || {}; p.dose[d] = p.dose[d] || {}; p.dose[d][key] = (p.dose[d][key] || 0) + r.reps;
     p.sessions = p.sessions || []; p.sessions.unshift({ date: d, ex: key, reps: r.reps, partial: r.misses, hint: r.hint, score: r.score }); p.sessions = p.sessions.slice(0, 60);
     saveStore();
@@ -1091,6 +1387,7 @@ $$('#g-dur button').forEach(b => b.addEventListener('click', () => { GE.dur = Nu
 $$('#g-gain button').forEach(b => b.addEventListener('click', () => { GE.gain = Number(b.dataset.gain); $$('#g-gain button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
 $('#g-pause').addEventListener('click', e => { if (!GE.running) return; GE.paused = !GE.paused; e.currentTarget.textContent = GE.paused ? 'Продолжить' : 'Пауза'; if (GE.paused) banner('Пауза', true); else hideBanner(); });
 $('#g-stop').addEventListener('click', endGame);
+$('#g-flip').addEventListener('click', () => { handFlip = !handFlip; try { localStorage.setItem('tura-hand-flip', handFlip ? '1' : '0'); } catch (e) { } GE.wrongT = 0; $('#g-flip').hidden = true; toast('Распознавание стороны руки переключено на этом устройстве'); });
 function gPtr(e) { const r = gcv.getBoundingClientRect(); GE.ptr.x = (e.clientX - r.left) / r.width * GE.aspect; GE.ptr.y = (e.clientY - r.top) / r.height; GE.ptr.mouse = e.pointerType === 'mouse'; }
 gcv.addEventListener('pointerdown', e => { if (GE.src !== 'touch' || !GE.running) return; try { gcv.setPointerCapture(e.pointerId); } catch (x) { } GE.ptr.down = true; gPtr(e); e.preventDefault(); });
 gcv.addEventListener('pointermove', e => { if (GE.src !== 'touch') return; gPtr(e); });
