@@ -1215,7 +1215,7 @@ function reportText() {
     if (h.apples) lv.push(`«Яблоки»: раскрытие кисти до ${h.apples.bestOpen || Math.round((h.apples.openT || 0) * 100)}%`);
     if (h.berries) lv.push(`«Ягоды»: уровень ${h.berries.level || 1}`);
     if (h.piano) lv.push(`«Пианино»: чистых нажатий ${h.piano.clean ?? '—'}%`);
-    if (h.car) lv.push(`«Машинка»: подъём пальца до ${h.car.bestLift ?? Math.round(h.car.Lmax || 0)}°`);
+    if (h.car && h.car.bestLift) lv.push(`«Машинка»: подъём пальца до ${h.car.bestLift}% от калибровки`);
     lines.push(`Кисть за 7 дней: ${kss.length} ${plural(kss.length, 'раунд', 'раунда', 'раундов')}, ${mvTxt(kss.reduce((a, s) => a + s.reps, 0))}${lv.length ? '. ' + lv.join('; ') : ''}`);
   }
   const last = (p.sessions || [])[0]; if (last && last.hint !== 'good') lines.push(`Главная подсказка по технике: ${HINTS[last.hint]}`);

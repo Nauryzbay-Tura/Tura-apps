@@ -336,7 +336,7 @@ const HG = {
   apples: { name: 'Яблоки', goal: 'Сжать кулак и полностью раскрыть кисть', how: 'Сидя у стола, телефон или планшет спереди на 50–70 см. Поднимите поражённую кисть ладонью к камере. Наведите кисть на яблоко и сожмите кулак: яблоко у вас в руке. Перенесите его к корзине и раскройте ладонь. Яблоко упадёт, только если пальцы раскрыты достаточно.', unit: ['яблоко', 'яблока', 'яблок'], cursor: true },
   berries: { name: 'Ягоды', goal: 'Щипок: большой палец к указательному и другим пальцам', how: 'Ладонь к камере на 50–70 см. Наведите кисть на ягоду и сведите кончики большого и нужного пальца. Цвет ягоды подсказывает палец. Если схватить ягоду всей кистью, она помнётся.', unit: ['ягода', 'ягоды', 'ягод'], cursor: true },
   piano: { name: 'Пианино', goal: 'Отдельные движения пальцев', how: 'Локоть на столе, кисть ладонью к камере, пальцы вверх. Когда нота доходит до линии, согните палец своей дорожки. Соседние пальцы держите неподвижно: чистое нажатие даёт полные очки.', unit: ['нота', 'ноты', 'нот'], cursor: false },
-  car: { name: 'Машинка', goal: 'Подъём одного пальца точно до заданного уровня', how: 'Предплечье и ладонь лежат на столе, пальцы смотрят на экран. Под палец подъезжает машинка. Поднимайте только этот палец: машинка едет вверх по линейке справа. Доведите её до отмеченного этажа и задержите, пока она не припаркуется, затем опустите палец. Остальные пальцы всё время лежат на столе.', unit: ['машинка', 'машинки', 'машинок'], cursor: false, view: 'table' }
+  car: { name: 'Машинка', goal: 'Подъём одного пальца точно до заданного уровня', how: 'Предплечье и ладонь лежат на столе, пальцы смотрят на экран. Под палец подъезжает машинка. Поднимайте только этот палец: машинка едет вверх по линейке справа. Сначала калибровка: дважды поднимите палец как можно выше — это 5-й этаж. Потом доводите машинку до отмеченного этажа и задерживайте, пока она не припаркуется. Остальные пальцы всё время лежат на столе.', unit: ['машинка', 'машинки', 'машинок'], cursor: false, view: 'table' }
 };
 const HICON = {
   apples: '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><circle cx="20" cy="23" r="12" fill="#E8453C"/><circle cx="15.5" cy="18.5" r="3.2" fill="#fff" opacity=".35"/><path d="M20 11c0-3 1-5 3-6" stroke="#7A4A1E" stroke-width="2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="9.5" rx="5" ry="2.3" transform="rotate(-25 26 9.5)" fill="#4BA34A"/></svg>',
@@ -495,6 +495,12 @@ function handFeatures(w, lab) {
   return { o, g, F, pinch, E };
 }
 // Экранные координаты точки: зеркало для фронтальной камеры и приближение кисти (GE.view) в «Машинке»
+// Кончик пальца относительно его основания в системе ладони на изображении, в длинах ладони
+function tipRel(lm) {
+  const A = GE.aspect, P = i => ({ x: lm[i].x * A, y: lm[i].y }), w = P(0), m = P(9);
+  const ax = { x: m.x - w.x, y: m.y - w.y }, L = Math.hypot(ax.x, ax.y) || 1e-3, u = { x: ax.x / L, y: ax.y / L }, v = { x: -u.y, y: u.x };
+  return FINGERS.map(f => { const t = P(f.tip), b = P(f.mcp), d = { x: t.x - b.x, y: t.y - b.y }; return [(d.x * u.x + d.y * u.y) / L, (d.x * v.x + d.y * v.y) / L]; });
+}
 function dispH(lm, i) { const p = lm[i], u = GE.mirror ? 1 - p.x : p.x, V = GE.view; return V ? { x: ((u - V.cu) * V.z + 0.5) * GE.aspect, y: (p.y - V.cv) * V.z + 0.5 } : { x: u * GE.aspect, y: p.y }; }
 // Играет только поражённая кисть. MediaPipe ставит метку руки по силуэту так, будто ладонь смотрит в камеру в зеркальном кадре.
 // Наш кадр не зеркальный: если ладонь смотрит в камеру (Яблоки, Ягоды, Пианино), метка обратная;
@@ -510,9 +516,20 @@ function realSide(lab) {
 function pickHand(res) {
   const L = (res && res.landmarks) || []; if (!L.length) return null;
   const H = res.handedness || res.handednesses || [], W = res.worldLandmarks || [], side = cur().side;
-  let best = -1, seen = null;
-  L.forEach((lm, i) => { const r = realSide(H[i] && H[i][0] && H[i][0].categoryName); if (r === side && best < 0 && W[i]) best = i; else if (!seen) seen = r; });
-  if (best < 0) return { wrong: true, seen: seen || (side === 'L' ? 'R' : 'L') };
+  const sides = L.map((lm, i) => realSide(H[i] && H[i][0] && H[i][0].categoryName));
+  let best = sides.findIndex((r, i) => r === side && W[i]);
+  if (L.length > 1 && best >= 0) { GE.votes.push(side); if (GE.votes.length > 20) GE.votes.shift(); GE.lastWrist = { x: L[best][0].x, y: L[best][0].y }; return { lm: L[best], w: W[best], lab: H[best][0].categoryName }; }
+  else {
+    // одна рука (или ни одна не совпала): берём ближайшую к прошлой позиции и решаем по большинству меток за ~0,7 с
+    best = 0;
+    if (GE.lastWrist && L.length > 1) { let bd = 9; L.forEach((lm, i) => { const d = Math.hypot(lm[0].x - GE.lastWrist.x, lm[0].y - GE.lastWrist.y); if (d < bd) { bd = d; best = i; } }); }
+    GE.votes.push(sides[best]);
+  }
+  if (GE.votes.length > 20) GE.votes.shift();
+  const wrongShare = GE.votes.filter(v => v && v !== side).length / GE.votes.length;
+  if (!W[best]) return null;
+  if (wrongShare > 0.5) return { wrong: true, seen: side === 'L' ? 'R' : 'L' };
+  GE.lastWrist = { x: L[best][0].x, y: L[best][0].y };
   return { lm: L[best], w: W[best], lab: H[best][0].categoryName };
 }
 
@@ -564,7 +581,7 @@ function poseForCursor(cx, cy, extra) {
 function idlePose(extra) { return Object.assign({ x: 0.5, y: 0.62, L: HAND_L, side: cur().side, aspect: GE.aspect, flex: [0.05, 0.05, 0.05, 0.05] }, extra); }
 
 // ================== Игровой движок ==================
-const GE = { id: null, src: null, running: false, paused: false, raf: 0, tPrev: 0, time: 0, dur: 60, gain: 1.5, phase: 'calib', phaseT: 0, game: null, inp: null, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], ptr: { x: null, y: null, down: false, mouse: false }, aspect: 0.75, mirror: false, stream: null, speed: 1, missingT: 0, missBanner: false, lastCue: {}, clock: 0, tok: 0, lastVT: -1, lastRes: null, wrongT: 0, view: null, chk: null, RE: null };
+const GE = { id: null, src: null, running: false, paused: false, raf: 0, tPrev: 0, time: 0, dur: 60, gain: 1.5, phase: 'calib', phaseT: 0, game: null, inp: null, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], ptr: { x: null, y: null, down: false, mouse: false }, aspect: 0.75, mirror: false, stream: null, speed: 1, missingT: 0, missBanner: false, lastCue: {}, clock: 0, tok: 0, lastVT: -1, lastRes: null, wrongT: 0, view: null, chk: null, RE: null, RT: null, RTSD: null, RESD: null, votes: [], hist: [], lastWrist: null, viewOff: 1 };
 const gcv = $('#gcanvas'), gx = gcv.getContext('2d');
 const gvideo = document.createElement('video'); gvideo.muted = true; gvideo.playsInline = true; gvideo.setAttribute('playsinline', '');
 window.__tura = { GE, ensureModel, store: () => store };
@@ -597,7 +614,7 @@ function cursorFrom(p) { const A = GE.aspect; return { x: clamp(A / 2 + (p.x - G
 function touchInput() {
   const pt = GE.ptr, has = pt.x != null, F = [0, 0, 0, 0], E = [0, 0, 0, 0], gm = GE.game;
   if (gm.id === 'piano' && pt.down && pt.x != null) { const k = gm.laneAt(pt.x); if (k != null) F[k] = 120; }
-  if (gm.id === 'car' && pt.down && pt.x != null && gm.car) E[gm.car.k] = gm.touchLift(pt);
+  if (gm.id === 'car' && pt.down && pt.x != null && gm.car) E[gm.car.k] = gm.touchLift(pt); // доля линейки
   return { ok: true, touch: true, g: pt.down ? 0.02 : 1, F, E, pinch: FINGERS.map(() => pt.down ? 0.1 : 1), cursor: has ? { x: pt.x, y: pt.y } : null, lm: null };
 }
 function readInput(dt) {
@@ -610,8 +627,8 @@ function readInput(dt) {
     if (gvideo.readyState < 2) return { ok: false };
     const vt = gvideo.currentTime;
     if (vt !== GE.lastVT) { GE.lastVT = vt; try { GE.lastRes = mpDetect(gvideo, performance.now()); } catch (e) { GE.lastRes = null; } }
-    const h = pickHand(GE.lastRes); if (!h) { GE.ema = null; return { ok: false }; }
-    if (h.wrong) { GE.ema = null; return { ok: false, wrong: true, seen: h.seen }; }
+    const h = pickHand(GE.lastRes); if (!h) { GE.ema = null; GE.hist = []; return { ok: false }; }
+    if (h.wrong) { GE.ema = null; GE.hist = []; return { ok: false, wrong: true, seen: h.seen }; }
     lm = h.lm; w = h.w; lab = h.lab;
   }
   const a = 0.55;
@@ -622,6 +639,10 @@ function readInput(dt) {
     W.x += a * (q.x - W.x); W.y += a * (q.y - W.y); W.z += a * (q.z - W.z);
   }
   const sl = GE.ema.lm, f = handFeatures(GE.ema.w, lab), D = i => dispH(sl, i);
+  f.T = tipRel(sl);
+  GE.hist.push({ E: f.E, F: f.F, T: f.T }); if (GE.hist.length > 5) GE.hist.shift();
+  f.E = [0, 1, 2, 3].map(j => median(GE.hist.map(h => h.E[j]))); f.F = [0, 1, 2, 3].map(j => median(GE.hist.map(h => h.F[j])));
+  f.T = [0, 1, 2, 3].map(j => [median(GE.hist.map(h => h.T[j][0])), median(GE.hist.map(h => h.T[j][1]))]);
   const palmC = [0, 5, 9, 13, 17].map(D).reduce((s, p) => ({ x: s.x + p.x / 5, y: s.y + p.y / 5 }), { x: 0, y: 0 });
   return { ok: true, lm: sl, ...f, palmC, tipX: FINGERS.map(q => D(q.tip).x), cursor: GE.ref ? cursorFrom(palmC) : null };
 }
@@ -1011,14 +1032,18 @@ class PianoGame {
 // ---------- Игра 4: Машинка (отдельный подъём пальца с опорой на стол) ----------
 // Подъём пальца — угол линии «основание — кончик» над плоскостью ладони (градусы) минус положение на столе.
 const CAR_LV = [null,
-  { fingers: [0], tol: 0.1, hold: 0.8, time: 12 },
-  { fingers: [0], tol: 0.09, hold: 1.0, time: 11 },
-  { fingers: [0, 1], tol: 0.08, hold: 1.2, time: 10 },
-  { fingers: [0, 1, 2], tol: 0.07, hold: 1.3, time: 10 },
-  { fingers: [0, 1, 2, 3], tol: 0.065, hold: 1.5, time: 9 },
-  { fingers: [0, 1, 2, 3], tol: 0.055, hold: 1.7, time: 9 }];
+  { fingers: [0], floors: [2, 3, 4], tol: 0.14, hold: 0.7, block: false },
+  { fingers: [0], floors: [2, 3, 4, 5], tol: 0.12, hold: 0.9, block: false },
+  { fingers: [0, 1], floors: [1, 2, 3, 4, 5], tol: 0.11, hold: 1.0, block: true },
+  { fingers: [0, 1, 2], floors: [1, 2, 3, 4, 5], tol: 0.1, hold: 1.2, block: true },
+  { fingers: [0, 1, 2, 3], floors: [1, 2, 3, 4, 5], tol: 0.09, hold: 1.4, block: true },
+  { fingers: [0, 1, 2, 3], floors: [1, 2, 3, 4, 5], tol: 0.08, hold: 1.6, block: true }];
+const CAR_TIME = 12, CAL_TIME = 4.5;
 const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 const fingerCall = k => k === 3 ? 'Мизинец' : `${capFirst(FINGERS[k].name)} палец`;
+const fingerAcc = k => k === 3 ? 'мизинец' : `${FINGERS[k].name} палец`;
+const pct = (a, q) => { if (!a.length) return 0; const b = [...a].sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.floor(q * b.length))]; };
+const sdev = a => { if (a.length < 2) return 0; const m = a.reduce((s, v) => s + v, 0) / a.length; return Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / a.length); };
 function drawCar(c, K, x, y, s, color, alpha = 1) {
   const X = x * K, Y = y * K, S = s * K;
   c.save(); c.globalAlpha = alpha;
@@ -1031,62 +1056,111 @@ function drawCar(c, K, x, y, s, color, alpha = 1) {
   c.fillStyle = '#FFE38A'; c.beginPath(); c.arc(X + S * 0.92, Y - S * 0.06, S * 0.08, 0, Math.PI * 2); c.fill();
   c.restore();
 }
+// Подъём пальца меряется двумя способами: угол над плоскостью ладони (3D модели) и смещение кончика
+// на изображении в системе ладони (2D). Оба шумят по-разному, поэтому каждый палец сначала калибруется:
+// пациент дважды поднимает его как можно выше. 100% линейки — его собственный максимум, способ с лучшим
+// отношением «размах / шум покоя» получает больший вес.
 class CarGame {
   constructor(p, st) {
     this.id = 'car'; this.view = 'table'; this.coloredTips = true; this.level = clamp(st.level || 1, 1, 6); this.lv0 = this.level;
-    this.Lmax = clamp(st.Lmax || 20, 6, 60); this.L0 = this.Lmax;
+    this.stretch = 1; this.cal = {}; this.calFails = 0; this.panelLeft = false;
     this.car = null; this.restNeed = false; this.nextT = 0.6; this.lastK = -1;
-    this.score = 0; this.hits = 0; this.misses = 0; this.flaggedN = 0; this.win = []; this.byF = [0, 0, 0, 0]; this.bestLift = 0; this.lift = [0, 0, 0, 0]; this.cue = ''; this.parked = [];
+    this.score = 0; this.hits = 0; this.misses = 0; this.flaggedN = 0; this.softN = 0; this.win = []; this.byF = [0, 0, 0, 0]; this.best = 0;
+    this.p = [0, 0, 0, 0]; this.other = [0, 0, 0, 0]; this.otherT = 0; this.cue = ''; this.snr = null; this.LmaxDeg = 25;
   }
   levelLabel() { return `Ур. ${this.level}`; }
   get L() { return CAR_LV[this.level]; }
   setLevel(n) { const o = this.level; this.level = clamp(n, 1, 6); if (this.level === o) return; banner(this.level > o ? `Уровень ${this.level}` : `Уровень ${this.level}: чуть проще`, false, 1.4); sfx(this.level > o ? 'level' : 'miss'); }
   outcome(v) { this.win.push(v); if (this.win.length >= 5) { const r = this.win.reduce((a, b) => a + b) / this.win.length; if (r >= 0.8) this.setLevel(this.level + 1); else if (r <= 0.4) this.setLevel(this.level - 1); this.win = []; } }
-  panel() { const A = GE.aspect, w = Math.min(0.24, A * 0.3), wide = A > 1.1; return { x: A - w - 0.03, y: wide ? 0.25 : 0.15, w, h: wide ? 0.62 : 0.72 }; }
+  onCalibrated(B) { if (B && B.length) { const u = median(B.map(b => handCenter(b.lm).u)); this.panelLeft = u > 0.5; } }
+  panel() { const A = GE.aspect, wide = A > 1.1, w = wide ? Math.min(0.24, A * 0.3) : Math.min(0.19, A * 0.26); return { x: this.panelLeft ? 0.03 : A - w - 0.03, y: wide ? 0.25 : 0.17, w, h: wide ? 0.6 : 0.68 }; }
   posY(v) { const P = this.panel(); return P.y + P.h * (1 - clamp(v, 0, 1.15) / 1.15); }
-  touchLift(pt) { const P = this.panel(); return clamp((P.y + P.h - pt.y) / P.h * 1.15, 0, 1.15) * this.Lmax; }
+  touchLift(pt) { const P = this.panel(); return clamp((P.y + P.h - pt.y) / P.h * 1.15, 0, 1.15); }
+  // --- измерение ---
+  disp2(inp, j) { const t = inp.T[j], r = GE.RT[j]; return [t[0] - r[0], t[1] - r[1]]; }
+  liftOf(inp, k) {
+    if (inp.touch) return inp.E[k];
+    const c = this.cal[k]; if (!c) return 0;
+    const d = this.disp2(inp, k), s2 = (d[0] * c.dir[0] + d[1] * c.dir[1]) / c.r2, s3 = (inp.E[k] - GE.RE[k]) / c.r3;
+    return (c.w2 * s2 + c.w3 * s3) / (c.w2 + c.w3);
+  }
+  // насколько сдвинулся другой палец, в долях размаха текущего пальца (2D)
+  moveOf(inp, j, k) {
+    if (inp.touch) return 0;
+    const c = this.cal[k], d = this.disp2(inp, j), m = Math.hypot(d[0], d[1]);
+    if (!c || m < 4 * (GE.RTSD[j] || 0.01)) return 0;
+    return m / c.r2;
+  }
+  finishCal(car) {
+    const k = car.k, S = car.samples, n3 = GE.RESD[k] || 2, n2 = GE.RTSD[k] || 0.01;
+    const D = S.map(s => s.d), mags = D.map(d => Math.hypot(d[0], d[1])), top = D.filter((d, i) => mags[i] >= pct(mags, 0.8));
+    let dir = top.reduce((a, d) => [a[0] + d[0], a[1] + d[1]], [0, 0]); const dl = Math.hypot(dir[0], dir[1]) || 1e-6; dir = [dir[0] / dl, dir[1] / dl];
+    const s2 = D.map(d => d[0] * dir[0] + d[1] * dir[1]), r2 = pct(s2, 0.9), r3 = pct(S.map(s => s.e), 0.9);
+    const snr2 = r2 / n2, snr3 = r3 / n3;
+    car.calSnr = Math.max(snr2, snr3);
+    if (car.calSnr < 3 && this.calFails < 1) return false;
+    this.cal[k] = { dir, r2: Math.max(r2, 1e-3), r3: Math.max(r3, 1), w2: Math.max(0, snr2) ** 2, w3: Math.max(0, snr3) ** 2 + 1e-6, snr: car.calSnr, deg: r3 };
+    if (this.cal[k].w2 + this.cal[k].w3 < 1e-3) this.cal[k].w2 = 1;
+    this.snr = this.snr == null ? car.calSnr : Math.min(this.snr, car.calSnr);
+    return true;
+  }
   newCar() {
     const fs = this.L.fingers; let k = pickOne(fs); if (k === this.lastK && fs.length > 1) k = pickOne(fs.filter(x => x !== k)); this.lastK = k;
-    const f = pickOne(this.level <= 1 ? [1, 2, 3] : this.level === 2 ? [1, 2, 3, 4] : [1, 2, 3, 4, 5]);
-    const r = Math.random();
-    this.car = { k, f, t: f * 0.2, state: 'arrive', at: 0, hold: 0, peak: 0, flagged: false, mode: r < 0.2 ? 'under' : r < 0.36 ? 'comp' : 'ok' };
+    if (GE.src !== 'touch' && !this.cal[k]) {
+      this.car = { k, state: 'calib', at: 0, samples: [] };
+      banner('Калибровка пальца', false, 1.2);
+      say(`Поднимите ${fingerAcc(k)} как можно выше и опустите. Два раза`); return;
+    }
+    const f = pickOne(this.L.floors), r = Math.random();
+    this.car = { k, f, t: f * 0.2, state: 'arrive', at: 0, hold: 0, peak: 0, flagged: false, soft: false, mode: r < 0.2 ? 'under' : r < 0.36 ? 'comp' : 'ok' };
     say(`${fingerCall(k)}, этаж ${f}`);
   }
   update(dt, inp) {
-    const R = inp.touch ? [0, 0, 0, 0] : (GE.RE || [0, 0, 0, 0]);
-    this.lift = inp.E.map((v, j) => v - R[j]);
     const car = this.car;
+    for (let j = 0; j < 4; j++) this.p[j] = this.liftOf(inp, j) / this.stretch;
     if (!car) {
       if (this.restNeed) {
-        const up = Math.max(...this.lift) / this.Lmax;
-        this.cue = up > 0.15 ? 'Опустите палец на стол' : '';
-        if (up <= 0.15) { this.restNeed = false; this.nextT = 0.5; }
+        const k = this.lastK, up = k >= 0 ? this.p[k] : 0;
+        this.cue = up > 0.2 ? 'Опустите палец на стол' : '';
+        if (up <= 0.2) { this.restNeed = false; this.nextT = 0.5; }
         return;
       }
       this.cue = ''; this.nextT -= dt; if (this.nextT <= 0) this.newCar(); return;
     }
     car.at += dt;
+    if (car.state === 'calib') {
+      const k = car.k;
+      car.samples.push({ d: this.disp2(inp, k), e: inp.E[k] - GE.RE[k] });
+      this.cue = car.at < CAL_TIME / 2 ? `Поднимите ${fingerAcc(k)} как можно выше` : 'Ещё раз: выше и на стол';
+      if (car.at >= CAL_TIME) {
+        if (this.finishCal(car)) { say('Готово'); this.car = null; this.restNeed = true; this.lastK = k; this.nextT = 0.3; this.calFails = 0; }
+        else { this.calFails++; car.at = 0; car.samples = []; banner('Камера почти не видит подъём пальца. Поднимите палец выше; если не помогает, поставьте телефон ниже и спереди кисти', false, 3.5); say('Поднимите палец выше'); }
+      }
+      return;
+    }
     if (car.state === 'arrive') { this.cue = `${fingerCall(car.k)}: этаж ${car.f}`; if (car.at > 1.0) { car.state = 'wait'; car.at = 0; } return; }
     if (car.state === 'park' || car.state === 'leave') { if (car.at > 0.9) { this.car = null; this.restNeed = true; } return; }
-    const k = car.k, L = this.L, p = this.lift[k] / this.Lmax;
-    car.peak = Math.max(car.peak, this.lift[k]); this.bestLift = Math.max(this.bestLift, this.lift[k]);
-    const others = [0, 1, 2, 3].filter(j => j !== k && this.lift[j] > Math.max(8, 0.35 * this.Lmax));
-    if (!inp.touch && others.length) {
-      if (!car.flagged) { car.flagged = true; this.flaggedN++; }
-      car.hold = Math.max(0, car.hold - dt * 2); this.cue = `${capFirst(FINGERS[others[0]].name)} — на стол`; sayCue('lift', 'Остальные пальцы на столе', 6);
-    } else if (Math.abs(p - car.t) <= L.tol) { car.hold += dt; this.cue = 'Держите!'; }
-    else { car.hold = Math.max(0, car.hold - dt * 2); this.cue = p < car.t - L.tol ? 'Выше' : 'Чуть ниже'; }
+    const k = car.k, L = this.L, p = this.p[k];
+    car.peak = Math.max(car.peak, p); this.best = Math.max(this.best, p);
+    const others = [0, 1, 2, 3].filter(j => j !== k && this.moveOf(inp, j, k) > 0.5);
+    this.otherT = others.length ? this.otherT + dt : 0;
+    const comp = this.otherT > 0.4;
+    if (comp) { this.other = [0, 1, 2, 3].map(j => others.includes(j) ? 1 : 0); if (!car.flagged) { car.flagged = true; this.flaggedN++; } } else this.other = [0, 0, 0, 0];
+    const inBand = Math.abs(p - car.t) <= L.tol;
+    if (comp && L.block) { car.hold = Math.max(0, car.hold - dt * 0.6); this.cue = `${capFirst(FINGERS[others[0]].name)} — на стол`; sayCue('lift', 'Остальные пальцы на столе', 6); }
+    else if (inBand) { car.hold += dt; if (comp) car.soft = true; this.cue = comp ? `Держите, но ${FINGERS[others[0]].name} — на стол` : 'Держите!'; }
+    else { car.hold = Math.max(0, car.hold - dt * 0.6); this.cue = p < car.t - L.tol ? 'Выше' : 'Чуть ниже'; }
     if (car.hold >= L.hold) {
-      car.state = 'park'; car.at = 0; this.hits++; this.byF[k]++; this.parked.push({ f: car.f, k });
-      const pts = 10 + 2 * this.level + 2 * car.f, P = this.panel(); this.score += pts; this.outcome(1);
-      floatText(P.x + P.w / 2, this.posY(car.t) - 0.06, '+' + pts, '#FFFFFF', 0.045); burst(P.x + P.w / 2, this.posY(car.t), [FINGERS[k].color, '#FFFFFF'], 12, 0.45, 0.01); sfx('place');
-      if (car.t >= 0.99 && !car.flagged) this.Lmax = Math.min(60, this.Lmax + 1.5);
+      car.state = 'park'; car.at = 0; this.hits++; this.byF[k]++; if (car.soft) this.softN++;
+      const full = 10 + 2 * this.level + 2 * car.f, pts = car.soft ? Math.round(full / 2) : full, P = this.panel(); this.score += pts; this.outcome(car.soft ? 0.5 : 1);
+      floatText(P.x + P.w / 2, this.posY(car.t) - 0.06, '+' + pts, car.soft ? '#F5C26B' : '#FFFFFF', 0.045); burst(P.x + P.w / 2, this.posY(car.t), [FINGERS[k].color, '#FFFFFF'], 12, 0.45, 0.01); sfx('place');
+      if (car.f === 5 && !car.flagged) this.stretch = Math.min(1.4, this.stretch * 1.04);
       if (this.hits % 4 === 0) say('Отлично');
       this.cue = ''; return;
     }
-    if (car.at > L.time) {
+    if (car.at > CAR_TIME) {
       car.state = 'leave'; car.at = 0; this.misses++; this.outcome(0); sfx('miss');
-      if (car.peak / this.Lmax < car.t - L.tol) { this.Lmax = Math.max(6, Math.min(this.Lmax, car.peak / Math.max(0.15, car.t - L.tol))); banner('Линейка подстроилась: стало легче', false, 1.4); }
+      if (car.peak < car.t - L.tol) { this.stretch = Math.max(0.5, this.stretch * Math.max(0.75, car.peak / Math.max(0.15, car.t - L.tol))); banner('Линейка подстроилась: стало легче', false, 1.4); }
       this.cue = '';
     }
   }
@@ -1098,81 +1172,85 @@ class CarGame {
   }
   draw(c, K, inp) {
     const car = this.car;
-    // машинка у кончика нужного пальца (на изображении кисти)
     if (car && inp && inp.lm) {
       const f = FINGERS[car.k], tip = dispH(inp.lm, f.tip), dip = dispH(inp.lm, f.tip - 1), palm0 = dispH(inp.lm, 0), palm9 = dispH(inp.lm, 9);
       const dx = tip.x - dip.x, dy = tip.y - dip.y, dl = Math.hypot(dx, dy) || 1, s = clamp(Math.hypot(palm9.x - palm0.x, palm9.y - palm0.y) * 0.32, 0.022, 0.07);
-      const tx = tip.x + dx / dl * s * 1.2, ty = tip.y + dy / dl * s * 1.2;
-      let x = tx, y = ty, a = 1;
-      if (car.state === 'arrive') { const u = ease(car.at / 1.0); x = lerp(-0.1, tx, u); y = ty; }
-      else if (car.state === 'park' || car.state === 'leave') a = 1 - clamp(car.at / 0.6, 0, 1);
       c.save(); c.strokeStyle = f.color; c.lineWidth = 0.006 * K; c.beginPath(); c.arc(tip.x * K, tip.y * K, s * 0.9 * K, 0, Math.PI * 2); c.stroke(); c.restore();
-      drawCar(c, K, x, y, s, f.color, a);
+      if (car.state !== 'calib') {
+        const tx = tip.x + dx / dl * s * 1.2, ty = tip.y + dy / dl * s * 1.2;
+        let x = tx, a = 1;
+        if (car.state === 'arrive') x = lerp(this.panelLeft ? GE.aspect + 0.1 : -0.1, tx, ease(car.at / 1.0));
+        else if (car.state === 'park' || car.state === 'leave') a = 1 - clamp(car.at / 0.6, 0, 1);
+        drawCar(c, K, x, ty, s, f.color, a);
+      }
     }
     this.drawPanel(c, K);
     this.drawFingers(c, K);
   }
   drawPanel(c, K) {
-    const P = this.panel(), car = this.car, L = this.L, X0 = P.x * K, W = P.w * K;
-    c.fillStyle = 'rgba(10,15,19,.74)'; roundRectPath(c, X0, (P.y - 0.05) * K, W, (P.h + 0.1) * K, 0.03 * K); c.fill();
-    if (car && car.state !== 'arrive') {
+    const P = this.panel(), car = this.car, L = this.L, X0 = P.x * K, W = P.w * K, calib = car && car.state === 'calib';
+    c.fillStyle = 'rgba(10,15,19,.62)'; roundRectPath(c, X0, (P.y - 0.05) * K, W, (P.h + 0.1) * K, 0.03 * K); c.fill();
+    if (car && !calib && car.state !== 'arrive') {
       const y1 = this.posY(car.t + L.tol), y2 = this.posY(car.t - L.tol), on = car.state === 'park';
       c.fillStyle = on ? 'rgba(124,240,176,.55)' : 'rgba(124,240,176,.28)'; c.fillRect(X0 + 0.008 * K, y1 * K, W - 0.016 * K, (y2 - y1) * K);
       c.fillStyle = '#7CF0B0'; c.font = `700 ${Math.round(0.03 * K)}px Unbounded, sans-serif`; c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillText('P', X0 + W - 0.014 * K, this.posY(car.t) * K);
     }
     c.font = `600 ${Math.round(0.026 * K)}px "Golos Text", sans-serif`; c.textAlign = 'left'; c.textBaseline = 'middle';
     for (let f = 0; f <= 5; f++) {
-      const y = this.posY(f * 0.2) * K, tgt = car && car.f === f;
+      const y = this.posY(f * 0.2) * K, tgt = car && car.f === f && !calib;
       c.strokeStyle = f === 0 ? 'rgba(255,255,255,.8)' : 'rgba(255,255,255,.35)'; c.lineWidth = (f === 0 ? 0.006 : 0.003) * K;
       c.beginPath(); c.moveTo(X0 + 0.008 * K, y); c.lineTo(X0 + W - 0.008 * K, y); c.stroke();
       c.fillStyle = tgt ? '#7CF0B0' : 'rgba(255,255,255,.8)'; c.fillText(f === 0 ? 'стол' : String(f), X0 + 0.012 * K, y - 0.016 * K);
     }
-    c.fillStyle = 'rgba(255,255,255,.9)'; c.font = `700 ${Math.round(0.028 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
-    c.fillText(car ? `этаж ${car.f}` : 'парковка', X0 + W / 2, (P.y - 0.015) * K);
-    c.font = `500 ${Math.round(0.022 * K)}px "Golos Text", sans-serif`; c.fillStyle = 'rgba(255,255,255,.6)'; c.textBaseline = 'top';
-    c.fillText(`5-й этаж = ${Math.round(this.Lmax)}°`, X0 + W / 2, (P.y + P.h + 0.012) * K);
+    c.fillStyle = 'rgba(255,255,255,.9)'; c.font = `700 ${Math.round(0.026 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    c.fillText(calib ? 'калибровка' : car ? `этаж ${car.f}` : 'парковка', X0 + W / 2, (P.y - 0.015) * K);
+    c.font = `500 ${Math.round(0.02 * K)}px "Golos Text", sans-serif`; c.fillStyle = 'rgba(255,255,255,.6)'; c.textBaseline = 'top';
+    c.fillText('5 = ваш максимум', X0 + W / 2, (P.y + P.h + 0.012) * K);
     if (car) {
-      const v = car.state === 'park' ? car.t : car.state === 'arrive' ? 0 : this.lift[car.k] / this.Lmax, s = Math.min(0.045, P.w * 0.2), cx = P.x + P.w * 0.56, cy = this.posY(v) - s * 0.35;
-      drawCar(c, K, cx, cy, s, FINGERS[car.k].color, car.state === 'leave' ? 1 - clamp(car.at / 0.6, 0, 1) : 1);
+      const v = calib ? Math.max(0, this.p[car.k]) : car.state === 'park' ? car.t : car.state === 'arrive' ? 0 : this.p[car.k];
+      const s = Math.min(0.045, P.w * 0.2), cx = P.x + P.w * 0.56, cy = this.posY(v) - s * 0.35;
+      if (!calib) drawCar(c, K, cx, cy, s, FINGERS[car.k].color, car.state === 'leave' ? 1 - clamp(car.at / 0.6, 0, 1) : 1);
+      else { const u = clamp(car.at / CAL_TIME, 0, 1); c.strokeStyle = FINGERS[car.k].color; c.lineWidth = 0.008 * K; c.lineCap = 'round'; c.beginPath(); c.arc((P.x + P.w / 2) * K, (P.y + P.h / 2) * K, P.w * 0.3 * K, -Math.PI / 2, -Math.PI / 2 + u * Math.PI * 2); c.stroke(); }
       if (car.state === 'wait' && car.hold > 0) { c.strokeStyle = '#7CF0B0'; c.lineWidth = 0.007 * K; c.lineCap = 'round'; c.beginPath(); c.arc(cx * K, cy * K, s * 1.45 * K, -Math.PI / 2, -Math.PI / 2 + Math.min(1, car.hold / L.hold) * Math.PI * 2); c.stroke(); }
     }
   }
   drawFingers(c, K) {
-    const car = this.car, y = 0.94;
-    c.font = `600 ${Math.round(0.022 * K)}px "Golos Text", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'top';
+    const car = this.car, y = 0.94, x0 = this.panelLeft ? GE.aspect - 0.3 : 0.05;
     FINGERS.forEach((f, j) => {
-      const x = 0.05 + j * 0.075, tgt = car && car.k === j, up = this.lift[j] > Math.max(8, 0.35 * this.Lmax);
-      c.fillStyle = tgt ? f.color : up ? '#F5A524' : 'rgba(124,240,176,.9)';
+      const x = x0 + j * 0.075, tgt = car && car.k === j;
+      c.fillStyle = tgt ? f.color : this.other[j] ? '#F5A524' : 'rgba(124,240,176,.9)';
       c.beginPath(); c.arc(x * K, (y - 0.02) * K, (tgt ? 0.016 : 0.012) * K, 0, Math.PI * 2); c.fill();
     });
   }
   drawCursor() { }
-  demoObjects() { this.car = { k: 0, f: 3, t: 0.6, state: 'wait', at: 1, hold: 0.4, peak: 0, flagged: false, mode: 'ok' }; this.lift = [0.55 * this.Lmax, 0, 0, 0]; }
+  demoObjects() { this.car = { k: 0, f: 3, t: 0.6, state: 'wait', at: 1, hold: 0.4, peak: 0, flagged: false, mode: 'ok' }; this.p = [0.55, 0, 0, 0]; }
   idle(extra) { return Object.assign({ x: 0.4, y: 0.3, L: 0.2, side: cur().side, aspect: GE.aspect, pose: 'table', tilt: 40, flex: [0, 0, 0, 0] }, extra); }
   autopilot(dt) {
-    const A = this.ap || (this.ap = { d: [0, 0, 0, 0] }), want = [0, 0, 0, 0], car = this.car;
-    if (car && car.state === 'wait') {
+    const A = this.ap || (this.ap = { d: [0, 0, 0, 0] }), want = [0, 0, 0, 0], car = this.car, M = car && this.cal[car.k] ? this.cal[car.k].deg : this.LmaxDeg;
+    if (car && car.state === 'calib') want[car.k] = M * (0.5 - 0.5 * Math.cos(2 * Math.PI * car.at / (CAL_TIME / 2)));
+    else if (car && car.state === 'wait') {
       let p = car.t + Math.sin(GE.clock * 2.3) * 0.02;
-      if (car.mode === 'under' && car.at < 2.2) p = Math.max(0.05, car.t - 0.25);
-      want[car.k] = p * this.Lmax;
-      if (car.mode === 'comp' && car.at > 0.5 && car.at < 1.8) { const nb = car.k < 3 ? car.k + 1 : car.k - 1; want[nb] = 0.6 * this.Lmax; }
-    } else if (car && car.state === 'park') want[car.k] = car.t * this.Lmax;
-    for (let i = 0; i < 4; i++) A.d[i] = approach(A.d[i], want[i], dt, 0.3);
+      if (car.mode === 'under' && car.at < 2.2) p = Math.max(0.05, car.t - 0.3);
+      want[car.k] = p * this.stretch * M;
+      if (car.mode === 'comp' && car.at > 0.3 && car.at < 2.0) { const nb = car.k < 3 ? car.k + 1 : car.k - 1; want[nb] = 0.6 * M; }
+    } else if (car && car.state === 'park') want[car.k] = car.t * this.stretch * M;
+    for (let i = 0; i < 4; i++) A.d[i] = approach(A.d[i], want[i], dt, 0.25);
     return this.idle({ flex: A.d.map(d => -d / 80) });
   }
   result() {
     const att = this.hits + this.misses, acc = att ? this.hits / att : 0, comp = att ? this.flaggedN / att : 0;
     const hint = comp > 0.3 ? 'lift' : acc < 0.5 && att >= 3 ? 'easy' : 'good';
     const per = this.byF.map((n, i) => n ? `${FINGERS[i].short} ${n}` : '').filter(Boolean).join(', ');
-    const extra = [['Не доехали', String(this.misses)], ['Поднимались другие пальцы', att ? `${this.flaggedN} из ${att}` : '—'], ['Лучший подъём пальца', this.bestLift ? Math.round(this.bestLift) + '°' : '—'], ['Линейка: 5-й этаж', `${Math.round(this.L0)}° → ${Math.round(this.Lmax)}°`], ['Припарковано по пальцам', per || '—'], ['Уровень', `${this.lv0} → ${this.level}`]];
-    return { id: 'car', score: this.score, reps: this.hits, misses: this.misses, hint, stars: starsFor(this.hits, acc, comp), extra, save: { level: this.level, Lmax: Math.round(this.Lmax * 10) / 10 }, bestLift: Math.round(this.bestLift) };
+    const view = this.snr == null ? '—' : this.snr >= 8 ? 'хорошо' : this.snr >= 4 ? 'средне' : 'слабо: поставьте камеру ниже и спереди';
+    const extra = [['Не доехали', String(this.misses)], ['Поднимались другие пальцы', att ? `${this.flaggedN} из ${att}` : '—'], ['Лучший подъём', this.best ? `${Math.round(this.best * this.stretch * 100)}% от калибровки` : '—'], ['Подъём виден камере', view], ['Припарковано по пальцам', per || '—'], ['Уровень', `${this.lv0} → ${this.level}`]];
+    return { id: 'car', score: this.score, reps: this.hits, misses: this.misses, hint, stars: starsFor(this.hits, acc, comp), extra, save: { level: this.level }, bestLift: this.best ? Math.round(this.best * this.stretch * 100) : null };
   }
 }
 function makeGame(id, p) { const st = hs(p, id); return id === 'apples' ? new ApplesGame(p, st) : id === 'berries' ? new BerriesGame(p, st) : id === 'car' ? new CarGame(p, st) : new PianoGame(p, st); }
 
 // ---------- Экраны ----------
 function levelText(id, st) {
-  if (id === 'car') { const l = st.level || 1; return `${l <= 2 ? 'указательный' : l === 3 ? '+ средний' : l === 4 ? '+ безымянный' : 'все пальцы'} · ${Math.round(st.Lmax || 20)}°`; }
+  if (id === 'car') { const l = st.level || 1; return `${l <= 2 ? 'указательный' : l === 3 ? '+ средний' : l === 4 ? '+ безымянный' : 'все пальцы'}${st.bestLift ? ` · подъём до ${st.bestLift}%` : ''}`; }
   if (id === 'apples') return st.openT ? `раскрытие ${Math.round(st.openT * 100)}%` : 'уровень 1';
   if (id === 'berries') { const l = st.level || 1; return l <= 2 ? 'большой + указательный' : l === 3 ? '+ средний' : l === 4 ? '+ безымянный' : 'все пальцы'; }
   const n = PIANO_LV[st.level || 1].n; return `${n} ${plural(n, 'палец', 'пальца', 'пальцев')}`;
@@ -1246,7 +1324,7 @@ function handCenter(r) { const x = (r[0].x + r[12].x) / 2, y = (r[0].y + r[12].y
 function setZoom(B) {
   const cs = B.map(b => handCenter(b.lm)), len = median(B.map(b => Math.hypot((b.lm[12].x - b.lm[0].x) * GE.aspect, b.lm[12].y - b.lm[0].y)));
   const z = clamp(0.42 / Math.max(len, 0.05), 1, 2.4);
-  GE.view = clampView({ cu: median(cs.map(c => c.u)) + 0.12 / z, cv: median(cs.map(c => c.v)) + 0.04 / z, z });
+  GE.view = clampView({ cu: median(cs.map(c => c.u)) + GE.viewOff * 0.12 / z, cv: median(cs.map(c => c.v)) + 0.04 / z, z });
 }
 function setupCanvas(aspect) { GE.aspect = aspect; gcv.height = 720; gcv.width = Math.round(720 * aspect); $('#gstage').style.aspectRatio = `${gcv.width} / 720`; }
 function openGame(id) {
@@ -1268,7 +1346,7 @@ async function startGame(src) {
   stopGame(); const tok = GE.tok;
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume && audioCtx.resume(); } catch (e) { }
   const p = cur();
-  Object.assign(GE, { src, paused: false, time: 0, phase: src === 'touch' ? 'play' : 'calib', phaseT: 0, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], missingT: 0, missBanner: false, lastCue: {}, inp: null, mirror: false, clock: 0, lastVT: -1, lastRes: null, wrongT: 0, view: null, chk: null, RE: null });
+  Object.assign(GE, { src, paused: false, time: 0, phase: src === 'touch' ? 'play' : 'calib', phaseT: 0, ema: null, ref: null, R: null, tipX: null, calBuf: [], parts: [], missingT: 0, missBanner: false, lastCue: {}, inp: null, mirror: false, clock: 0, lastVT: -1, lastRes: null, wrongT: 0, view: null, chk: null, RE: null, RT: null, RTSD: null, RESD: null, votes: [], hist: [], lastWrist: null, viewOff: 1 });
   $('#game-intro').hidden = true; $('#game-result').hidden = true; $('#game-controls').hidden = false; $('#g-pause').textContent = 'Пауза';
   if (src === 'camera') {
     setupCanvas(0.75); gx.fillStyle = '#0A0F13'; gx.fillRect(0, 0, gcv.width, gcv.height); banner('Загружаю модель распознавания кисти…', true);
@@ -1309,8 +1387,11 @@ function gloop() {
         GE.R = [0, 1, 2, 3].map(j => median(B.map(b => b.F[j])));
         GE.RE = [0, 1, 2, 3].map(j => median(B.map(b => b.E[j])));
         GE.tipX = [0, 1, 2, 3].map(j => median(B.map(b => b.tipX[j])));
-        if (GE.game.view === 'table' && GE.src === 'camera') setZoom(B);
-        GE.game.onCalibrated && GE.game.onCalibrated();
+        GE.RT = [0, 1, 2, 3].map(j => [median(B.map(b => b.T[j][0])), median(B.map(b => b.T[j][1]))]);
+        GE.RTSD = [0, 1, 2, 3].map(j => Math.max(0.004, sdev(B.map(b => Math.hypot(b.T[j][0] - GE.RT[j][0], b.T[j][1] - GE.RT[j][1])))));
+        GE.RESD = [0, 1, 2, 3].map(j => Math.max(1, sdev(B.map(b => b.E[j]))));
+        GE.game.onCalibrated && GE.game.onCalibrated(B);
+        if (GE.game.view === 'table' && GE.src === 'camera') { GE.viewOff = GE.game.panelLeft ? -1 : 1; setZoom(B); }
         GE.phase = 'count'; GE.phaseT = 0;
       }
     } else { GE.phaseT = 0; GE.calBuf = []; if (GE.src === 'camera') hideBanner(); else banner(chk.msg, true); }
@@ -1321,8 +1402,8 @@ function gloop() {
     GE.missingT = inp.ok ? 0 : GE.missingT + dt;
     if (GE.missingT < 0.6) {
       if (GE.missBanner) { hideBanner(); GE.missBanner = false; }
-      GE.time += dt; GE.game.update(dt, inp);
-      if (GE.view && inp.ok) { const hc = handCenter(inp.lm), V = GE.view; V.cu = approach(V.cu, hc.u + 0.12 / V.z, dt, 2.5); V.cv = approach(V.cv, hc.v + 0.04 / V.z, dt, 2.5); clampView(V); }
+      GE.time += dt; if (inp.ok) GE.game.update(dt, inp);
+      if (GE.view && inp.ok) { const hc = handCenter(inp.lm), V = GE.view; V.cu = approach(V.cu, hc.u + GE.viewOff * 0.12 / V.z, dt, 2.5); V.cv = approach(V.cv, hc.v + 0.04 / V.z, dt, 2.5); clampView(V); }
     } else { banner(inp.wrong ? wrongText(inp.seen) : GE.game.view === 'table' ? 'Не вижу кисть: положите её на стол перед планшетом' : 'Не вижу кисть: держите ладонь перед камерой', true); GE.missBanner = true; }
     if (GE.time >= GE.dur) { endGame(); return; }
   }
@@ -1375,6 +1456,7 @@ function renderGameResult(r) {
     if (r.bestOpen != null) s.bestOpen = Math.max(s.bestOpen || 0, r.bestOpen);
     if (r.clean != null) s.clean = r.clean;
     if (r.bestLift != null) s.bestLift = Math.max(s.bestLift || 0, r.bestLift);
+    if (r.id === 'car') delete s.Lmax;
     const d = todayIso(), key = 'k_' + r.id; p.dose = p.dose || {}; p.dose[d] = p.dose[d] || {}; p.dose[d][key] = (p.dose[d][key] || 0) + r.reps;
     p.sessions = p.sessions || []; p.sessions.unshift({ date: d, ex: key, reps: r.reps, partial: r.misses, hint: r.hint, score: r.score }); p.sessions = p.sessions.slice(0, 60);
     saveStore();
